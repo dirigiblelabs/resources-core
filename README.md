@@ -1,6 +1,3 @@
-# ide-core
-Core Services for the WebIDE
-
 # Core Services for Eclipse Dirigible WebIDE
 
 Core Services for the [Eclipse Dirigible](https://github.com/eclipse/dirigible) WebIDE v3.x and above.
