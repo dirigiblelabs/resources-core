@@ -19,7 +19,7 @@ function getMainMenu() {
 		menuExtension = require(menuExtensions[i]);
 		mainmenu.push[menuExtension.getMenu()];
 	}
-	return mainmenu;
+	return JSON.stringify(mainmenu);
 }
 
 getMainMenu();
