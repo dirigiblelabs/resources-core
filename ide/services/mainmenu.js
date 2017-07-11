@@ -11,15 +11,22 @@
 /* eslint-env node, dirigible */
 
 var extensions = require('core/v3/extensions');
+var extensions = require('http/v3/response');
 
 function getMainMenu() {
     var mainmenu = [];
+    response.println('getting extensions...');
 	var menuExtensions = extensions.getExtensions('/ide/extensions/mainmenu');
+	response.println('got extensions: ' + menuExtensions.length);
 	for (var i=0; i<menuExtensions.length; i++) {
-		menuExtension = require(menuExtensions[i]);
-		mainmenu.push[menuExtension.getMenu()];
+		var module = menuExtensions[i];
+		response.println('processing extension module: ' + module);
+		menuExtension = require(module);
+		var menu = menuExtension.getMenu();
+		response.println('menu to add: ' + menu);
+		mainmenu.push[menu];
 	}
-	return JSON.stringify(mainmenu);
+	response.println(JSON.stringify(mainmenu));
 }
 
 getMainMenu();
