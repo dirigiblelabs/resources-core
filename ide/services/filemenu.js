@@ -10,7 +10,7 @@
 
 /* eslint-env node, dirigible */
 
-exports.getMenu() {
+exports.getMenu = function() {
 	var menu = {
 			"name":"File",
 			"link":"#",
