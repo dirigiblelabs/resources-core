@@ -11,7 +11,7 @@
 /* eslint-env node, dirigible */
 
 var extensions = require('core/v3/extensions');
-var extensions = require('http/v3/response');
+var response = require('http/v3/response');
 
 function getMainMenu() {
     var mainmenu = [];
