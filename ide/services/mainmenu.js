@@ -23,7 +23,7 @@ function getMainMenu() {
 		response.println('processing extension module: ' + module);
 		menuExtension = require(module);
 		var menu = menuExtension.getMenu();
-		response.println('menu to add: ' + menu);
+		response.println('menu to add: ' + JSON.stringify(menu));
 		mainmenu.push[menu];
 	}
 	response.println(JSON.stringify(mainmenu));
