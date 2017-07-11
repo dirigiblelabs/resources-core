@@ -14,7 +14,7 @@ var extensions = require('core/v3/extensions');
 
 function getMainMenu() {
     var mainmenu = [];
-	var menuExtensions = extensions.getExtensions('/ide/extensions/menu');
+	var menuExtensions = extensions.getExtensions('/ide/extensions/mainmenu');
 	for (var i=0; i<menuExtensions.length; i++) {
 		menuExtension = require(menuExtensions[i]);
 		mainmenu.push[menuExtension.getMenu()];
