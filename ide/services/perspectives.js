@@ -10,11 +10,15 @@
 
 /* eslint-env node, dirigible */
 
-exports.getMenu = function() {
-	var menu = {
-			"name":"File",
-			"link":"#",
-			"onClick":"alert('File has been clicked')"
-		};
-	return menu;
+var extensions = require('core/v3/extensions');
+var response = require('http/v3/response');
+
+var perspectives = [];
+var perspectiveExtensions = extensions.getExtensions('ide-perspective');
+for (var i=0; i<perspectiveExtensions.length; i++) {
+    var module = perspectiveExtensions[i];
+    perspectiveExtension = require(module);
+    var perspective = perspectiveExtension.getPerspective();
+    perspectives.push(perspective);
 }
+response.println(JSON.stringify(perspectives));
