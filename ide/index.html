@@ -28,7 +28,7 @@
 	
 	<link type="text/css" rel="stylesheet" href="css/dark.css" />
 	
-	<script src="services/message_hub.js"></script>
+	<script src="ui/message-hub.js"></script>
 	
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -94,7 +94,8 @@
 						id:"ws",
 		            	type: 'component',
 		            	componentName: 'Workspace',
-		            	componentState: { label: 'Workspace' }
+		            	componentState: { label: 'Workspace' },
+		            	width: 30
 		        	},{
 						id: 'center',
 		            	type: 'column',
@@ -108,7 +109,7 @@
 								id:"console",
 								type: 'component',
 								componentName: 'Console',
-								componentState: { label: 'Console' }
+								componentState: { label: 'Console' }								
 						}]
 		        }]
 		    }]
@@ -118,11 +119,11 @@
 
 		
 		myLayout.registerComponent( 'Workspace', function( container, componentState ){
-		    container.getElement().html('<iframe src="workspace.html"></iframe>');
+		    container.getElement().html('<iframe src="../ide-workspace/workspace.html"></iframe>');
 		});
 		myLayout.registerComponent( 'Editor', function( container, componentState ){
 			this.setContent = function(path){
-				container.getElement().empty().html( '<iframe src="/services/v3/web/ide-editor-orion/editor.html?file='+path+'"></iframe>' )
+				container.getElement().empty().html( '<iframe src="../ide-editor-orion/editor.html?file='+path+'"></iframe>' )
 			};
 			this.setContent(componentState.path);
 		});
