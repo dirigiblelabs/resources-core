@@ -116,10 +116,18 @@
 									componentState: {  },
 									content: []
 								},{
-									id:"console",
-									type: 'component',
-									componentName: 'Console',
-									componentState: { label: 'Console' }								
+									type: 'stack',
+									content: [{
+										id:"console",
+										type: 'component',
+										componentName: 'Console',
+										componentState: { label: 'Console' }	
+									},{
+										id:"preview",
+										type: 'component',
+										componentName: 'Preview',
+										componentState: { label: 'Preview' }	
+									}]							
 							}]
 					}]
 				}]
