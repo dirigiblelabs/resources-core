@@ -72,21 +72,11 @@
 	
 	<div class="shell">
 		<div class="sidebar list-group">
-			<a class="list-group-item"><i class="fa fa-files-o fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-code-fork fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-database fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-sitemap fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-bug fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-object-group fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-area-chart fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-truck fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-puzzle-piece fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-user fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-lock fa-2x"></i></a>
-			<a class="list-group-item"><i class="fa fa-life-ring fa-2x"></i></a>
+			<a class="list-group-item" ng-repeat="perspective in perspectives" title="{{perspective.name}}" href="{{perspective.link}}" target="_blank"><i class="fa fa-{{perspective.image}} fa-2x"></i></a>
 		</div>
-	<div class="plane"></div>
-
+		<div class="plane"></div>
+	</div>
+	
 	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular.min.js"></script>
 	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular-resource.min.js"></script>
 
@@ -243,9 +233,15 @@
 			$scope.onClick = function(action) {
 				eval(action);
 			};
+			
+			var urlPerspectives = '../../js/ide/services/perspectives.js';
+			$http.get(urlPerspectives)
+				.success(function(data) {
+					$scope.perspectives = data;
+			});
 		});
 	</script>
-		
+	
 </body>
 
 </html>
