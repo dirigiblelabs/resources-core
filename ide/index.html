@@ -135,6 +135,8 @@
 			
 			this.layout = new GoldenLayout(this.config, $('.plane') );
 			
+			this.messageHub = new FramesMessageHub();
+			
 			this.layout.registerComponent( 'Workspace', function( container, componentState ){
 				container.getElement().html('<iframe src="../ide-workspace/workspace.html"></iframe>');
 			});
@@ -163,12 +165,11 @@
 				if(!this.listeners[eventType]){
 					this.listeners[eventType] = [];
 				}
-				var client = new FramesMessageHub();
-				client.subscribe(callback, eventType);
+				var subscriber = this.messageHub.subscribe(callback, eventType);
 
 				var entry = {
 					id: uuidv4(),
-					handler: client
+					handler: subscriber
 				};
 				this.listeners[eventType].push(entry);
 				return entry.id;
@@ -178,7 +179,9 @@
 					return;
 				for (var i = this.listeners[eventType].length - 1; i >= 0; i--) {
 				  if (this.listeners[eventType][i].id == id) {
-					 this.listeners[eventType].splice(i, 1);
+					var subscriber = this.listeners[eventType][i].handler;
+				  	this.messageHub.unsibscribe(subscriber);
+					this.listeners[eventType].splice(i, 1);
 				  }
 				}
 			};
@@ -195,7 +198,7 @@
 	
 		var layoutCtrl = new LayoutController();
 		
-		layoutCtrl.addListener('fileselected', function(msg){
+		var listenerId = layoutCtrl.addListener('fileselected', function(msg){
 			var newItemConfig = {
 				id: msg.data.path,
 				title: msg.data.label,
