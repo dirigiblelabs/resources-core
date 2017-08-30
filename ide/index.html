@@ -195,6 +195,10 @@
 	
 		var layoutCtrl = new LayoutController();
 		
+		$(window).resize(function() {
+  			layoutCtrl.layout.updateSize();
+		});
+		
 		var listenerId = layoutCtrl.addListener('fileselected', function(msg){
 			var newItemConfig = {
 				id: msg.data.path,
