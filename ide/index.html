@@ -272,7 +272,7 @@
 					path = path.concat(parentIds.call(this, this.views[viewId], region));
 					path.reverse().forEach(function(compId){
 						var child = this.regions[compId] || this.views[compId];
-						node = this.layout.root.getItemsById(node.id)[0];
+						node = this.layout.root !== node ? this.layout.root.getItemsById(node.id)[0] : this.layout.root;
 						if(viewId === compId || !this.layout.root.getItemsById(compId)[0]){
 							node.addChild(child);
 						}
