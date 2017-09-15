@@ -153,7 +153,7 @@
 			
 		};
 		
-		viewRegistry = new ViewRegistry();
+		var viewRegistry = new ViewRegistry();
 		
 		viewRegistry.factory('frame', function(container, componentState){
 			container.setTitle(componentState.label || 'View');
@@ -186,7 +186,8 @@
 			this.regions = {
 				'main': {
 					id: 'main',
-					type: 'row'
+					type: 'row',
+					isClosable: false
 				},
 				'left': {
 					id: 'left',
@@ -343,6 +344,9 @@
 			};
 			
 			this.init = function(containerEl, viewNames){
+				this.containerEl = containerEl;
+				this.viewNames = viewNames;
+				
 				var views = {};
 				viewNames.forEach(function(viewName){
 					views[viewName] = this.viewRegistry.view(viewName);
@@ -355,24 +359,40 @@
 					content: [this.layoutViews.call(this, views)]
 				};
 				
-				this.layout = new GoldenLayout(this.config, containerEl);
+				var savedState = localStorage.getItem('DIRIGIBLE.IDE.GL.state');
+				var cfg = this.config;
+				if( savedState !== null ) {
+					cfg = JSON.parse(savedState);
+				}
+				this.layout = new GoldenLayout(cfg, containerEl);
+				
 				Object.keys(this.viewRegistry.factories()).forEach(function(factoryname){
 					this.layout.registerComponent(factoryname, this.viewRegistry.factory(factoryname));
 				}.bind(this));
+				
+				this.layout.on('stateChanged', function(){
+					//TODO: debounce or do taht only with save button! This fires a lot
+					var state = JSON.stringify( this.layout.toConfig() );
+					localStorage.setItem('DIRIGIBLE.IDE.GL.state', state );
+				}.bind(this));
+				
 				this.layout.init();
 			};
 			
-			this.openView = function(viewId, region){
-				if(this.viewRegistry.view(viewId)){
-					var node = this.layout.root;
-					var path = [viewId];
-					path = path.concat(parentIds.call(this, this.viewRegistry.view(viewId), region));
-					path.reverse().forEach(function(compId){
-						var child = this.regions[compId] || this.viewRegistry.view(compId);
-						node = this.layout.root !== node ? this.layout.root.getItemsById(node.id)[0] : this.layout.root;
-						if(viewId === compId || !this.layout.root.getItemsById(compId)[0]){
-							//if(node && !node.contentItems.find(function(it){return it.id = child.id}))
-								node.addChild(child);
+			this.openView = function(viewId/*, region*/){
+				var viewDef = this.viewRegistry.view(viewId);
+				if(viewDef){
+					var node;
+					var defaultPath = [viewId];
+					defaultPath = defaultPath.concat(parentIds.call(this, viewDef/*, region*/));//TODO: consider custom region
+					defaultPath.reverse().forEach(function(compId){
+						if(!node)
+							node = this.layout.root;
+						else
+							node = this.layout.root.getItemsById(node.id || node.config.id)[0];
+						var child = node.getItemsById(compId)[0] || this.regions[compId] || this.viewRegistry.view(compId);
+						if(!node.isRoot && child && this.layout.root.getItemsById(child.id || child.config.id).length<1){
+							node.addChild(child);
 						}
 						node = child;
 					}.bind(this));
@@ -381,6 +401,12 @@
 			
 			this.resize = function(){
 				this.layout.updateSize();
+			};
+			
+			this.reset = function(){
+				this.layout.destroy();
+				this.containerEl.empty();
+				this.layout.init(this.containerEl, this.viewNames);
 			};
 		};
 		
@@ -429,7 +455,7 @@
 			var regionId = msg.data.regionId;
 			layoutCtrl.open(viewId, regionId);
 		})
- 		$(window).resize(function(){layoutCtrl.layout.updateSize()});//TOD: do not expose the native layout object
+ 		$(window).resize(function(){layoutCtrl.layout.updateSize()});//TODO: do not expose the native layout object
 		layoutCtrl.init($('.plane'), ['ws', 'import', 'editor', 'properties', 'console', 'preview']);
 		
 	</script>
