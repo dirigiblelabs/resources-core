@@ -49,9 +49,17 @@ angular.module('ideUiCore', ['ngResource'])
 .service('Menu', ['$resource', function($resource){
 	return $resource('../../js/ide/services/menu.js');
 }])
-.service('User', ['$resource', function($resource){
-	var user = $resource('../../js/ide/services/user-name.js');
+.service('User', ['$http', '$timeout', function($http, $timeout){
 	return {
-		name: user.query()
-	}
+		get: function(){
+			var user = {};
+			$http({
+				url: '../../js/ide/services/user-name.js',
+				method: 'GET'
+			}).success(function(data){
+				user.name = data;
+			});
+			return user;
+		}
+	};
 }]);

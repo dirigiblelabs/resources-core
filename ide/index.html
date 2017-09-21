@@ -84,7 +84,7 @@
 		            </ul>
 				  </li>				  
 				  <li class="hidden-xs">
-					<a href=""><span class="fa fa-user user"></span> <span class="user" ng-include="'../../js/ide/services/user-name.js'"></span>&nbsp;</a>
+					<a href=""><span class="fa fa-user user"></span> <span class="user" ng-bind="wb.user.name"></span>&nbsp;</a>
 				  </li>
 				</ul>
 			</div>
@@ -156,10 +156,11 @@
 			
 			return layoutCtrl;
 		}])
-		.controller('WorkbenchController', ['Perspectives', 'Menu', 'Theme', 'Layout', 'messageHub', function (Perspectives, Menu, Theme, Layout, $messageHub) {
+		.controller('WorkbenchController', ['Perspectives', 'Menu', 'Theme', 'Layout', 'User', 'messageHub', function (Perspectives, Menu, Theme, Layout, User, $messageHub) {
 			this.perspectives = Perspectives.query();
 			this.menu = Menu.query();
 			this.Layout = Layout;
+			this.user = User.get();
 			
 			this.onClick = function(action, item, subItem) {
 				if(item.name === 'Show View'){
