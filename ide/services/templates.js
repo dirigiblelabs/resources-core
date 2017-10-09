@@ -17,6 +17,7 @@ for (var i=0; i<templateExtensions.length; i++) {
     var module = templateExtensions[i];
     templateExtension = require(module);
     var template = templateExtension.getTemplate();
+    template.id = module;
     templates.push(template);
 }
 response.println(JSON.stringify(templates));
