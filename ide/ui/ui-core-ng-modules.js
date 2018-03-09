@@ -82,7 +82,8 @@ angular.module('ideUiCore', ['ngResource'])
 				"orion":  "../ide-orion/editor.html",
 				"repository":  "../ide-orion/repository.html",
 				"flowable": "../ide-bpm/index.html#/editor",
-				"schema": "../ide-schema/schema.html"
+				"schema": "../ide-schema/schema.html",
+				"model": "../ide-model/modeler.html"
 			}
 	var editorsForContentType = this.editorsForContentType = {
 			"": ['orion'],
@@ -91,7 +92,8 @@ angular.module('ideUiCore', ['ngResource'])
 			"text/plain": ['orion'],
 			"text/html": ['orion'],
 			"application/bpmn+xml": ['flowable'],
-			"application/schema+xml": ['schema']
+			"application/schema+xml": ['schema'],
+			"application/model+xml": ['model']
 		};			
 	var defaultEditorId = this.defaultEditorId = "orion";
 	this.$get = [function editorsFactory() {
