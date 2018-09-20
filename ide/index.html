@@ -9,14 +9,14 @@
   ~ SAP - initial API and implementation
   -->
 
-<html lang="en">
+<html lang="en"  ng-app="workbench" ng-controller="WorkbenchController as wb">
 <head>
 
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Eclipse Dirigible &trade; | Workbench </title>
+    <title>{{branding.name}} | Workbench </title>
 
 	<!-- Twitter Bootstrap with Theme Support -->
 	<link type="text/css" rel="stylesheet" href="../../../../services/v3/core/theme/bootstrap.min.css">
@@ -34,7 +34,7 @@
 	<link rel="shortcut icon" type="image/png" href="../../../../services/v3/web/resources/images/favicon.png" />
 </head>
 
-<body ng-app="workbench" ng-controller="WorkbenchController as wb">
+<body>
 
 	<div menu menu-data-url="../../js/ide/services/menu.js"></div>
 	
@@ -66,7 +66,19 @@
 		.config(["messageHubProvider", function(messageHubProvider) {
 			messageHubProvider.evtNamePrefix = 'workbench';
 		}])	
-		.controller('WorkbenchController', ['Layouts', function (Layouts) {
+		.controller('WorkbenchController', ['$scope', '$http', 'Layouts', function ($scope, $http, Layouts) {
+
+			$scope.getBrandingInfo = function() {
+				$scope.branding = JSON.parse(localStorage.getItem('DIRIGIBLE.branding'));
+				if ($scope.branding === null) {
+					$http.get('../../../../services/v3/js/branding/api.js')
+					.success(function(data) {
+						$scope.branding = data;
+						localStorage.setItem('DIRIGIBLE.branding', JSON.stringify(data));
+					});
+				}
+			};
+			$scope.getBrandingInfo();
 
 			this.layoutModel = {
 				views: ['workspace', 'import', 'editor', 'properties', 'console', 'preview'],
