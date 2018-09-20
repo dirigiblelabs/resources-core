@@ -79,6 +79,9 @@ angular.module('ideUiCore', ['ngResource'])
 		}
 	};
 }])
+.service('Branding', ['$resource', function($resource) {
+	return $resource('../../js/branding/api.js');
+}])
 .provider('Editors', function(){
 	function getEditors(resourcePath) {
 	    var xhr = new XMLHttpRequest();
@@ -226,7 +229,7 @@ angular.module('ideUiCore', ['ngResource'])
 		manager: undefined
 	};
 }])
-.directive('menu', ['$resource', 'Theme', 'User', 'Layouts', 'messageHub', function($resource, Theme, User, Layouts, messageHub){
+.directive('menu', ['$resource', 'Theme', 'User', 'Branding', 'Layouts', 'messageHub', function($resource, Theme, User, Branding,Layouts, messageHub){
 	return {
 		restrict: 'AE',
 		transclude: true,
@@ -240,6 +243,19 @@ angular.module('ideUiCore', ['ngResource'])
 			function loadMenu(){
 				scope.menu = $resource(url).query();
 			}
+			function getBrandingInfo() {
+				scope.branding = JSON.parse(localStorage.getItem('DIRIGIBLE.branding'));
+				if (scope.branding === null) {
+					
+					Branding.get().$promise
+					.then(function(data) {
+						scope.branding = data;
+						localStorage.setItem('DIRIGIBLE.branding', JSON.stringify(data));
+					});
+				}
+			}
+			getBrandingInfo();
+
 			if(!scope.menu && url)
 				loadMenu.call(scope);
 			scope.menuClick = function(item, subItem) {
