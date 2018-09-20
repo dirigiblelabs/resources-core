@@ -90,7 +90,7 @@ angular.module('ideUiCore', ['ngResource'])
 	    if (xhr.status === 200) {
 	       	return JSON.parse(xhr.responseText);
 	    }
-	};
+	}
 	var editorProviders = {};
 	var editorsForContentType = {};
 	var editorsList = getEditors();
@@ -227,6 +227,31 @@ angular.module('ideUiCore', ['ngResource'])
 .factory('Layouts', [function(){
 	return {
 		manager: undefined
+	};
+}])
+.directive('brandtitle', ['Branding', function(Branding) {
+	return {
+		restrict: 'AE',
+		transclude: true,
+		replace: 'true',
+		scope: {
+			perspectiveName: '@perspectiveName'
+		},
+		link: function(scope, el, attrs){
+			function getBrandingInfo() {
+				scope.branding = JSON.parse(localStorage.getItem('DIRIGIBLE.branding'));
+				if (scope.branding === null) {
+					
+					Branding.get().$promise
+					.then(function(data) {
+						scope.branding = data;
+						localStorage.setItem('DIRIGIBLE.branding', JSON.stringify(data));
+					});
+				}
+			}
+			getBrandingInfo();
+		},
+		templateUrl: '../../../../services/v3/web/ide/ui/tmpl/brandTitle.html'
 	};
 }])
 .directive('menu', ['$resource', 'Theme', 'User', 'Branding', 'Layouts', 'messageHub', function($resource, Theme, User, Branding,Layouts, messageHub){

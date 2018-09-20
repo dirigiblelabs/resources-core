@@ -16,7 +16,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>{{branding.name}} | Workbench </title>
+	<title brandtitle perspective-name="Workspace"></title>
 
 	<!-- Twitter Bootstrap with Theme Support -->
 	<link type="text/css" rel="stylesheet" href="../../../../services/v3/core/theme/bootstrap.min.css">
@@ -66,19 +66,7 @@
 		.config(["messageHubProvider", function(messageHubProvider) {
 			messageHubProvider.evtNamePrefix = 'workbench';
 		}])	
-		.controller('WorkbenchController', ['$scope', '$http', 'Layouts', function ($scope, $http, Layouts) {
-
-			$scope.getBrandingInfo = function() {
-				$scope.branding = JSON.parse(localStorage.getItem('DIRIGIBLE.branding'));
-				if ($scope.branding === null) {
-					$http.get('../../../../services/v3/js/branding/api.js')
-					.success(function(data) {
-						$scope.branding = data;
-						localStorage.setItem('DIRIGIBLE.branding', JSON.stringify(data));
-					});
-				}
-			};
-			$scope.getBrandingInfo();
+		.controller('WorkbenchController', ['Layouts', function (Layouts) {
 
 			this.layoutModel = {
 				views: ['workspace', 'import', 'editor', 'properties', 'console', 'preview'],
