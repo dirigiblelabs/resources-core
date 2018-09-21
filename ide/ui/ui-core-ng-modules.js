@@ -238,20 +238,20 @@ angular.module('ideUiCore', ['ngResource'])
 			perspectiveName: '@perspectiveName'
 		},
 		link: function(scope, el, attrs){
-			function getBrandingInfo() {
-				scope.branding = JSON.parse(localStorage.getItem('DIRIGIBLE.branding'));
-				if (scope.branding === null) {
-					
-					Branding.get().$promise
-					.then(function(data) {
-						scope.branding = data;
-						localStorage.setItem('DIRIGIBLE.branding', JSON.stringify(data));
-					});
-				}
-			}
-			getBrandingInfo();
+			getBrandingInfo(scope, Branding);
 		},
 		templateUrl: '../../../../services/v3/web/ide/ui/tmpl/brandTitle.html'
+	};
+}])
+.directive('brandicon', ['Branding', function(Branding) {
+	return {
+		restrict: 'AE',
+		transclude: true,
+		replace: 'true',
+		link: function(scope, el, attrs){
+			getBrandingInfo(scope, Branding);
+		},
+		templateUrl: '../../../../services/v3/web/ide/ui/tmpl/brandIcon.html'
 	};
 }])
 .directive('menu', ['$resource', 'Theme', 'User', 'Branding', 'Layouts', 'messageHub', function($resource, Theme, User, Branding,Layouts, messageHub){
@@ -268,18 +268,7 @@ angular.module('ideUiCore', ['ngResource'])
 			function loadMenu(){
 				scope.menu = $resource(url).query();
 			}
-			function getBrandingInfo() {
-				scope.branding = JSON.parse(localStorage.getItem('DIRIGIBLE.branding'));
-				if (scope.branding === null) {
-					
-					Branding.get().$promise
-					.then(function(data) {
-						scope.branding = data;
-						localStorage.setItem('DIRIGIBLE.branding', JSON.stringify(data));
-					});
-				}
-			}
-			getBrandingInfo();
+			getBrandingInfo(scope, Branding);
 
 			if(!scope.menu && url)
 				loadMenu.call(scope);
@@ -375,3 +364,15 @@ angular.module('ideUiCore', ['ngResource'])
 		}
 	}
 }])	;
+
+function getBrandingInfo(scope, BrandingService) {
+	scope.branding = JSON.parse(localStorage.getItem('DIRIGIBLE.branding'));
+	if (scope.branding === null) {
+		
+		BrandingService.get().$promise
+		.then(function(data) {
+			scope.branding = data;
+			localStorage.setItem('DIRIGIBLE.branding', JSON.stringify(data));
+		});
+	}
+}
