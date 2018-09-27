@@ -1,5 +1,5 @@
 {
-	"guid": "ide",
+	"guid": "ide-core",
 	"repository": {
 		"type": "git",
 		"branch": "master",
