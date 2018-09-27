@@ -11,23 +11,19 @@
 var extensions = require('core/v3/extensions');
 var response = require('http/v3/response');
 
-var mainmenu = [];
-var menuExtensions = extensions.getExtensions('ide-menu');
+var editors = [];
+var editorExtensions = extensions.getExtensions('ide-editor');
 
-for (var i = 0; i < menuExtensions.length; i++) {
-    var module = menuExtensions[i];
+for (var i = 0; editorExtensions != null && i < editorExtensions.length; i++) {
+    var module = editorExtensions[i];
     try {
-    	menuExtension = require(module);
-    	var menu = menuExtension.getMenu();
-    	mainmenu.push(menu);	
+    	var editorExtension = require(module);
+    	var editor = editorExtension.getEditor();
+    	editors.push(editor);	
     } catch(error) {
-    	console.error('Error occured while loading metadata for the menu: ' + module);
+    	console.error('Error occured while loading metadata for the editor: ' + module);
     	console.error(error);
     }
 }
 
-mainmenu.sort(function(p, n) {
-	return (parseInt(p.order) - parseInt(n.order));
-});
-
-response.println(JSON.stringify(mainmenu));
+response.println(JSON.stringify(editors));
