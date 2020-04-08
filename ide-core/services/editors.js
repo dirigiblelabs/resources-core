@@ -26,4 +26,13 @@ for (var i = 0; editorExtensions != null && i < editorExtensions.length; i++) {
     }
 }
 
+editors = editors.sort(function(a, b) {
+	if (a.defaultEditor) {
+		return -1;
+	} else if (b.defaultEditor) {
+		return 1;
+	}
+	return 0;
+});
+
 response.println(JSON.stringify(editors));
