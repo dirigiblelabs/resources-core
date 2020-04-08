@@ -11,20 +11,37 @@
 var extensions = require('core/v4/extensions');
 var response = require('http/v4/response');
 
-var templates = [];
-var templateExtensions = extensions.getExtensions('ide-template');
+var rs = require("http/v4/rs");
 
-for (var i = 0; i < templateExtensions.length; i++) {
-    var module = templateExtensions[i];
-    try {
-    	var templateExtension = require(module);
-    	var template = templateExtension.getTemplate();
-    	template.id = module;
-    	templates.push(template);	
-    } catch(error) {
-    	console.error('Error occured while loading metadata for the template: ' + module);
-    	console.error(error);
-    }
+rs.service()
+    .resource("")
+        .get(function(ctx, request, response) {
+            var templates = getTemplates();
+			response.println(JSON.stringify(templates));
+        })
+    .resource("extensions")
+        .get(function(ctx, request, response) {
+    	    var templates = getTemplates();
+    	    var fileExtensions = [];
+    	    templates.forEach(template => {if (template.extension) fileExtensions.push(template.extension);});
+			response.println(JSON.stringify(fileExtensions));
+    })
+.execute();
+
+function getTemplates() {
+	var templates = [];
+	var templateExtensions = extensions.getExtensions('ide-template');
+	for (var i = 0; i < templateExtensions.length; i++) {
+	    var module = templateExtensions[i];
+	    try {
+	    	var templateExtension = require(module);
+	    	var template = templateExtension.getTemplate();
+	    	template.id = module;
+	    	templates.push(template);	
+	    } catch(error) {
+	    	console.error('Error occured while loading metadata for the template: ' + module);
+	    	console.error(error);
+	    }
+	}
+	return templates;
 }
-
-response.println(JSON.stringify(templates));
