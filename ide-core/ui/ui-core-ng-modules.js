@@ -340,6 +340,46 @@ angular.module('ideUiCore', ['ngResource'])
 		templateUrl: '../../../../services/v4/web/ide-core/ui/tmpl/sidebar.html'
 	}
 }])
+.directive('notification', ['messageHub', function(messageHub) {
+	return {
+		restrict: 'AE',
+		transclude: true,
+		replace: 'true',
+		scope: {
+			active: '@'
+		},
+		link: function(scope, el, attrs){
+
+			messageHub.on('ide.notification', function(msg) {
+				scope.messageType = "info";
+				if (msg.data.type) {
+					switch(msg.data.type) {
+						case "success":
+						case "ok":
+							scope.messageType = "success";
+							break;
+						case "warning":
+							scope.messageType = "warning";
+							break;
+						case "info":
+							scope.messageType = "info";
+							break;
+						case "error":
+						case "danger":
+							scope.messageType = "danger";
+							break;
+					}
+					scope.messageType = msg.data.type;
+				}
+				scope.title = msg.data.title;
+				scope.message = msg.data.message;
+				$("#notificationModal").modal('show')
+				scope.$apply();
+			});
+		},
+		templateUrl: '../../../../services/v4/web/ide-core/ui/tmpl/notification.html'
+	}
+}])
 .directive('statusBar', ['messageHub', function(messageHub){
 	return {
 		restrict: 'AE',
