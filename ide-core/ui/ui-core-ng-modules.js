@@ -340,7 +340,7 @@ angular.module('ideUiCore', ['ngResource'])
 		templateUrl: '../../../../services/v4/web/ide-core/ui/tmpl/sidebar.html'
 	}
 }])
-.directive('notification', ['messageHub', function(messageHub) {
+.directive('alert', ['messageHub', function(messageHub) {
 	return {
 		restrict: 'AE',
 		transclude: true,
@@ -350,10 +350,10 @@ angular.module('ideUiCore', ['ngResource'])
 		},
 		link: function(scope, el, attrs){
 
-			messageHub.on('ide.notification', function(msg) {
+			messageHub.on('ide.alert', function(msg) {
 				scope.messageType = "info";
 				if (msg.data.type) {
-					switch(msg.data.type) {
+					switch(msg.data.type.toLowerCase()) {
 						case "success":
 						case "ok":
 							scope.messageType = "success";
@@ -369,15 +369,14 @@ angular.module('ideUiCore', ['ngResource'])
 							scope.messageType = "danger";
 							break;
 					}
-					scope.messageType = msg.data.type;
 				}
 				scope.title = msg.data.title;
 				scope.message = msg.data.message;
-				$("#notificationModal").modal('show')
+				$("#alertModal").modal('show')
 				scope.$apply();
 			});
 		},
-		templateUrl: '../../../../services/v4/web/ide-core/ui/tmpl/notification.html'
+		templateUrl: '../../../../services/v4/web/ide-core/ui/tmpl/alert.html'
 	}
 }])
 .directive('statusBar', ['messageHub', function(messageHub){
