@@ -349,30 +349,43 @@ angular.module('ideUiCore', ['ngResource'])
 			active: '@'
 		},
 		link: function(scope, el, attrs){
+			let alertModalId = "#alertModal";
+
+			scope.clearAlerts = function() {
+				scope.alerts = [];
+				$(alertModalId).modal('hide')
+			};
 
 			messageHub.on('ide.alert', function(msg) {
-				scope.messageType = "info";
+				let alert = {
+					messageType: "info",
+					title: msg.data.title,
+					message: msg.data.message
+				};
+
 				if (msg.data.type) {
 					switch(msg.data.type.toLowerCase()) {
 						case "success":
 						case "ok":
-							scope.messageType = "success";
+							alert.messageType = "success";
 							break;
 						case "warning":
-							scope.messageType = "warning";
+							alert.messageType = "warning";
 							break;
 						case "info":
-							scope.messageType = "info";
+							alert.messageType = "info";
 							break;
 						case "error":
 						case "danger":
-							scope.messageType = "danger";
+							alert.messageType = "danger";
 							break;
 					}
 				}
-				scope.title = msg.data.title;
-				scope.message = msg.data.message;
-				$("#alertModal").modal('show')
+				if (!scope.alerts) {
+					scope.alerts = [];
+				}
+				scope.alerts.push(alert);
+				$(alertModalId).modal('show')
 				scope.$apply();
 			});
 		},
