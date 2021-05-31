@@ -274,6 +274,18 @@ angular.module('ideUiCore', ['ngResource'])
 				Layouts.manager.openView(msg.viewId);
 			});
 
+			messageHub.on('workspace.file.deleted', function(msg) {
+				Layouts.manager.closeEditor(msg.data.path);
+			});
+
+			messageHub.on('workspace.file.renamed', function(msg) {
+				Layouts.manager.closeEditor(msg.data.file.path);
+			});
+
+			messageHub.on('workspace.file.moved', function(msg) {
+				Layouts.manager.closeEditor("/" + msg.data.workspace + msg.data.sourcepath + "/" + msg.data.file);
+			});
+
 			if(!scope.menu && url)
 				loadMenu.call(scope);
 			scope.menuClick = function(item, subItem) {
