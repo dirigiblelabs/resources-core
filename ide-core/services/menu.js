@@ -8,25 +8,25 @@
  * Contributors:
  *   SAP - initial API and implementation
  */
-var extensions = require('core/v4/extensions');
-var response = require('http/v4/response');
+let extensions = require('core/v4/extensions');
+let response = require('http/v4/response');
 
-var mainmenu = [];
-var menuExtensions = extensions.getExtensions('ide-menu');
+let mainmenu = [];
+let menuExtensions = extensions.getExtensions('ide-menu');
 
-for (var i = 0; i < menuExtensions.length; i++) {
-    var module = menuExtensions[i];
-    try {
-    	menuExtension = require(module);
-    	var menu = menuExtension.getMenu();
-    	mainmenu.push(menu);	
-    } catch(error) {
-    	console.error('Error occured while loading metadata for the menu: ' + module);
-    	console.error(error);
-    }
+for (let i = 0; i < menuExtensions.length; i++) {
+	let module = menuExtensions[i];
+	try {
+		menuExtension = require(module);
+		let menu = menuExtension.getMenu();
+		mainmenu.push(menu);
+	} catch (error) {
+		console.error('Error occured while loading metadata for the menu: ' + module);
+		console.error(error);
+	}
 }
 
-mainmenu.sort(function(p, n) {
+mainmenu.sort(function (p, n) {
 	return (parseInt(p.order) - parseInt(n.order));
 });
 

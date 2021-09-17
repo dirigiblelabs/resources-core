@@ -8,25 +8,25 @@
  * Contributors:
  *   SAP - initial API and implementation
  */
-var extensions = require('core/v4/extensions');
-var response = require('http/v4/response');
+let extensions = require('core/v4/extensions');
+let response = require('http/v4/response');
 
-var editors = [];
-var editorExtensions = extensions.getExtensions('ide-editor');
+let editors = [];
+let editorExtensions = extensions.getExtensions('ide-editor');
 
-for (var i = 0; editorExtensions != null && i < editorExtensions.length; i++) {
-    var module = editorExtensions[i];
-    try {
-    	var editorExtension = require(module);
-    	var editor = editorExtension.getEditor();
-    	editors.push(editor);	
-    } catch(error) {
-    	console.error('Error occured while loading metadata for the editor: ' + module);
-    	console.error(error);
-    }
+for (let i = 0; editorExtensions != null && i < editorExtensions.length; i++) {
+	let module = editorExtensions[i];
+	try {
+		let editorExtension = require(module);
+		let editor = editorExtension.getEditor();
+		editors.push(editor);
+	} catch (error) {
+		console.error('Error occured while loading metadata for the editor: ' + module);
+		console.error(error);
+	}
 }
 
-editors = editors.sort(function(a, b) {
+editors = editors.sort(function (a, b) {
 	if (a.defaultEditor) {
 		return -1;
 	} else if (b.defaultEditor) {
