@@ -86,7 +86,7 @@ angular.module('ideUiCore', ['ngResource'])
 				if (!editorsForContentType[contentType]) {
 					editorsForContentType[contentType] = [editor.label];
 				} else {
-					editorsForContentType[contentType] = [editor.label];
+					editorsForContentType[contentType].push(editor.label);
 				}
 			});
 		});
