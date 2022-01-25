@@ -1,0 +1,27 @@
+<div class="dg-overlay dg-hidden">
+    <!-- Alert -->
+    <div id="dgIdeAlert" class="fd-message-box-docs-static fd-message-box fd-message-box--{{ alert.type }}">
+        <section class="fd-message-box__content">
+            <header class="fd-bar fd-bar--header fd-message-box__header">
+                <div class="fd-bar__left">
+                    <div class="fd-bar__element">
+                        <i class="sap-icon--message-{{ alert.type }}"></i>
+                        <h2 class="fd-title fd-title--h5">{{ alert.title }}</h2>
+                    </div>
+                </div>
+            </header>
+            <div class="fd-message-box__body">{{ alert.message }}</div>
+            <footer class="fd-bar fd-bar--footer fd-message-box__footer">
+                <div class="fd-bar__right">
+                    <div class="fd-bar__element">
+                        <button
+                            class="fd-button fd-button--emphasized fd-button--compact fd-message-box__decisive-button"
+                            ng-click="hideAlert()">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </footer>
+        </section>
+    </div>
+</div>
