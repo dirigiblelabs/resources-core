@@ -858,24 +858,27 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 messageHub.onDidReceiveMessage(
                     'ide.statusMessage',
                     function (msg) {
-                        scope.message = msg.data;
-                        scope.$apply(); // This is a problem
+                        scope.$apply(function () {
+                            scope.message = msg.data;
+                        });
                     },
                     true
                 );
                 messageHub.onDidReceiveMessage(
                     'ide.statusCaret',
                     function (msg) {
-                        scope.caret = msg.data;
-                        scope.$apply(); // This is a problem
+                        scope.$apply(function () {
+                            scope.caret = msg.data;
+                        });
                     },
                     true
                 );
                 messageHub.onDidReceiveMessage(
                     'ide.statusError',
                     function (msg) {
-                        scope.error = msg.data;
-                        scope.$apply(); // This is a problem
+                        scope.$apply(function () {
+                            scope.error = msg.data;
+                        });
                     },
                     true
                 );
