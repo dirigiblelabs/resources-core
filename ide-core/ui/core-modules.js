@@ -797,7 +797,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         scope.alert = alerts[0];
                         messageBox.classList.add("fd-message-box--active");
                         element[0].classList.remove("dg-hidden");
-                        scope.$apply(); // This is a problem
                     }
                 }
 
@@ -811,32 +810,34 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 messageHub.onDidReceiveMessage(
                     'ide.alert',
                     function (msg) {
-                        let type;
-                        if (msg.data.type) {
-                            switch (msg.data.type.toLowerCase()) {
-                                case "success":
-                                    type = "success";
-                                    break;
-                                case "warning":
-                                    type = "warning";
-                                    break;
-                                case "info":
-                                    type = "information";
-                                    break;
-                                case "error":
-                                    type = "error";
-                                    break;
-                                default:
-                                    type = "information";
-                                    break;
+                        scope.$apply(function () {
+                            let type;
+                            if (msg.data.type) {
+                                switch (msg.data.type.toLowerCase()) {
+                                    case "success":
+                                        type = "success";
+                                        break;
+                                    case "warning":
+                                        type = "warning";
+                                        break;
+                                    case "info":
+                                        type = "information";
+                                        break;
+                                    case "error":
+                                        type = "error";
+                                        break;
+                                    default:
+                                        type = "information";
+                                        break;
+                                }
                             }
-                        }
-                        alerts.push({
-                            title: msg.data.title,
-                            message: msg.data.message,
-                            type: type,
+                            alerts.push({
+                                title: msg.data.title,
+                                message: msg.data.message,
+                                type: type,
+                            });
+                            scope.showAlert();
                         });
-                        scope.showAlert();
                     },
                     true
                 );
