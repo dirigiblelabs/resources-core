@@ -1,6 +1,6 @@
 <div class="dg-overlay dg-hidden">
     <!-- Alert -->
-    <div id="dgIdeAlert" class="fd-message-box-docs-static fd-message-box fd-message-box--{{ alert.type }}">
+    <div id="dgIdeAlert" class="fd-message-box fd-message-box--{{ alert.type }}">
         <section class="fd-message-box__content">
             <header class="fd-bar fd-bar--header fd-message-box__header">
                 <div class="fd-bar__left">
@@ -24,4 +24,115 @@
             </footer>
         </section>
     </div>
+    <!-- Dialog -->
+    <section class="fd-dialog" id="dgIdeDialog">
+        <div role="dialog" aria-modal="true" aria-label="System Dialog"
+            class="fd-dialog__content fd-dialog__content--s">
+            <header class="fd-dialog__header fd-bar"
+                ng-class="{'fd-bar--header-with-subheader' : dialog.subheader !== ''}">
+                <div class="fd-bar__left">
+                    <div class="fd-bar__element" ng-class="{'dg-hidden' : dialog.header === ''}">{{ dialog.header }}
+                    </div>
+                    <div class="fd-bar__element">
+                        <h2 class="fd-title fd-title--h5">{{ dialog.title }}</h2>
+                    </div>
+                </div>
+            </header>
+            <div class="fd-dialog__subheader fd-bar fd-bar--subheader"
+                ng-class="{'dg-hidden' : dialog.subheader === ''}">
+                <div class="fd-bar__left">
+                    <div class="fd-bar__element">{{ dialog.subheader }}</div>
+                </div>
+            </div>
+            <div class="fd-dialog__body">
+                {{ dialog.body }}
+                <div class="fd-dialog__loader fd-busy-indicator--m" ng-class="{'dg-hidden' : dialog.loader === false}"
+                    aria-hidden="{{ dialog.loader }}" aria-label="loading">
+                    <div class="fd-busy-indicator--circle-0"></div>
+                    <div class="fd-busy-indicator--circle-1"></div>
+                    <div class="fd-busy-indicator--circle-2"></div>
+                </div>
+            </div>
+            <footer class="fd-dialog__footer fd-bar fd-bar--footer">
+                <div class="fd-bar__right">
+                    <div class="fd-bar__element" ng-class="{'dg-hidden' : dialog.footer === ''}">{{ dialog.footer }}
+                    </div>
+                    <div class="fd-bar__element" ng-class="{'dg-hidden' : dialog.mainBtnLabel === ''}">
+                        <button class="fd-dialog__decisive-button fd-button fd-button--emphasized fd-button--compact"
+                            ng-click="hideDialog('main')">{{ dialog.mainBtnLabel }}</button>
+                    </div>
+                    <div class="fd-bar__element" ng-class="{'dg-hidden' : dialog.secondaryBtnLabel === ''}">
+                        <button class="fd-dialog__decisive-button fd-button fd-button--compact"
+                            ng-class="{'fd-button--transparent' : dialog.mainBtnLabel !== ''}"
+                            ng-click="hideDialog('secondary')">{{ dialog.secondaryBtnLabel }}</button>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </section>
+    <!-- Selectable dialog -->
+    <section class="fd-dialog" id="dgIdeSelectDialog">
+        <div class="fd-dialog__content" role="dialog" aria-modal="true">
+            <header class="fd-dialog__header fd-bar fd-bar--header-with-subheader">
+                <div class="fd-bar__left">
+                    <div class="fd-bar__element">
+                        <h2 class="fd-title fd-title--h5">{{ selectDialog.title }}</h2>
+                    </div>
+                </div>
+                <div class="fd-bar__right">
+                    <div class="fd-bar__element">
+                        <button ng-click="clearSearch()"
+                            class="fd-button fd-button--transparent fd-button--compact">Clear</button>
+                    </div>
+                </div>
+            </header>
+            <div class="fd-dialog__subheader fd-bar fd-bar--subheader">
+                <div class="fd-bar__middle">
+                    <div class="fd-input-group">
+                        <input class="fd-input fd-input-group__input fd-input--compact" id="dgIdeSelectDialogSearch"
+                            type="text" aria-label="search" placeholder="Search..." ng-model="searchValue"
+                            ng-change="searchChanged()">
+                        <span
+                            class="fd-input-group__addon fd-input-group__addon--button fd-input-group__addon--compact">
+                            <button
+                                class="fd-button fd-input-group__button fd-button--icon fd-button--transparent fd-button--compact"
+                                aria-label="perform search">
+                                <i class="sap-icon--search" role="presentation"></i>
+                            </button>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="fd-dialog__body fd-dialog__body--no-vertical-padding">
+                <ul class="fd-list fd-list--selection fd-list--compact fd-list--no-border" aria-label="selection list"
+                    role="listbox">
+                    <li role="option" tabindex="0" class="fd-list__item" ng-repeat="item in selectDialog.listItems"
+                        ng-hide="item.hidden">
+                        <div class="fd-form-item fd-list__form-item">
+                            <input type="checkbox" class="fd-checkbox fd-checkbox--compact" id="{{ item.id }}"
+                                ng-model="item.selected" ng-change="itemSelected(item.selected)"
+                                aria-labelledby="{{ item.id }}">
+                            <label tabindex="-1" class="fd-checkbox__label fd-checkbox__label--compact"
+                                for="{{ item.id }}"></label>
+                        </div>
+                        <span class="fd-list__title" id="{{ item.id }}">{{ item.text }}</span>
+                    </li>
+                </ul>
+                <span class="fd-list__footer">{{ selectDialog.selectedItems }} item(s) selected </span>
+            </div>
+            <footer class="fd-dialog__footer fd-bar fd-bar--footer">
+                <div class="fd-bar__right">
+                    <div class="fd-bar__element">
+                        <button ng-click="hideSelectDialog('select')"
+                            class="fd-dialog__decisive-button fd-button fd-button--emphasized fd-button--compact"
+                            ng-disabled="!selectDialog.selectedItems">Select</button>
+                    </div>
+                    <div class="fd-bar__element">
+                        <button ng-click="hideSelectDialog('cancel')"
+                            class="fd-dialog__decisive-button fd-button fd-button--transparent fd-button--compact">Cancel</button>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </section>
 </div>

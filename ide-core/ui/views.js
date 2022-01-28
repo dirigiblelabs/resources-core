@@ -32,9 +32,10 @@ angular.module('ideUI', ['ideMessageHub'])
                 messageHub.onDidReceiveMessage(
                     'ide.themeChange',
                     function () {
-                        Theme.reload();
-                        scope.links = Theme.getLinks();
-                        scope.$apply();
+                        scope.$apply(function () {
+                            Theme.reload();
+                            scope.links = Theme.getLinks();
+                        });
                     },
                     true
                 );

@@ -1,40 +1,47 @@
 angular.module('ideMessageHub', [])
     .provider('messageHub', function MessageHubProvider() {
-        this.eventIdPrefix = '';
+        this.eventIdPrefix = "";
         this.eventIdDelimiter = '.';
         this.$get = [function messageHubFactory() {
             let messageHub = new FramesMessageHub();
             let trigger = function (eventId, absolute = false) {
                 if (!eventId)
                     throw Error('eventId argument must be a valid string, identifying an existing event');
-                messageHub.post(
-                    {},
-                    (absolute ? eventId : this.eventIdPrefix + this.eventIdDelimiter + eventId)
-                );
+                if (!absolute && this.eventIdPrefix !== "") eventId = this.eventIdPrefix + this.eventIdDelimiter + eventId;
+                messageHub.post({}, eventId);
             }.bind(this);
             let post = function (eventId, data, absolute = false) {
                 if (!eventId)
                     throw Error('eventId argument must be a valid string, identifying an existing event');
-                messageHub.post(
-                    { data: data },
-                    (absolute ? eventId : this.eventIdPrefix + this.eventIdDelimiter + eventId)
-                );
+                if (!absolute && this.eventIdPrefix !== "") eventId = this.eventIdPrefix + this.eventIdDelimiter + eventId;
+                messageHub.post({ data: data }, eventId);
             }.bind(this);
             let onMessage = function (eventId, callbackFunc, absolute = false) {
                 if (typeof callbackFunc !== 'function')
                     throw Error('Callback argument must be a function');
-                messageHub.subscribe(
-                    callbackFunc,
-                    (absolute ? eventId : this.eventIdPrefix + this.eventIdDelimiter + eventId)
-                );
+                if (!absolute && this.eventIdPrefix !== "") eventId = this.eventIdPrefix + this.eventIdDelimiter + eventId;
+                messageHub.subscribe(callbackFunc, eventId);
             }.bind(this);
+            let setStatusMessage = function (message) {
+                messageHub.post({
+                    message: message,
+                }, 'ide.statusMessage');
+            };
+            let setStatusError = function (message) {
+                messageHub.post({
+                    message: message,
+                }, 'ide.statusError');
+            };
+            let setStatusCaret = function (text) {
+                messageHub.post({
+                    text: text,
+                }, 'ide.statusCaret');
+            };
             let announceAlert = function (title, message, type) {
                 messageHub.post({
-                    data: {
-                        title: title,
-                        message: message,
-                        type: type
-                    }
+                    title: title,
+                    message: message,
+                    type: type
                 }, 'ide.alert');
             };
             let announceAlertSuccess = function (title, message) {
@@ -49,11 +56,58 @@ angular.module('ideMessageHub', [])
             let announceAlertError = function (title, message) {
                 announceAlert(title, message, "error");
             };
+            let showDialog = function (
+                title = "",
+                body = "",
+                mainBtnLabel = "Ok",
+                secondaryBtnLabel = "Cancel",
+                callbackTopic = null,
+                loader = false,
+                header = "",
+                subheader = "",
+                footer = ""
+            ) {
+                messageHub.post({
+                    header: header,
+                    subheader: subheader,
+                    title: title,
+                    body: body,
+                    footer: footer,
+                    loader: loader,
+                    mainBtnLabel: mainBtnLabel,
+                    secondaryBtnLabel: secondaryBtnLabel,
+                    callbackTopic: callbackTopic
+                }, 'ide.dialog');
+            };
+            let showSelectDialog = function (
+                title,
+                listItems,
+                callbackTopic
+            ) {
+                if (title === undefined)
+                    throw Error('Select dialog: Title must be specified');
+                if (listItems === undefined || !Array.isArray(listItems))
+                    throw Error('Select dialog: You must provide a list of strings.');
+                else if (listItems.length === 0)
+                    throw Error('Select dialog: List is empty');
+                if (callbackTopic === undefined)
+                    throw Error('Select dialog: Callback topic must pe specified');
+                messageHub.post({
+                    title: title,
+                    listItems: listItems,
+                    callbackTopic: callbackTopic
+                }, 'ide.selectDialog');
+            };
             return {
+                setStatusMessage: setStatusMessage,
+                setStatusError: setStatusError,
+                setStatusCaret: setStatusCaret,
                 announceAlertSuccess: announceAlertSuccess,
                 announceAlertInfo: announceAlertInfo,
                 announceAlertWarning: announceAlertWarning,
                 announceAlertError: announceAlertError,
+                showDialog: showDialog,
+                showSelectDialog: showSelectDialog,
                 triggerEvent: trigger,
                 'postMessage': post,
                 onDidReceiveMessage: onMessage

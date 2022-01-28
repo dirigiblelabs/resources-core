@@ -779,11 +779,33 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             replace: true,
             link: function (scope, element) {
                 let messageBox = element[0].querySelector("#dgIdeAlert");
+                let ideDialog = element[0].querySelector("#dgIdeDialog");
+                let ideSelectDialog = element[0].querySelector("#dgIdeSelectDialog");
                 let alerts = [];
+                let dialogs = [];
+                let selectDialogs = [];
+                scope.searchValue = "";
                 scope.alert = {
                     title: "",
                     message: "",
                     type: "information", // information, error, success, warning
+                };
+                scope.dialog = {
+                    header: "",
+                    subheader: "",
+                    title: "",
+                    body: "",
+                    footer: "",
+                    loader: false,
+                    mainBtnLabel: "",
+                    secondaryBtnLabel: "",
+                    callbackTopic: null
+                };
+                scope.selectDialog = {
+                    title: "",
+                    listItems: [],
+                    selectedItems: 0,
+                    callbackTopic: ""
                 };
 
                 scope.clearAlerts = function () {
@@ -798,22 +820,96 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         messageBox.classList.add("fd-message-box--active");
                         element[0].classList.remove("dg-hidden");
                     }
-                }
+                };
 
                 scope.hideAlert = function () {
                     messageBox.classList.remove("fd-message-box--active");
                     element[0].classList.add("dg-hidden");
                     alerts.shift();
-                    if (alerts.length > 0) scope.showAlert();
+                    checkForDialogs();
+                };
+
+                scope.showDialog = function () {
+                    if (element[0].classList.contains("dg-hidden")) {
+                        scope.dialog = dialogs[0];
+                        ideDialog.classList.add("fd-dialog--active");
+                        element[0].classList.remove("dg-hidden");
+                    }
+                };
+
+                scope.hideDialog = function (buttonType) {
+                    if (scope.dialog.callbackTopic) messageHub.postMessage(scope.dialog.callbackTopic, buttonType, true);
+                    ideDialog.classList.remove("fd-dialog--active");
+                    element[0].classList.add("dg-hidden");
+                    dialogs.shift();
+                    checkForDialogs();
+                };
+
+                scope.itemSelected = function (selected) {
+                    if (selected) scope.selectDialog.selectedItems += 1;
+                    else scope.selectDialog.selectedItems -= 1;
+                };
+
+                scope.searchChanged = function () {
+                    let value = scope.searchValue.toLowerCase();
+                    if (value === "") scope.clearSearch();
+                    else for (let i = 0; i < scope.selectDialog.listItems.length; i++) {
+                        if (!scope.selectDialog.listItems[i].text.toLowerCase().includes(value))
+                            scope.selectDialog.listItems[i].hidden = true;
+                    }
+                };
+
+                scope.clearSearch = function () {
+                    scope.searchValue = "";
+                    for (let i = 0; i < scope.selectDialog.listItems.length; i++) {
+                        scope.selectDialog.listItems[i].hidden = false;
+                    }
+                };
+
+                scope.showSelectDialog = function () {
+                    if (element[0].classList.contains("dg-hidden")) {
+                        scope.selectDialog = selectDialogs[0];
+                        ideSelectDialog.classList.add("fd-dialog--active");
+                        element[0].classList.remove("dg-hidden");
+                    }
+                };
+
+                scope.hideSelectDialog = function (action) {
+                    if (action === "select") {
+                        if (scope.selectDialog.selectedItems > 0)
+                            messageHub.postMessage(
+                                scope.selectDialog.callbackTopic,
+                                {
+                                    selected: getSelectedItems()
+                                },
+                                true
+                            );
+                        else return;
+                    }
+                    else messageHub.postMessage(
+                        scope.selectDialog.callbackTopic,
+                        { selected: [] },
+                        true
+                    );
+                    ideSelectDialog.classList.remove("fd-dialog--active");
+                    element[0].classList.add("dg-hidden");
+                    selectDialogs.shift();
+                    checkForDialogs();
+                };
+
+                function checkForDialogs() {
+                    if (selectDialogs.length > 0) scope.showSelectDialog();
+                    else if (dialogs.length > 0) scope.showDialog();
+                    else if (alerts.length > 0) scope.showAlert();
                 }
 
                 messageHub.onDidReceiveMessage(
-                    'ide.alert',
-                    function (msg) {
+                    "ide.alert",
+                    function (data) {
                         scope.$apply(function () {
                             let type;
-                            if (msg.data.type) {
-                                switch (msg.data.type.toLowerCase()) {
+                            if (data.type) {
+                                switch (data.type.toLowerCase()) {
                                     case "success":
                                         type = "success";
                                         break;
@@ -832,11 +928,71 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                                 }
                             }
                             alerts.push({
-                                title: msg.data.title,
-                                message: msg.data.message,
+                                title: data.title,
+                                message: data.message,
                                 type: type,
                             });
                             scope.showAlert();
+                        });
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    "ide.dialog",
+                    function (data) {
+                        scope.$apply(function () {
+                            dialogs.push({
+                                header: data.header,
+                                subheader: data.subheader,
+                                title: data.title,
+                                body: data.body,
+                                footer: data.footer,
+                                loader: data.loader,
+                                mainBtnLabel: data.mainBtnLabel,
+                                secondaryBtnLabel: data.secondaryBtnLabel,
+                                callbackTopic: data.callbackTopic
+                            });
+                            scope.showDialog();
+                        });
+                    },
+                    true
+                );
+
+                function getSelectedItems() {
+                    let selected = [];
+                    for (let i = 0; i < scope.selectDialog.listItems.length; i++) {
+                        if (scope.selectDialog.listItems[i].selected)
+                            selected.push(scope.selectDialog.listItems[i].ownId);
+                    }
+                    return selected;
+                }
+
+                function getSelectDialogList(listItems) {
+                    return listItems.map(
+                        function (item, index) {
+                            return {
+                                "id": `idesdl${index}`,
+                                "ownId": item.id,
+                                "text": item.text,
+                                "hidden": false,
+                                "selected": false
+                            };
+                        }
+                    );
+                }
+
+                messageHub.onDidReceiveMessage(
+                    "ide.selectDialog",
+                    function (data) {
+                        scope.$apply(function () {
+                            selectDialogs.push({
+                                title: data.title,
+                                listItems: getSelectDialogList(data.listItems),
+                                selectedItems: 0,
+                                callbackTopic: data.callbackTopic
+                            });
+                            scope.showSelectDialog();
                         });
                     },
                     true
@@ -857,27 +1013,27 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             link: function (scope) {
                 messageHub.onDidReceiveMessage(
                     'ide.statusMessage',
-                    function (msg) {
+                    function (data) {
                         scope.$apply(function () {
-                            scope.message = msg.data;
-                        });
-                    },
-                    true
-                );
-                messageHub.onDidReceiveMessage(
-                    'ide.statusCaret',
-                    function (msg) {
-                        scope.$apply(function () {
-                            scope.caret = msg.data;
+                            scope.message = data.message;
                         });
                     },
                     true
                 );
                 messageHub.onDidReceiveMessage(
                     'ide.statusError',
-                    function (msg) {
+                    function (data) {
                         scope.$apply(function () {
-                            scope.error = msg.data;
+                            scope.error = data.message;
+                        });
+                    },
+                    true
+                );
+                messageHub.onDidReceiveMessage(
+                    'ide.statusCaret',
+                    function (data) {
+                        scope.$apply(function () {
+                            scope.caret = data.text;
                         });
                     },
                     true
