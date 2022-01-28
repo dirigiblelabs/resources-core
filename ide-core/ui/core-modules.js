@@ -275,6 +275,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 menu: '=?menuData'
             },
             link: function (scope, element) {
+                let isMenuOpen = false;
                 scope.themes = Theming.getThemes();
                 scope.user = User.get();
                 let themePopover = element[0].querySelector("#themePopover");
@@ -282,16 +283,20 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 let userPopover = element[0].querySelector("#userPopover");
                 let userPopoverButton = element[0].querySelector("#userPopoverButton");
                 function documentClick(event) {
-                    if (!themePopover.classList.contains("dg-hidden")) {
-                        if (!themePopover.parentElement.contains(event.originalTarget))
-                            toggleThemePopover(true);
-                    }
-                    if (!userPopover.classList.contains("dg-hidden")) {
-                        if (!userPopover.parentElement.contains(event.originalTarget))
-                            toggleUserPopover(true);
+                    if (isMenuOpen) {
+                        if (!themePopover.classList.contains("dg-hidden")) {
+                            if (!themePopover.parentElement.contains(event.target))
+                                toggleThemePopover(true);
+                        }
+                        if (!userPopover.classList.contains("dg-hidden")) {
+                            if (!userPopover.parentElement.contains(event.target))
+                                toggleUserPopover(true);
+                        }
+                        console.log("here");
                     }
                 }
                 function toggleThemePopover(hidden = true) {
+                    isMenuOpen = !hidden;
                     if (hidden) {
                         themePopover.classList.add("dg-hidden");
                         themePopover.setAttribute("aria-expanded", false);
@@ -303,6 +308,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     }
                 }
                 function toggleUserPopover(hidden = true) {
+                    isMenuOpen = !hidden;
                     if (hidden) {
                         userPopover.classList.add("dg-hidden");
                         userPopover.setAttribute("aria-expanded", false);
@@ -459,6 +465,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 };
 
                 scope.themeButtonClicked = function () {
+                    toggleUserPopover(true);
                     if (themePopover.classList.contains("dg-hidden")) {
                         let offset = themePopoverButton.getBoundingClientRect();
                         themePopover.style.top = `${offset.bottom}px`;
@@ -484,6 +491,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 };
 
                 scope.userButtonClicked = function () {
+                    toggleThemePopover(true);
                     if (userPopover.classList.contains("dg-hidden")) {
                         let offset = userPopoverButton.getBoundingClientRect();
                         userPopover.style.top = `${offset.bottom}px`;
@@ -521,7 +529,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             link: function (scope, element) {
                 let isMenuOpen = false;
                 function documentClick(event) {
-                    if (isMenuOpen && !element[0].contains(event.originalTarget)) {
+                    if (isMenuOpen && !element[0].contains(event.target)) {
                         scope.hideAllMenus();
                     }
                 }
@@ -614,7 +622,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             link: function (scope, element) {
                 let isMenuOpen = false;
                 function documentClick(event) {
-                    if (isMenuOpen && !element[0].contains(event.originalTarget)) {
+                    if (isMenuOpen && !element[0].contains(event.target)) {
                         scope.hideAllMenus();
                     }
                 }
