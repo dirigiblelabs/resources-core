@@ -278,7 +278,9 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 scope.themes = Theming.getThemes();
                 scope.user = User.get();
                 let themePopover = element[0].querySelector("#themePopover");
+                let themePopoverButton = element[0].querySelector("#themePopoverButton");
                 let userPopover = element[0].querySelector("#userPopover");
+                let userPopoverButton = element[0].querySelector("#userPopoverButton");
                 function documentClick(event) {
                     if (!themePopover.classList.contains("dg-hidden")) {
                         if (!themePopover.parentElement.contains(event.originalTarget))
@@ -286,12 +288,30 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     }
                     if (!userPopover.classList.contains("dg-hidden")) {
                         if (!userPopover.parentElement.contains(event.originalTarget))
-                            userPopover.classList.add("dg-hidden");
+                            toggleUserPopover(true);
                     }
                 }
                 function toggleThemePopover(hidden = true) {
-                    if (hidden) themePopover.classList.add("dg-hidden");
-                    else themePopover.classList.remove("dg-hidden");
+                    if (hidden) {
+                        themePopover.classList.add("dg-hidden");
+                        themePopover.setAttribute("aria-expanded", false);
+                        themePopoverButton.setAttribute("aria-expanded", false);
+                    } else {
+                        themePopover.classList.remove("dg-hidden");
+                        themePopover.setAttribute("aria-expanded", true);
+                        themePopoverButton.setAttribute("aria-expanded", true);
+                    }
+                }
+                function toggleUserPopover(hidden = true) {
+                    if (hidden) {
+                        userPopover.classList.add("dg-hidden");
+                        userPopover.setAttribute("aria-expanded", false);
+                        userPopoverButton.setAttribute("aria-expanded", false);
+                    } else {
+                        userPopover.classList.remove("dg-hidden");
+                        userPopover.setAttribute("aria-expanded", true);
+                        userPopoverButton.setAttribute("aria-expanded", true);
+                    }
                 }
                 document.addEventListener("click", documentClick);
 
@@ -425,24 +445,22 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 scope.themeButtonLeave = function (event) {
                     let target = event.toElement || event.relatedTarget;
                     if (target) {
-                        if (!target.classList.contains("fd-menu__link")) {
+                        if (!target.classList.contains("fd-menu__link"))
                             toggleThemePopover(true);
-                        }
                     }
                 };
 
                 scope.themeMenuLeave = function (event) {
                     let target = event.toElement || event.relatedTarget;
                     if (target) {
-                        if (!target.classList.contains("fd-tool-header__button")) {
+                        if (!target.classList.contains("fd-tool-header__button"))
                             toggleThemePopover(true);
-                        }
                     }
                 };
 
-                scope.themeButtonClicked = function (menuButton) {
+                scope.themeButtonClicked = function () {
                     if (themePopover.classList.contains("dg-hidden")) {
-                        let offset = menuButton.getBoundingClientRect();
+                        let offset = themePopoverButton.getBoundingClientRect();
                         themePopover.style.top = `${offset.bottom}px`;
                         themePopover.style.right = `${$window.innerWidth - offset.right}px`;
                         toggleThemePopover(false);
@@ -452,28 +470,26 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 scope.userButtonLeave = function (event) {
                     let target = event.toElement || event.relatedTarget;
                     if (target) {
-                        if (!target.classList.contains("fd-menu__link")) {
-                            userPopover.classList.add("dg-hidden");
-                        }
+                        if (!target.classList.contains("fd-menu__link"))
+                            toggleUserPopover(true);
                     }
                 };
 
                 scope.userMenuLeave = function (event) {
                     let target = event.toElement || event.relatedTarget;
                     if (target) {
-                        if (!target.classList.contains("fd-tool-header__button")) {
-                            userPopover.classList.add("dg-hidden");
-                        }
+                        if (!target.classList.contains("fd-tool-header__button"))
+                            toggleUserPopover(true);
                     }
                 };
 
-                scope.userButtonClicked = function (userButton) {
+                scope.userButtonClicked = function () {
                     if (userPopover.classList.contains("dg-hidden")) {
-                        let offset = userButton.getBoundingClientRect();
+                        let offset = userPopoverButton.getBoundingClientRect();
                         userPopover.style.top = `${offset.bottom}px`;
                         userPopover.style.right = `${$window.innerWidth - offset.right}px`;
-                        userPopover.classList.remove("dg-hidden");
-                    } else userPopover.classList.add("dg-hidden");
+                        toggleUserPopover(false);
+                    } else toggleUserPopover(true);
                 };
 
                 scope.setTheme = function (themeId) {
