@@ -292,7 +292,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                             if (!userPopover.parentElement.contains(event.target))
                                 toggleUserPopover(true);
                         }
-                        console.log("here");
                     }
                 }
                 function toggleThemePopover(hidden = true) {
@@ -556,19 +555,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     }
                     isMenuOpen = false;
                 };
-                scope.hideMenu = function (event) {
-                    let menuButton = event.currentTarget.parentElement.querySelector(".fd-button--menu");
-                    let target = event.toElement || event.relatedTarget;
-                    if (target !== menuButton) {
-                        event.currentTarget.classList.add("dg-hidden");
-                    }
-                };
-                scope.menuButtonLeave = function (event) {
-                    let target = event.toElement || event.relatedTarget;
-                    if (!target.classList.contains("fd-menu__link")) {
-                        scope.hideAllMenus();
-                    }
-                };
                 scope.hideAllSubmenus = function (parent) {
                     let submenuLists = parent.querySelectorAll(".fd-menu__sublist");
                     let submenuLinks = parent.querySelectorAll(".fd-menu__link[aria-haspopup]");
@@ -581,30 +567,26 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         submenuLists[i].setAttribute("aria-hidden", true);
                     }
                 };
-                scope.submenuAction = function (submenu) {
-                    let submenuList;
-                    let submenuLink;
-                    if (submenu.classList.contains("fd-menu__item")) {
-                        submenuList = submenu.querySelector(".fd-menu__sublist");
-                        submenuLink = submenu.querySelector(".fd-menu__link");
-                    } else {
-                        submenuList = submenu.parentElement.querySelector(".fd-menu__sublist");
-                        submenuLink = submenu.parentElement.querySelector(".fd-menu__link");
+                scope.submenuShow = function (submenuId) {
+                    let submenu = element[0].querySelector("#" + submenuId);
+                    let submenuList = submenu.querySelector(".fd-menu__sublist");
+                    let submenuLink = submenu.querySelector(".fd-menu__link");
+                    if (!submenuLink.classList.contains("is-expanded")) {
+                        submenuLink.classList.add("is-expanded");
+                        submenuLink.setAttribute("aria-expanded", true);
+                        submenuList.classList.remove("dg-hidden");
+                        submenuList.setAttribute("aria-hidden", false);
                     }
-                    if (submenuList) {
-                        if (!submenuLink.classList.contains("is-expanded")) {
-                            if (submenu.classList.contains("fd-menu__item")) scope.hideAllSubmenus(submenu.parentElement);
-                            else scope.hideAllSubmenus(submenu.parentElement.parentElement);
-                            submenuLink.classList.add("is-expanded");
-                            submenuLink.setAttribute("aria-expanded", true);
-                            submenuList.classList.remove("dg-hidden");
-                            submenuList.setAttribute("aria-hidden", false);
-                        } else {
-                            submenuLink.classList.remove("is-expanded");
-                            submenuLink.setAttribute("aria-expanded", false);
-                            submenuList.classList.add("dg-hidden");
-                            submenuList.setAttribute("aria-hidden", true);
-                        }
+                };
+                scope.submenuHide = function (submenuId, target) {
+                    let submenu = element[0].querySelector("#" + submenuId);
+                    if (!submenu.contains(target)) {
+                        let submenuList = submenu.querySelector(".fd-menu__sublist");
+                        let submenuLink = submenu.querySelector(".fd-menu__link");
+                        submenuLink.classList.remove("is-expanded");
+                        submenuLink.setAttribute("aria-expanded", false);
+                        submenuList.classList.add("dg-hidden");
+                        submenuList.setAttribute("aria-hidden", true);
                     }
                 };
             },
@@ -649,19 +631,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     }
                     isMenuOpen = false;
                 };
-                scope.hideMenu = function (event) {
-                    let menuButton = event.currentTarget.parentElement.querySelector(".fd-button--menu");
-                    let target = event.toElement || event.relatedTarget;
-                    if (target !== menuButton) {
-                        event.currentTarget.classList.add("dg-hidden");
-                    }
-                };
-                scope.menuButtonLeave = function (event) {
-                    let target = event.toElement || event.relatedTarget;
-                    if (!target.classList.contains("fd-menu__link")) {
-                        scope.hideAllMenus();
-                    }
-                };
                 scope.hideAllSubmenus = function (parent) {
                     let submenuLists = parent.querySelectorAll(".fd-menu__sublist");
                     let submenuLinks = parent.querySelectorAll(".fd-menu__link[aria-haspopup]");
@@ -674,30 +643,26 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         submenuLists[i].setAttribute("aria-hidden", true);
                     }
                 };
-                scope.submenuAction = function (submenu) {
-                    let submenuList;
-                    let submenuLink;
-                    if (submenu.classList.contains("fd-menu__item")) {
-                        submenuList = submenu.querySelector(".fd-menu__sublist");
-                        submenuLink = submenu.querySelector(".fd-menu__link");
-                    } else {
-                        submenuList = submenu.parentElement.querySelector(".fd-menu__sublist");
-                        submenuLink = submenu.parentElement.querySelector(".fd-menu__link");
+                scope.submenuShow = function (submenuId) {
+                    let submenu = element[0].querySelector("#" + submenuId);
+                    let submenuList = submenu.querySelector(".fd-menu__sublist");
+                    let submenuLink = submenu.querySelector(".fd-menu__link");
+                    if (!submenuLink.classList.contains("is-expanded")) {
+                        submenuLink.classList.add("is-expanded");
+                        submenuLink.setAttribute("aria-expanded", true);
+                        submenuList.classList.remove("dg-hidden");
+                        submenuList.setAttribute("aria-hidden", false);
                     }
-                    if (submenuList) {
-                        if (!submenuLink.classList.contains("is-expanded")) {
-                            if (submenu.classList.contains("fd-menu__item")) scope.hideAllSubmenus(submenu.parentElement);
-                            else scope.hideAllSubmenus(submenu.parentElement.parentElement);
-                            submenuLink.classList.add("is-expanded");
-                            submenuLink.setAttribute("aria-expanded", true);
-                            submenuList.classList.remove("dg-hidden");
-                            submenuList.setAttribute("aria-hidden", false);
-                        } else {
-                            submenuLink.classList.remove("is-expanded");
-                            submenuLink.setAttribute("aria-expanded", false);
-                            submenuList.classList.add("dg-hidden");
-                            submenuList.setAttribute("aria-hidden", true);
-                        }
+                };
+                scope.submenuHide = function (submenuId, target) {
+                    let submenu = element[0].querySelector("#" + submenuId);
+                    if (!submenu.contains(target)) {
+                        let submenuList = submenu.querySelector(".fd-menu__sublist");
+                        let submenuLink = submenu.querySelector(".fd-menu__link");
+                        submenuLink.classList.remove("is-expanded");
+                        submenuLink.setAttribute("aria-expanded", false);
+                        submenuList.classList.add("dg-hidden");
+                        submenuList.setAttribute("aria-hidden", true);
                     }
                 };
                 scope.menuItemClick = function (item, subItem) {
@@ -719,43 +684,29 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 hideMenuFn: "&",
                 isToplevel: "<",
             },
-            link: function (scope) {
-                scope.hideAllSubmenus = function (parent) {
-                    let submenuLists = parent.querySelectorAll(".fd-menu__sublist");
-                    let submenuLinks = parent.querySelectorAll(".fd-menu__link[aria-haspopup]");
-                    if (submenuLists.length !== submenuLinks.length)
-                        console.error("Error: Submenu list count is different then the submenu link count.");
-                    for (let i = 0; i < submenuLists.length; i++) {
-                        submenuLinks[i].classList.remove("is-expanded");
-                        submenuLinks[i].setAttribute("aria-expanded", false);
-                        submenuLists[i].classList.add("dg-hidden");
-                        submenuLists[i].setAttribute("aria-hidden", true);
-                    }
-                };
-                scope.submenuAction = function (submenu) {
-                    let submenuList;
-                    let submenuLink;
-                    if (submenu.classList.contains("fd-menu__item")) {
-                        submenuList = submenu.querySelector(".fd-menu__sublist");
-                        submenuLink = submenu.querySelector(".fd-menu__link");
-                    } else {
-                        submenuList = submenu.parentElement.querySelector(".fd-menu__sublist");
-                        submenuLink = submenu.parentElement.querySelector(".fd-menu__link");
-                    }
+            link: function (scope, element) {
+                scope.submenuShow = function (submenuId) {
+                    let submenu = element[0].querySelector("#" + submenuId);
+                    let submenuList = submenu.querySelector(".fd-menu__sublist");
+                    let submenuLink = submenu.querySelector(".fd-menu__link");
                     if (submenuList) {
                         if (!submenuLink.classList.contains("is-expanded")) {
-                            if (submenu.classList.contains("fd-menu__item")) scope.hideAllSubmenus(submenu.parentElement);
-                            else scope.hideAllSubmenus(submenu.parentElement.parentElement);
                             submenuLink.classList.add("is-expanded");
                             submenuLink.setAttribute("aria-expanded", true);
                             submenuList.classList.remove("dg-hidden");
                             submenuList.setAttribute("aria-hidden", false);
-                        } else {
-                            submenuLink.classList.remove("is-expanded");
-                            submenuLink.setAttribute("aria-expanded", false);
-                            submenuList.classList.add("dg-hidden");
-                            submenuList.setAttribute("aria-hidden", true);
                         }
+                    }
+                };
+                scope.submenuHide = function (submenuId, target) {
+                    let submenu = element[0].querySelector("#" + submenuId);
+                    if (!submenu.contains(target)) {
+                        let submenuList = submenu.querySelector(".fd-menu__sublist");
+                        let submenuLink = submenu.querySelector(".fd-menu__link");
+                        submenuLink.classList.remove("is-expanded");
+                        submenuLink.setAttribute("aria-expanded", false);
+                        submenuList.classList.add("dg-hidden");
+                        submenuList.setAttribute("aria-hidden", true);
                     }
                 };
                 scope.menuItemClick = function (item, subItem) {

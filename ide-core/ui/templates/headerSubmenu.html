@@ -1,20 +1,19 @@
 <ul class="fd-menu__sublist dg-hidden" aria-hidden="true" role="menu">
-    <li class="fd-menu__item" role="presentation" ng-mouseenter="submenuAction($event.currentTarget)"
-        ng-repeat-start="menuItem in parentItem.items track by $index">
+    <li class="fd-menu__item" role="presentation" ng-repeat-start="menuItem in parentItem.items track by $index"
+        ng-init="subMenuId = ('SM' + submenuIndex + $parent.$index + $index + menuItem.name + parentItem.items.length + menuItem.items.length | removeSpaces)"
+        id="{{ 'P' + subMenuId }}">
         <span ng-if="!menuItem.items" class="fd-menu__link" role="menuitem"
             ng-click="menuItemClick(parentItem, menuItem)">
             <span class="fd-menu__title">{{ menuItem.name }}</span>
         </span>
         <span ng-if="menuItem.items" class="fd-menu__link" role="menuitem" aria-expanded="false" aria-haspopup="true"
-            aria-controls="SM{{ submenuIndex }}{{ $parent.$index }}{{ $index }}{{ menuItem.name | removeSpaces }}{{ parentItem.items.length }}{{ menuItem.items.length }}"
-            ng-click="submenuAction($event.currentTarget)">
+            aria-controls="{{ subMenuId }}" ng-mouseenter="submenuShow('P' + subMenuId)"
+            ng-mouseleave="submenuHide('P' + subMenuId, $event.relatedTarget)">
             <span class="fd-menu__title">{{ menuItem.name }}</span>
             <span class="fd-menu__addon-after fd-menu__addon-after--submenu"></span>
         </span>
-        <header-submenu ng-if="menuItem.items"
-            id="SM{{ submenuIndex }}{{ $parent.$index }}{{ $index }}{{ menuItem.name | removeSpaces }}{{ parentItem.items.length }}{{ menuItem.items.length }}"
-            menu-handler="menuHandler()" hide-menu-fn="hideMenuFn()" parent-item="menuItem"
-            submenu-index="$parent.$index"></header-submenu>
+        <header-submenu ng-if="menuItem.items" id="{{ subMenuId }}" menu-handler="menuHandler()"
+            hide-menu-fn="hideMenuFn()" parent-item="menuItem" submenu-index="$parent.$index"></header-submenu>
     </li>
     <span ng-if="menuItem.divider" class="fd-menu__separator" ng-repeat-end></span>
 </ul>
