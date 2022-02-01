@@ -447,22 +447,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     }
                 };
 
-                scope.themeButtonLeave = function (event) {
-                    let target = event.toElement || event.relatedTarget;
-                    if (target) {
-                        if (!target.classList.contains("fd-menu__link"))
-                            toggleThemePopover(true);
-                    }
-                };
-
-                scope.themeMenuLeave = function (event) {
-                    let target = event.toElement || event.relatedTarget;
-                    if (target) {
-                        if (!target.classList.contains("fd-tool-header__button"))
-                            toggleThemePopover(true);
-                    }
-                };
-
                 scope.themeButtonClicked = function () {
                     toggleUserPopover(true);
                     if (themePopover.classList.contains("dg-hidden")) {
@@ -471,22 +455,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         themePopover.style.right = `${$window.innerWidth - offset.right}px`;
                         toggleThemePopover(false);
                     } else toggleThemePopover(true);
-                };
-
-                scope.userButtonLeave = function (event) {
-                    let target = event.toElement || event.relatedTarget;
-                    if (target) {
-                        if (!target.classList.contains("fd-menu__link"))
-                            toggleUserPopover(true);
-                    }
-                };
-
-                scope.userMenuLeave = function (event) {
-                    let target = event.toElement || event.relatedTarget;
-                    if (target) {
-                        if (!target.classList.contains("fd-tool-header__button"))
-                            toggleUserPopover(true);
-                    }
                 };
 
                 scope.userButtonClicked = function () {

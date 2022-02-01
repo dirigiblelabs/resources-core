@@ -13,13 +13,13 @@
         <div class="fd-tool-header__element">
             <button id="themePopoverButton"
                 class="fd-button fd-button--compact fd-button--transparent fd-button--menu fd-tool-header__button"
-                ng-click="themeButtonClicked()" ng-mouseleave="themeButtonLeave($event)" aria-label="themes menu button"
-                aria-controls="themePopover" aria-expanded="false" aria-haspopup="true">
+                ng-click="themeButtonClicked()" aria-label="themes menu button" aria-controls="themePopover"
+                aria-expanded="false" aria-haspopup="true">
                 <span class="fd-button__text">Theme</span>
                 <i class="sap-icon--slim-arrow-down"></i>
             </button>
             <div class="fd-popover__body fd-popover__body--right fd-popover__body--no-arrow dg-fixed-menu dg-hidden"
-                aria-hidden="false" id="themePopover" ng-mouseleave="themeMenuLeave($event)">
+                aria-hidden="false" id="themePopover">
                 <div class="fd-popover__wrapper" style="max-height: 250px;">
                     <nav class="fd-menu">
                         <ul class="fd-menu__list" role="menu">
@@ -42,13 +42,13 @@
         <div class="fd-tool-header__element">
             <button id="userPopoverButton"
                 class="fd-button fd-button--compact fd-button--transparent fd-tool-header__button"
-                ng-click="userButtonClicked()" ng-mouseleave="userButtonLeave($event)" aria-label="user menu button"
-                aria-controls="userPopover" aria-expanded="false" aria-haspopup="true">
+                ng-click="userButtonClicked()" aria-label="user menu button" aria-controls="userPopover"
+                aria-expanded="false" aria-haspopup="true">
                 <i class="sap-icon--account" role="presentation"></i>
                 <span class="fd-button__text">{{ user.name }}</span>
             </button>
             <div class="fd-popover__body fd-popover__body--right fd-popover__body--no-arrow dg-fixed-menu dg-hidden"
-                aria-hidden="false" id="userPopover" ng-mouseleave="userMenuLeave($event)">
+                aria-hidden="false" id="userPopover">
                 <div class="fd-popover__wrapper" style="max-height: 250px;">
                     <nav class="fd-menu">
                         <ul class="fd-menu__list" role="menu">
