@@ -37,11 +37,6 @@
                         <h2 class="fd-title fd-title--h5">{{ dialog.title }}</h2>
                     </div>
                 </div>
-                <div class="fd-bar__right" ng-if="dialog.buttons.length === 0">
-                    <div class="fd-bar__element">
-                        <button ng-click="hideDialog()" class="fd-button fd-button--compact">Close</button>
-                    </div>
-                </div>
             </header>
             <div class="fd-dialog__subheader fd-bar fd-bar--subheader"
                 ng-class="{'dg-hidden' : dialog.subheader === ''}">
@@ -74,7 +69,8 @@
     <!-- Selectable dialog -->
     <section class="fd-dialog" id="dgIdeSelectDialog">
         <div class="fd-dialog__content" role="dialog" aria-modal="true">
-            <header class="fd-dialog__header fd-bar fd-bar--header-with-subheader">
+            <header class="fd-dialog__header fd-bar"
+                ng-class="{'fd-bar--header-with-subheader' : selectDialog.hasSearch}">
                 <div class="fd-bar__left">
                     <div class="fd-bar__element">
                         <h2 class="fd-title fd-title--h5">{{ selectDialog.title }}</h2>
@@ -153,6 +149,26 @@
                     </div>
                 </div>
             </footer>
+        </div>
+    </section>
+    <!-- Window -->
+    <section class="fd-dialog" id="dgIdeDialogWindow">
+        <div role="dialog" aria-modal="true" aria-label="System Window" class="fd-dialog__content dg-window__content">
+            <header class="fd-dialog__header fd-bar">
+                <div class="fd-bar__left">
+                    <div class="fd-bar__element">
+                        <h2 class="fd-title fd-title--h5">{{ window.title }}</h2>
+                    </div>
+                </div>
+                <div class="fd-bar__right">
+                    <div class="fd-bar__element">
+                        <button ng-click="hideWindow()" class="fd-button fd-button--compact">Close</button>
+                    </div>
+                </div>
+            </header>
+            <div class="fd-dialog__body dg-window-body">
+                <iframe ng-src="{{ window.link }}" parameters="{{ window.parameters }}"></iframe>
+            </div>
         </div>
     </section>
 </div>

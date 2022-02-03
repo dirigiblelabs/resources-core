@@ -80,6 +80,9 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             }
         };
     }])
+    .service('DialogWindows', ['$resource', function ($resource) {
+        return $resource('/services/v4/js/ide-core/services/dialog-windows.js');
+    }])
     .provider('Editors', function () {
         function getEditors() {
             let xhr = new XMLHttpRequest();
@@ -432,6 +435,8 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     } else if (item.event === 'openView') {
                         // open view
                         Layouts.manager.openView(item.name.toLowerCase());
+                    } else if (item.event === 'openDialogWindow') {
+                        messageHub.showDialogWindow(item.dialogId);
                     } else if (item.name === 'Reset') {
                         scope.resetViews();
                     } else {
@@ -732,15 +737,21 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             templateUrl: '/services/v4/web/ide-core/ui/templates/ideSidebar.html'
         }
     }])
-    .directive('ideDialogs', ['messageHub', function (messageHub) {
+    /**
+     * Used for Dialogs and Window Dialogs
+     */
+    .directive('ideDialogs', ['messageHub', 'DialogWindows', function (messageHub, DialogWindows) {
         return {
             restrict: 'E',
             replace: true,
             link: function (scope, element) {
+                let dialogWindows = DialogWindows.query();
                 let messageBox = element[0].querySelector("#dgIdeAlert");
                 let ideDialog = element[0].querySelector("#dgIdeDialog");
                 let ideSelectDialog = element[0].querySelector("#dgIdeSelectDialog");
+                let ideDialogWindow = element[0].querySelector("#dgIdeDialogWindow");
                 let alerts = [];
+                let windows = [];
                 let dialogs = [];
                 let selectDialogs = [];
                 scope.searchValue = "";
@@ -768,40 +779,37 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     isSingleChoice: true,
                     hasSearch: false
                 };
-
-                scope.clearAlerts = function () {
-                    scope.alerts = [];
-                    element[0].classList.add("dg-hidden");
-                    messageBox.classList.remove("fd-message-box--active");
+                scope.window = {
+                    title: "",
+                    dialogWindowId: "",
+                    callbackTopic: null,
+                    link: "",
+                    parameters: ""
                 };
 
                 scope.showAlert = function () {
-                    if (element[0].classList.contains("dg-hidden")) {
-                        scope.alert = alerts[0];
-                        messageBox.classList.add("fd-message-box--active");
+                    if (element[0].classList.contains("dg-hidden"))
                         element[0].classList.remove("dg-hidden");
-                    }
+                    scope.alert = alerts[0];
+                    messageBox.classList.add("fd-message-box--active");
                 };
 
                 scope.hideAlert = function () {
                     messageBox.classList.remove("fd-message-box--active");
-                    element[0].classList.add("dg-hidden");
                     alerts.shift();
                     checkForDialogs();
                 };
 
                 scope.showDialog = function () {
-                    if (element[0].classList.contains("dg-hidden")) {
-                        scope.dialog = dialogs[0];
-                        ideDialog.classList.add("fd-dialog--active");
+                    if (element[0].classList.contains("dg-hidden"))
                         element[0].classList.remove("dg-hidden");
-                    }
+                    scope.dialog = dialogs[0];
+                    ideDialog.classList.add("fd-dialog--active");
                 };
 
                 scope.hideDialog = function (buttonId) {
                     if (buttonId && scope.dialog.callbackTopic) messageHub.postMessage(scope.dialog.callbackTopic, buttonId, true);
                     ideDialog.classList.remove("fd-dialog--active");
-                    element[0].classList.add("dg-hidden");
                     dialogs.shift();
                     checkForDialogs();
                 };
@@ -833,11 +841,10 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 };
 
                 scope.showSelectDialog = function () {
-                    if (element[0].classList.contains("dg-hidden")) {
-                        scope.selectDialog = selectDialogs[0];
-                        ideSelectDialog.classList.add("fd-dialog--active");
+                    if (element[0].classList.contains("dg-hidden"))
                         element[0].classList.remove("dg-hidden");
-                    }
+                    scope.selectDialog = selectDialogs[0];
+                    ideSelectDialog.classList.add("fd-dialog--active");
                 };
 
                 scope.hideSelectDialog = function (action) {
@@ -860,14 +867,44 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                             );
                         else return;
                     }
-                    else messageHub.postMessage(
-                        scope.selectDialog.callbackTopic,
-                        { selected: [] },
-                        true
-                    );
+                    else {
+                        let selected;
+                        if (scope.selectDialog.isSingleChoice) selected = "";
+                        else selected = [];
+                        messageHub.postMessage(
+                            scope.selectDialog.callbackTopic,
+                            { selected: selected },
+                            true
+                        );
+                    }
                     ideSelectDialog.classList.remove("fd-dialog--active");
                     element[0].classList.add("dg-hidden");
                     selectDialogs.shift();
+                    checkForDialogs();
+                };
+
+                scope.showWindow = function () {
+                    scope.window = windows[0];
+                    if (scope.window.link === "") {
+                        console.log(scope.window);
+                        console.error(
+                            "Dialog Window Error: The link property is missing."
+                        );
+                        windows.shift();
+                        checkForDialogs();
+                        return;
+                    }
+                    if (element[0].classList.contains("dg-hidden"))
+                        element[0].classList.remove("dg-hidden");
+                    ideDialogWindow.classList.add("fd-message-box--active");
+                };
+
+                scope.hideWindow = function () {
+                    if (scope.window.callbackTopic) messageHub.trigger(scope.dialog.callbackTopic, true);
+                    ideDialogWindow.classList.remove("fd-dialog--active");
+                    windows.shift();
+                    scope.window.link = "";
+                    scope.window.parameters = "";
                     checkForDialogs();
                 };
 
@@ -875,6 +912,8 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     if (selectDialogs.length > 0) scope.showSelectDialog();
                     else if (dialogs.length > 0) scope.showDialog();
                     else if (alerts.length > 0) scope.showAlert();
+                    else if (windows.length > 0) scope.showWindow();
+                    else element[0].classList.add("dg-hidden");
                 }
 
                 messageHub.onDidReceiveMessage(
@@ -968,6 +1007,33 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                                 hasSearch: data.hasSearch
                             });
                             scope.showSelectDialog();
+                        });
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    "ide.dialogWindow",
+                    function (data) {
+                        scope.$apply(function () {
+                            let found = false;
+                            for (let i = 0; i < dialogWindows.length; i++) {
+                                if (dialogWindows[i].id === data.dialogWindowId) {
+                                    found = true;
+                                    windows.push({
+                                        title: dialogWindows[i].title,
+                                        dialogWindowId: dialogWindows[i].id,
+                                        callbackTopic: data.callbackTopic,
+                                        link: dialogWindows[i].link,
+                                        parameters: data.parameters || ""
+                                    });
+                                    break;
+                                }
+                            }
+                            if (found) scope.showWindow();
+                            else console.error(
+                                "Dialog Window Error: There is no window dialog with such id."
+                            );
                         });
                     },
                     true

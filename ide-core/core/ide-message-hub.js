@@ -70,6 +70,8 @@ angular.module('ideMessageHub', [])
                 subheader = "",
                 footer = ""
             ) {
+                if (buttons.length === 0)
+                    throw Error("Dialog: There must be at least one button");
                 messageHub.post({
                     header: header,
                     subheader: subheader,
@@ -89,13 +91,13 @@ angular.module('ideMessageHub', [])
                 hasSearch = false
             ) {
                 if (title === undefined)
-                    throw Error('Select dialog: Title must be specified');
+                    throw Error("Select dialog: Title must be specified");
                 if (listItems === undefined || !Array.isArray(listItems))
-                    throw Error('Select dialog: You must provide a list of strings.');
+                    throw Error("Select dialog: You must provide a list of strings.");
                 else if (listItems.length === 0)
-                    throw Error('Select dialog: List is empty');
+                    throw Error("Select dialog: List is empty");
                 if (callbackTopic === undefined)
-                    throw Error('Select dialog: Callback topic must pe specified');
+                    throw Error("Select dialog: Callback topic must pe specified");
                 messageHub.post({
                     title: title,
                     listItems: listItems,
@@ -103,6 +105,17 @@ angular.module('ideMessageHub', [])
                     isSingleChoice: isSingleChoice,
                     hasSearch: hasSearch
                 }, 'ide.selectDialog');
+            };
+            let showWindowDialog = function (
+                dialogWindowId = "",
+                parameters = "",
+                callbackTopic = null
+            ) {
+                messageHub.post({
+                    dialogWindowId: dialogWindowId,
+                    parameters: parameters,
+                    callbackTopic: callbackTopic
+                }, 'ide.dialogWindow');
             };
             return {
                 setStatusMessage: setStatusMessage,
@@ -114,6 +127,7 @@ angular.module('ideMessageHub', [])
                 announceAlertError: announceAlertError,
                 showDialog: showDialog,
                 showSelectDialog: showSelectDialog,
+                showWindowDialog: showWindowDialog,
                 triggerEvent: trigger,
                 'postMessage': post,
                 onDidReceiveMessage: onMessage
