@@ -756,15 +756,17 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     body: "",
                     footer: "",
                     loader: false,
-                    mainBtnLabel: "",
-                    secondaryBtnLabel: "",
+                    buttons: [],
                     callbackTopic: null
                 };
                 scope.selectDialog = {
                     title: "",
                     listItems: [],
                     selectedItems: 0,
-                    callbackTopic: ""
+                    selectedItemId: "",
+                    callbackTopic: "",
+                    isSingleChoice: true,
+                    hasSearch: false
                 };
 
                 scope.clearAlerts = function () {
@@ -796,17 +798,22 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     }
                 };
 
-                scope.hideDialog = function (buttonType) {
-                    if (scope.dialog.callbackTopic) messageHub.postMessage(scope.dialog.callbackTopic, buttonType, true);
+                scope.hideDialog = function (buttonId) {
+                    if (buttonId && scope.dialog.callbackTopic) messageHub.postMessage(scope.dialog.callbackTopic, buttonId, true);
                     ideDialog.classList.remove("fd-dialog--active");
                     element[0].classList.add("dg-hidden");
                     dialogs.shift();
                     checkForDialogs();
                 };
 
-                scope.itemSelected = function (selected) {
-                    if (selected) scope.selectDialog.selectedItems += 1;
-                    else scope.selectDialog.selectedItems -= 1;
+                scope.itemSelected = function (item) {
+                    if (scope.selectDialog.isSingleChoice) {
+                        scope.selectDialog.selectedItemId = item;
+                        scope.selectDialog.selectedItems = 1;
+                    } else {
+                        if (item) scope.selectDialog.selectedItems += 1;
+                        else scope.selectDialog.selectedItems -= 1;
+                    }
                 };
 
                 scope.searchChanged = function () {
@@ -835,8 +842,16 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
 
                 scope.hideSelectDialog = function (action) {
                     if (action === "select") {
-                        if (scope.selectDialog.selectedItems > 0)
-                            messageHub.postMessage(
+                        if (scope.selectDialog.selectedItems > 0 || scope.selectDialog.selectedItemId !== "")
+                            if (scope.selectDialog.isSingleChoice)
+                                messageHub.postMessage(
+                                    scope.selectDialog.callbackTopic,
+                                    {
+                                        selected: scope.selectDialog.selectedItemId
+                                    },
+                                    true
+                                );
+                            else messageHub.postMessage(
                                 scope.selectDialog.callbackTopic,
                                 {
                                     selected: getSelectedItems()
@@ -908,8 +923,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                                 body: data.body,
                                 footer: data.footer,
                                 loader: data.loader,
-                                mainBtnLabel: data.mainBtnLabel,
-                                secondaryBtnLabel: data.secondaryBtnLabel,
+                                buttons: data.buttons,
                                 callbackTopic: data.callbackTopic
                             });
                             scope.showDialog();
@@ -949,7 +963,9 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                                 title: data.title,
                                 listItems: getSelectDialogList(data.listItems),
                                 selectedItems: 0,
-                                callbackTopic: data.callbackTopic
+                                callbackTopic: data.callbackTopic,
+                                isSingleChoice: data.isSingleChoice,
+                                hasSearch: data.hasSearch
                             });
                             scope.showSelectDialog();
                         });
@@ -1012,16 +1028,16 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             restrict: 'E',
             replace: true,
             scope: {
-                viewsModel: '=',
-                viewsLayoutViews: '@',
+                layoutModel: '=',
+                layoutViews: '@', // Do we need this?
             },
             link: function (scope, element) {
                 let views;
                 if (scope.layoutViews) views = scope.layoutViews.split(',');
-                else views = scope.viewsModel.views;
-                let eventHandlers = scope.viewsModel.events;
-                let viewSettings = scope.viewsModel.viewSettings;
-                let layoutSettings = scope.viewsModel.layoutSettings;
+                else views = scope.layoutModel.views;
+                let eventHandlers = scope.layoutModel.events;
+                let viewSettings = scope.layoutModel.viewSettings;
+                let layoutSettings = scope.layoutModel.layoutSettings;
 
                 viewRegistry.get().then(function (registry) {
                     scope.layoutManager = new LayoutController(registry);

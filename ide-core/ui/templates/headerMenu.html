@@ -5,7 +5,7 @@
             <span class="fd-button__text">{{ menuItem.name }}</span>
             <i class="sap-icon--slim-arrow-down"></i>
         </button>
-        <nav class="fd-menu dg-fixed-menu dg-hidden">
+        <nav class="fd-menu fd-menu--compact dg-fixed-menu dg-hidden">
             <ul class="fd-menu__list" role="menu">
                 <li class="fd-menu__item" role="presentation" ng-repeat-start="item in menuItem.items track by $index"
                     ng-init="menuId = ('SM' + $parent.$index + $index + item.name | removeSpaces)"

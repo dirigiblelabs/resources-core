@@ -59,8 +59,11 @@ angular.module('ideMessageHub', [])
             let showDialog = function (
                 title = "",
                 body = "",
-                mainBtnLabel = "Ok",
-                secondaryBtnLabel = "Cancel",
+                buttons = [{
+                    id: "b1",
+                    type: "normal", // normal, emphasized, transparent
+                    label: "Ok",
+                }],
                 callbackTopic = null,
                 loader = false,
                 header = "",
@@ -74,15 +77,16 @@ angular.module('ideMessageHub', [])
                     body: body,
                     footer: footer,
                     loader: loader,
-                    mainBtnLabel: mainBtnLabel,
-                    secondaryBtnLabel: secondaryBtnLabel,
+                    buttons: buttons,
                     callbackTopic: callbackTopic
                 }, 'ide.dialog');
             };
             let showSelectDialog = function (
                 title,
                 listItems,
-                callbackTopic
+                callbackTopic,
+                isSingleChoice = true,
+                hasSearch = false
             ) {
                 if (title === undefined)
                     throw Error('Select dialog: Title must be specified');
@@ -95,7 +99,9 @@ angular.module('ideMessageHub', [])
                 messageHub.post({
                     title: title,
                     listItems: listItems,
-                    callbackTopic: callbackTopic
+                    callbackTopic: callbackTopic,
+                    isSingleChoice: isSingleChoice,
+                    hasSearch: hasSearch
                 }, 'ide.selectDialog');
             };
             return {

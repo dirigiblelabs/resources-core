@@ -37,6 +37,11 @@
                         <h2 class="fd-title fd-title--h5">{{ dialog.title }}</h2>
                     </div>
                 </div>
+                <div class="fd-bar__right" ng-if="dialog.buttons.length === 0">
+                    <div class="fd-bar__element">
+                        <button ng-click="hideDialog()" class="fd-button fd-button--compact">Close</button>
+                    </div>
+                </div>
             </header>
             <div class="fd-dialog__subheader fd-bar fd-bar--subheader"
                 ng-class="{'dg-hidden' : dialog.subheader === ''}">
@@ -53,18 +58,14 @@
                     <div class="fd-busy-indicator--circle-2"></div>
                 </div>
             </div>
-            <footer class="fd-dialog__footer fd-bar fd-bar--footer">
+            <footer ng-if="dialog.buttons.length > 0" class="fd-dialog__footer fd-bar fd-bar--footer">
                 <div class="fd-bar__right">
                     <div class="fd-bar__element" ng-class="{'dg-hidden' : dialog.footer === ''}">{{ dialog.footer }}
                     </div>
-                    <div class="fd-bar__element" ng-class="{'dg-hidden' : dialog.mainBtnLabel === ''}">
-                        <button class="fd-dialog__decisive-button fd-button fd-button--emphasized fd-button--compact"
-                            ng-click="hideDialog('main')">{{ dialog.mainBtnLabel }}</button>
-                    </div>
-                    <div class="fd-bar__element" ng-class="{'dg-hidden' : dialog.secondaryBtnLabel === ''}">
+                    <div class="fd-bar__element" ng-repeat="btn in dialog.buttons">
                         <button class="fd-dialog__decisive-button fd-button fd-button--compact"
-                            ng-class="{'fd-button--transparent' : dialog.mainBtnLabel !== ''}"
-                            ng-click="hideDialog('secondary')">{{ dialog.secondaryBtnLabel }}</button>
+                            ng-class="{'normal':'', 'emphasized':'fd-button--emphasized', 'transparent':'fd-button--transparent'}[btn.type]"
+                            ng-click="hideDialog(btn.id)">{{ btn.label }}</button>
                     </div>
                 </div>
             </footer>
@@ -79,14 +80,14 @@
                         <h2 class="fd-title fd-title--h5">{{ selectDialog.title }}</h2>
                     </div>
                 </div>
-                <div class="fd-bar__right">
+                <div class="fd-bar__right" ng-if="selectDialog.hasSearch">
                     <div class="fd-bar__element">
                         <button ng-click="clearSearch()"
                             class="fd-button fd-button--transparent fd-button--compact">Clear</button>
                     </div>
                 </div>
             </header>
-            <div class="fd-dialog__subheader fd-bar fd-bar--subheader">
+            <div ng-if="selectDialog.hasSearch" class="fd-dialog__subheader fd-bar fd-bar--subheader">
                 <div class="fd-bar__middle">
                     <div class="fd-input-group">
                         <input class="fd-input fd-input-group__input fd-input--compact" id="dgIdeSelectDialogSearch"
@@ -104,7 +105,24 @@
                 </div>
             </div>
             <div class="fd-dialog__body fd-dialog__body--no-vertical-padding">
-                <ul class="fd-list fd-list--selection fd-list--compact fd-list--no-border" aria-label="selection list"
+                <fieldset class="fd-fieldset" ng-if="selectDialog.isSingleChoice">
+                    <ul class="fd-list fd-list--selection fd-list--compact fd-list--no-border"
+                        aria-label="selection list" role="listbox">
+                        <li role="option" tabindex="0" class="fd-list__item" ng-repeat="item in selectDialog.listItems"
+                            ng-hide="item.hidden">
+                            <div class="fd-form-item fd-list__form-item">
+                                <input type="radio" class="fd-radio fd-radio--compact" id="{{ item.id }}"
+                                    name="select_dialog_radio" ng-model="item.selected"
+                                    ng-change="itemSelected(item.ownId)" aria-labelledby="{{ item.id }}">
+                                <label tabindex="-1" class="fd-radio__label fd-radio__label--compact"
+                                    for="{{ item.id }}"></label>
+                            </div>
+                            <span class="fd-list__title">{{ item.text }}</span>
+                        </li>
+                    </ul>
+                </fieldset>
+                <ul ng-if="!selectDialog.isSingleChoice"
+                    class="fd-list fd-list--selection fd-list--compact fd-list--no-border" aria-label="selection list"
                     role="listbox">
                     <li role="option" tabindex="0" class="fd-list__item" ng-repeat="item in selectDialog.listItems"
                         ng-hide="item.hidden">
@@ -115,10 +133,12 @@
                             <label tabindex="-1" class="fd-checkbox__label fd-checkbox__label--compact"
                                 for="{{ item.id }}"></label>
                         </div>
-                        <span class="fd-list__title" id="{{ item.id }}">{{ item.text }}</span>
+                        <span class="fd-list__title">{{ item.text }}</span>
                     </li>
                 </ul>
-                <span class="fd-list__footer">{{ selectDialog.selectedItems }} item(s) selected </span>
+                <span class="fd-list__footer"
+                    ng-class="{'dg-hidden' : selectDialog.isSingleChoice}">{{ selectDialog.selectedItems }} item(s)
+                    selected</span>
             </div>
             <footer class="fd-dialog__footer fd-bar fd-bar--footer">
                 <div class="fd-bar__right">
