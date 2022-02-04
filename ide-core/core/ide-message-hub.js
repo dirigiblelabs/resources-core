@@ -106,7 +106,7 @@ angular.module('ideMessageHub', [])
                     hasSearch: hasSearch
                 }, 'ide.selectDialog');
             };
-            let showWindowDialog = function (
+            let showDialogWindow = function (
                 dialogWindowId = "",
                 parameters = "",
                 callbackTopic = null
@@ -127,7 +127,7 @@ angular.module('ideMessageHub', [])
                 announceAlertError: announceAlertError,
                 showDialog: showDialog,
                 showSelectDialog: showSelectDialog,
-                showWindowDialog: showWindowDialog,
+                showDialogWindow: showDialogWindow,
                 triggerEvent: trigger,
                 'postMessage': post,
                 onDidReceiveMessage: onMessage
