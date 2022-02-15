@@ -754,7 +754,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 let windows = [];
                 let dialogs = [];
                 let selectDialogs = [];
-                scope.searchValue = "";
+                scope.searchInput = { value: "" }; // AngularJS - "If you use ng-model, you have to use an object property, not just a variable"
                 scope.alert = {
                     title: "",
                     message: "",
@@ -825,7 +825,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 };
 
                 scope.searchChanged = function () {
-                    let value = scope.searchValue.toLowerCase();
+                    let value = scope.searchInput.value.toLowerCase();
                     if (value === "") scope.clearSearch();
                     else for (let i = 0; i < scope.selectDialog.listItems.length; i++) {
                         if (!scope.selectDialog.listItems[i].text.toLowerCase().includes(value))
@@ -834,7 +834,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 };
 
                 scope.clearSearch = function () {
-                    scope.searchValue = "";
+                    scope.searchInput.value = "";
                     for (let i = 0; i < scope.selectDialog.listItems.length; i++) {
                         scope.selectDialog.listItems[i].hidden = false;
                     }
