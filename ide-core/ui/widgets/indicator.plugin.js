@@ -19,10 +19,11 @@
         customSort: function (firstNodeId, secondNodeId) {
             let firstNode = this.get_node(firstNodeId);
             let secondNode = this.get_node(secondNodeId);
-            if (firstNode.type == secondNode.type) {
+            if (firstNode.type == secondNode.type)
                 return firstNode.text.localeCompare(secondNode.text, "en", { numeric: true, sensitivity: "base" });
-            }
-            else return (firstNode.type === "folder") ? false : true;
+            else if (firstNode.type === "folder") return false;
+            else if (secondNode.type === "folder") return true;
+            else return firstNode.text.localeCompare(secondNode.text, "en", { numeric: true, sensitivity: "base" });
         },
         rowIndicator: function (element, node) {
             if (node) {
