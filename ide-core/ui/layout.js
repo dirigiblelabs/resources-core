@@ -8,434 +8,1033 @@
  * Contributors:
  *   SAP - initial API and implementation
  */
-let ViewRegistry = function () {
-
-    let _views = {};
-
-    let _factories = {};
-
-    this.factory = function (name, func) {
-        if (arguments.length == 1)
-            return _factories[name];
-
-        if (typeof func !== 'function')
-            throw Error('Not a function');
-        _factories[name] = func;
-        return this;
-    }
-
-    this.factories = function () {
-        return _factories;
-    }
-
-    this.view = function (viewid, factory, region, label, settings) {
-        if (viewid === undefined)
-            throw Error('Illegal argument for viewid ' + viewid);
-        //get view
-        if (arguments.length == 1)
-            return _views[viewid];
-        //set view
-        if (factory === undefined)
-            throw Error('Illegal argument for factory ' + factory);
-        let componentName;
-        if (typeof factory === 'string')
-            componentName = factory;
-        else if (typeof factory === 'function') {
-            this.factory(viewid, factory);
-            componentName = viewid;
-        }
-        region = region || 'center-bottom';
-        settings = settings || [];
-        settings.label = label;
-
-        _views[viewid] = {
-            id: viewid,
-            type: 'component',
-            componentName: componentName,
-            componentState: settings,
-            defaultRegionId: region
-        }
-        return this;
-    };
-
-    this.views = function () {
-        return _views;
-    }
-
-    return this;
-
-};
-
-function LayoutController(viewRegistry, messageHub) {
-
-    this.viewRegistry = viewRegistry;
-
-    this.regions = {
-        'main': {
-            id: 'main',
-            type: 'row',
-            isClosable: false
-        },
-        'left': {
-            id: 'left',
-            type: 'column',
-            width: 30,
-            defaultRegionId: 'main'
-        },
-        'left-top': {
-            id: 'left-top',
-            type: 'stack',
-            defaultRegionId: 'left'
-        },
-        'left-middle': {
-            id: 'left-middle',
-            type: 'stack',
-            defaultRegionId: 'left'
-        },
-        'left-bottom': {
-            id: 'left-bottom',
-            type: 'stack',
-            defaultRegionId: 'left'
-        },
-        'center': {
-            id: 'center',
-            type: 'column',
-            defaultRegionId: 'main'
-        },
-        'center-top': {
-            id: 'center-top',
-            type: 'stack',
-            defaultRegionId: 'center'
-        },
-        'center-middle': {
-            id: 'center-middle',
-            type: 'stack',
-            defaultRegionId: 'center'
-        },
-        'center-bottom': {
-            id: 'center-bottom',
-            type: 'stack',
-            defaultRegionId: 'center'
-        },
-        'right': {
-            id: 'right',
-            type: 'column',
-            defaultRegionId: 'main'
-        },
-        'right-top': {
-            id: 'right-top',
-            type: 'stack',
-            defaultRegionId: 'right'
-        },
-        'right-middle': {
-            id: 'right-middle',
-            type: 'stack',
-            defaultRegionId: 'right'
-        },
-        'right-bottom': {
-            id: 'right-bottom',
-            type: 'stack',
-            defaultRegionId: 'right'
-        }
-    }
-
-    let parentIds = function (node, regionId, arr) {
-        arr = arr || [];
-        let _parentId = regionId || node.defaultRegionId;
-        if (!_parentId)
-            return arr;
-        if (this.regions[_parentId]) {
-            arr.push(_parentId);
-            return parentIds.call(this, this.regions[_parentId], undefined, arr);
-        }
-        return arr;
-    };
-
-    let copy = function (src) {
-        return JSON.parse(JSON.stringify(src));
-    };
-
-    let gridItem = function (top, id) {
-        if (top.id === id)
-            return top;
-        if (top.content) {
-            let item = top.content.find(function (_item) {
-                return gridItem(_item, id);
-            });
-            return item && gridItem(item, id)
-        }
-    };
-
-    let addView = function (views, view, grid) {
-        let node;
-        let path = [view.id].concat(parentIds.call(this, view));
-        //build branches top-bottom
-        path.reverse().forEach(function (compId, idx, arr) {
-            let _gridNode = gridItem(grid, compId);
-            if (_gridNode) {
-                node = _gridNode;
-                return;//next
-            } else {
-                let child = this.regions[compId] || views[compId];
-                if (child) {
-                    child = copy(child);
-                    if (!node.content)
-                        node.content = [];
-                    if (!node.content.find(function (it) { return it.id == child.id }))
-                        node.content.push(child);
-                    node = child;
-                }
-            }
-        }.bind(this));
-    }.bind(this);
-
-    this.layoutViews = function (views) {
-        let grid = copy(this.regions.main);
-        if (views) {
-            Object.values(views).map(function (view) {
-                if (view) {
-                    view = copy(view);
-                    addView(views, view, grid);
-                }
-                return view;
-            }.bind(this));
-        }
-        return grid;
-    }.bind(this);
-
-    this.messageHub = messageHub || new FramesMessageHub();
-
-    this.listeners = {};
-
-    this.addListener = function (eventType, callback) {
-        if (!this.listeners[eventType]) {
-            this.listeners[eventType] = [];
-        }
-        let subscriber = this.messageHub.subscribe(callback.bind(this), eventType);
-
-        let entry = {
-            id: uuidv4(),
-            handler: subscriber
-        };
-        this.listeners[eventType].push(entry);
-        return entry.id;
-    };
-    this.removeListener = function (id, eventType) {
-        if (!this.listeners[eventType])
-            return;
-        for (let i = this.listeners[eventType].length - 1; i >= 0; i--) {
-            if (this.listeners[eventType][i].id == id) {
-                let subscriber = this.listeners[eventType][i].handler;
-                this.messageHub.unsibscribe(subscriber);
-                this.listeners[eventType].splice(i, 1);
-            }
-        }
-    };
-    /**
-     * Provide id to enable save/restore state for browser's localStorage. No id will implicitly always reconstruct the instance and will not attempt future state changes save.
-     * Providing an id and the reconstruct flag set to true will not retrive from local storage last state, but will subscribe and save the reconstructed instance future changes.
-     * The layout will be always reconstructed on first init regardless of the reconstruct flag.
-     */
-    this.init = function (containerEl, viewNames, id, reconstruct, viewSettings, layoutSettings) {
-        this.containerEl = containerEl;
-        this.viewNames = viewNames;
-        this.viewSettings = viewSettings;
-        this.layoutSettings = layoutSettings;
-        id = id || $(containerEl).attr("id");
-
-        if (id) {
-            if (!reconstruct) {
-                //load from localStorage
-                let savedState = localStorage.getItem('DIRIGIBLE.IDE.GL.state.' + id);
-                if (savedState !== null) {
-                    this.config = JSON.parse(savedState);
-                }
-            }
-        }
-        if (!id || reconstruct || !this.config) {
-            //reconstruct (ignore previously saved state)
-            let views = {};
-            this.viewNames.forEach(function (viewName) {
-                if (this.viewSettings) {
-                    // If this fails with undefined, then there is no view with the name of 'viewName'
-                    views[viewName] = Object.assign(this.viewRegistry.view(viewName), this.viewSettings[viewName]);
-                }
-                else views[viewName] = this.viewRegistry.view(viewName)
-            }.bind(this));
-            // Default settings
-            this.config = {
-                settings: {
-                    showPopoutIcon: false,
-                    showCloseIcon: false
-                },
-                dimensions: {
-                    headerHeight: 44,
-                    borderWidth: 1
-                },
-                content: [this.layoutViews.call(this, views)]
-            };
-            // Per layout settings
-            if (this.layoutSettings) {
-                this.config.settings = Object.assign(this.config.settings, this.layoutSettings);
-            }
-        }
-
-        this.layout = new GoldenLayout(this.config, containerEl);
-
-        Object.keys(this.viewRegistry.factories()).forEach(function (factoryname) {
-            this.layout.registerComponent(factoryname, this.viewRegistry.factory(factoryname));
-        }.bind(this));
-
-        if (id) {
-            this.layout.on('stateChanged', function () {
-                // TODO: debounce or do that only with save button! This fires a lot
-                let state = JSON.stringify(this.layout.toConfig());
-                localStorage.setItem('DIRIGIBLE.IDE.GL.state.' + id, state);
-            }.bind(this));
-        }
-
-        this.layout.on('tabCreated', function (tab) {
-            if (tab.contentItem.config.title === "Welcome" && tab.contentItem.config.componentState.path === undefined) {
-                tab.closeElement[0].style.display = "none";
-            }
-            tab.closeElement.off('click').click(function () {
-                if (tab.contentItem.config.componentName && tab.contentItem.config.componentName === 'editor') {
-                    if (tab.contentItem.config.title && tab.contentItem.config.title.startsWith('*')) {
-                        if (confirm('You have unsaved changes, are you sure you want to close ' + tab.contentItem.config.title.substring(1))) {
-                            tab.contentItem.remove();
+angular.module('layout', ['idePerspective', 'ideMessageHub'])
+    .constant('SplitPaneState', {
+        EXPANDED: 0,
+        COLLAPSED: 1
+    })
+    .factory('Views', ['$resource', function ($resource) {
+        let get = function () {
+            return $resource('/services/v4/js/ide-core/services/views.js').query().$promise
+                .then(function (data) {
+                    data = data.map(function (v) {
+                        v.id = v.id || v.name.toLowerCase();
+                        v.label = v.label || v.name;
+                        v.factory = v.factory || 'frame';
+                        v.settings = {
+                            "path": v.link
                         }
-                    } else {
-                        tab.contentItem.remove();
-                    }
-                } else {
-                    if (confirm('Are you sure you want to close ' + tab.contentItem.config.title)) {
-                        tab.contentItem.remove();
-                    }
-                }
-            });
-        });
+                        v.region = v.region || 'left-top';
+                        return v;
+                    });
+                    //no extension point. provisioned "manually"
+                    //data.push({ "id": "editor", "factory": "editor", "region": "center-middle", "label": "Editor", "settings": {} });
+                    let brandingInfo = getBrandingInfo();
+                    data.push({ "id": "welcome", "factory": "frame", "region": "center-middle", "label": "Welcome", "settings": { "path": brandingInfo.welcomePage } });
+                    //no extension point yet
+                    data.push({ "id": "result", "factory": "frame", "region": "center-bottom", "label": "Result", "settings": { "path": "../ide-database/sql/result.html" } });
+                    data.push({ "id": "properties", "factory": "frame", "region": "center-bottom", "label": "Properties", "settings": { "path": "../ide/properties.html" } });
+                    data.push({ "id": "sql", "factory": "frame", "region": "center-middle", "label": "SQL", "settings": { "path": "../ide-database/sql/editor.html" } });
 
-        this.layout.init();
-    };
-
-    this.openView = function (viewId/*, region*/) {
-        let viewDef = this.viewRegistry.view(viewId);
-        if (viewDef) {
-            let node;
-            let defaultPath = [viewId];
-            defaultPath = defaultPath.concat(parentIds.call(this, viewDef/*, region*/));//TODO: consider custom region
-            defaultPath.reverse().forEach(function (compId) {
-                if (!node)
-                    node = this.layout.root;
-                else
-                    node = this.layout.root.getItemsById(node.id || node.config.id)[0];
-                let child = node.getItemsById(compId)[0] || this.regions[compId] || this.viewRegistry.view(compId);
-                if (!node.isRoot && child && this.layout.root.getItemsById(child.id || child.config.id).length < 1) {
-                    node.addChild(child);
-                }
-                node = child;
-            }.bind(this));
-        }
-    };
-
-    this.openEditor = function (resourcePath, resourceLabel, contentType, editorId = "editor", extraArgs = null) {
-        let newItemConfig = {
-            id: resourcePath,
-            title: resourceLabel,
-            type: 'component',
-            componentName: 'editor',
-            componentState: {
-                path: resourcePath,
-                editorId: editorId,
-                contentType: contentType,
-                extraArgs: extraArgs
-            }
+                    return data;
+                });
         };
-        //is an editor available to stack new children to it?
-        if (this.layout.root.getItemsById('editor')[0]) {
-            //is already open?
-            if (this.layout.root.getItemsById(newItemConfig.id).length) {
-                //replace content
-                let panel = this.layout.root.getItemsById(newItemConfig.id)[0];
-                //panel.instance.setContent(newItemConfig.id);
-                panel.parent.setActiveContentItem(panel);
-            } else {
-                // open new tab
-                this.layout.root.getItemsById('editor')[0].parent.addChild(newItemConfig);
-            }
-        } else {
-            this.openView('editor');
-            this.layout.root.getItemsById('editor')[0].parent.addChild(newItemConfig);
+
+        return {
+            get: get
+        };
+    }])
+    .directive('view', ['Views', function (Views) {
+        return {
+            restrict: 'E',
+            replace: true,
+            scope: {
+                name: '@',
+                settings: '=',
+            },
+            link: function (scope, element, attrs) {
+                Views.get().then(function (views) {
+                    const view = views.find(v => v.id === scope.name);
+                    if (view)
+                        scope.path = view.settings.path;
+                });
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/view.html'
         }
-    };
+    }])
+    .directive('ideLayout', ['Views', 'Layouts', 'Editors', 'SplitPaneState', 'messageHub', '$timeout', function (Views, Layouts, Editors, SplitPaneState, messageHub, $timeout) {
+        return {
+            restrict: 'E',
+            replace: true,
+            scope: {
+                name: '@',
+                viewsLayoutModel: '='
+            },
+            controller: ['$scope', function ($scope) {
+                const VIEW = 'view';
+                const EDITOR = 'editor';
 
-    function closeEditor(editor, layoutManager) {
-        let title = editor.config.title;
-        if (title.startsWith("*")) {
-            if (confirm('You have unsaved changes, are you sure you want to close ' + title.substring(1))) {
-                layoutManager.getItemsById('editor')[0].parent.removeChild(editor);
-            }
-        } else {
-            layoutManager.getItemsById('editor')[0].parent.removeChild(editor);
-        }
-    }
+                $scope.views = [];
+                $scope.explorerTabs = [];
+                $scope.bottomTabs = [];
+                $scope.centerSplittedTabViews = {
+                    direction: 'horizontal',
+                    panes: [
+                        {
+                            tabs: [],
+                            selectedTab: null
+                        }
+                    ]
+                };
 
-    this.closeEditor = function (editorId) {
-        let editor = this.layout.root.getItemsById(editorId)[0];
-        closeEditor(editor, this.layout.root);
-    };
-
-    this.closeOtherEditors = function (editorId) {
-        let editorIds = this.layout.root.getItemsById('editor')[0].parent.config.content
-            .filter(e => e.id !== "editor" && e.id !== editorId)
-            .map(e => e.id);
-        let editors = [];
-        editorIds.forEach(e => editors.push(this.layout.root.getItemsById(e)[0]))
-        for (let i = 0; i < editors.length; i++) {
-            closeEditor(editors[i], this.layout.root);
-        }
-    };
-
-    this.closeAllEditors = function () {
-        let editorIds = this.layout.root.getItemsById('editor')[0].parent.config.content
-            .filter(e => e.id !== "editor")
-            .map(e => e.id);
-        let editors = [];
-        editorIds.forEach(e => editors.push(this.layout.root.getItemsById(e)[0]))
-        for (let i = 0; i < editors.length; i++) {
-            closeEditor(editors[i], this.layout.root);
-        }
-    };
-
-    this.setEditorDirty = function (resourcePath, dirty) {
-        //is an editor available to stack new children to it?
-        if (this.layout.root.getItemsById('editor')[0]) {
-            //is already open?
-            if (this.layout.root.getItemsById(resourcePath).length) {
-                let panel = this.layout.root.getItemsById(resourcePath)[0];
-                let title = panel.container.tab.titleElement.text();
-                if (!title.startsWith('*') && dirty) {
-                    panel.setTitle(`*${title}`);
-                } else if (title.startsWith('*') && !dirty) {
-                    panel.setTitle(title.substring(1, title.length));
+                $scope.layoutSettings = $scope.viewsLayoutModel.layoutSettings || {};
+                $scope.selection = {
+                    selectedBottomTab: null
+                };
+                $scope.splitPanesState = {
+                    main: []
                 }
+
+                $scope.initialOpenViews = $scope.viewsLayoutModel.views;
+
+                let eventHandlers = $scope.viewsLayoutModel.events;
+                //let viewSettings = $scope.viewsLayoutModel.viewSettings;
+
+                Views.get().then(function (views) {
+                    $scope.views = views;
+
+                    const viewExists = (v) => views.some(x => x.id === v.id);
+                    const viewById = (viewId) => $scope.views.find(v => v.id === viewId);
+                    const byLeftRegion = view => view.region.startsWith('left')
+                    const byBottomRegion = view => view.region === 'center-bottom';
+                    const byCenterRegion = view => view.region === 'center-top' || view.region === 'center-middle';
+
+                    const savedState = loadLayoutState();
+                    if (savedState) {
+                        const restoreCenterSplittedTabViews = function (state, removedViewsIds) {
+                            if (state.panes) {
+                                state.panes.forEach(pane => restoreCenterSplittedTabViews(pane, removedViewsIds));
+                            } else {
+                                state.tabs = state.tabs.filter(v => v.type === EDITOR || (viewExists(v) && (!removedViewsIds || !removedViewsIds.includes(v.id))));
+                                if (!state.tabs.some(x => x.id === state.selectedTab)) {
+                                    state.selectedTab = null;
+                                }
+                            }
+
+                            return state;
+                        }
+
+                        $scope.explorerTabs = savedState.explorer.tabs.filter(viewExists);
+                        $scope.bottomTabs = savedState.bottom.tabs.filter(viewExists);
+
+                        let newlyAddedViews, removedViewsIds;
+                        let initialOpenViewsChanged = !angular.equals(savedState.initialOpenViews, $scope.initialOpenViews);
+                        if (initialOpenViewsChanged) {
+                            newlyAddedViews = $scope.initialOpenViews.filter(x => savedState.initialOpenViews.every(y => x !== y)).map(viewById);
+                            removedViewsIds = savedState.initialOpenViews.filter(x => $scope.initialOpenViews.every(y => x !== y));
+
+                            $scope.explorerTabs = $scope.explorerTabs
+                                .filter(x => !removedViewsIds.includes(x.id))
+                                .concat(newlyAddedViews.filter(byLeftRegion).map(mapViewToTab));
+
+                            $scope.bottomTabs = $scope.bottomTabs
+                                .filter(x => !removedViewsIds.includes(x.id))
+                                .concat(newlyAddedViews.filter(byBottomRegion).map(mapViewToTab));
+                        }
+
+                        $scope.centerSplittedTabViews = restoreCenterSplittedTabViews(savedState.center, removedViewsIds);
+
+                        if (newlyAddedViews) {
+                            $scope.centerSplittedTabViews.panes[0].tabs.push(...newlyAddedViews.filter(byCenterRegion).map(mapViewToTab));
+                        }
+
+                        if ($scope.bottomTabs.some(x => x.id === savedState.bottom.selected))
+                            $scope.selection.selectedBottomTab = savedState.bottom.selected;
+
+                        if (initialOpenViewsChanged)
+                            saveLayoutState();
+
+                    } else {
+                        let openViews = $scope.initialOpenViews.map(viewById);
+
+                        $scope.explorerTabs = openViews
+                            .filter(byLeftRegion)
+                            .map(mapViewToTab);
+
+                        $scope.bottomTabs = openViews
+                            .filter(byBottomRegion)
+                            .map(mapViewToTab);
+
+                        $scope.centerSplittedTabViews.panes[0].tabs = openViews
+                            .filter(byCenterRegion)
+                            .map(mapViewToTab);
+                    }
+
+                    $scope.$watch('selection', function (newSelection, oldSelection) {
+                        if (!angular.equals(newSelection, oldSelection)) {
+                            saveLayoutState();
+                        }
+                    }, true);
+
+                    if (eventHandlers) {
+                        Object.keys(eventHandlers).forEach(function (evtName) {
+                            let handler = eventHandlers[evtName];
+                            if (typeof handler === 'function')
+                                messageHub.onDidReceiveMessage(evtName, handler);
+                        });
+                    }
+                });
+
+                $scope.closeCenterTab = function (tab) {
+                    tryCloseCenterTabs([tab]);
+                }
+
+                $scope.moveCenterTab = function (tab) {
+                    moveTab(tab.id);
+                }
+
+                $scope.collapseBottomPane = function () {
+                    updateSplitPanesState({
+                        editorsPaneState: SplitPaneState.EXPANDED,
+                        bottomPanesState: SplitPaneState.COLLAPSED
+                    });
+                }
+
+                $scope.expandBottomPane = function () {
+                    updateSplitPanesState({
+                        editorsPaneState: SplitPaneState.EXPANDED,
+                        bottomPanesState: SplitPaneState.EXPANDED
+                    });
+                }
+
+                $scope.toggleEditorsPane = function () {
+                    let editorsPaneCollapsed = $scope.isEditorsPaneCollapsed();
+
+                    updateSplitPanesState({
+                        editorsPaneState: editorsPaneCollapsed ? SplitPaneState.EXPANDED : SplitPaneState.COLLAPSED,
+                        bottomPanesState: SplitPaneState.EXPANDED
+                    });
+                }
+
+                $scope.isEditorsPaneCollapsed = function () {
+                    return $scope.splitPanesState.main[0] == SplitPaneState.COLLAPSED;
+                }
+
+                $scope.isBottomPaneCollapsed = function () {
+                    return $scope.splitPanesState.main.length < 2 || $scope.splitPanesState.main[1] == SplitPaneState.COLLAPSED;
+                }
+
+                function loadLayoutState() {
+                    let savedState = localStorage.getItem('DIRIGIBLE.IDE.LAYOUT.state.' + $scope.id);
+                    if (savedState !== null) {
+                        return JSON.parse(savedState);
+                    }
+
+                    return null;
+                }
+
+                function saveLayoutState() {
+
+                    const saveCenterSplittedTabViews = function (parent) {
+                        let ret;
+                        if (parent.panes) {
+                            ret = {
+                                direction: parent.direction,
+                                panes: []
+                            };
+                            for (let i = 0; i < parent.panes.length; i++) {
+                                const pane = parent.panes[i];
+                                ret.panes.push(saveCenterSplittedTabViews(pane));
+                            }
+                        } else {
+                            ret = {
+                                tabs: parent.tabs.map(x => ({ id: x.id, type: x.type, label: x.label, path: x.path, params: x.params })),
+                                selectedTab: parent.selectedTab
+                            };
+                        }
+                        return ret;
+                    }
+
+                    let state = {
+                        initialOpenViews: $scope.initialOpenViews,
+                        explorer: {
+                            tabs: $scope.explorerTabs.map(x => ({ id: x.id, type: x.type, label: x.label, path: x.path }))
+                        },
+                        bottom: {
+                            tabs: $scope.bottomTabs.map(x => ({ id: x.id, type: x.type, label: x.label, path: x.path })),
+                            selected: $scope.selection.selectedBottomTab
+                        },
+                        center: saveCenterSplittedTabViews($scope.centerSplittedTabViews)
+                    };
+
+                    localStorage.setItem('DIRIGIBLE.IDE.LAYOUT.state.' + $scope.id, JSON.stringify(state));
+                }
+
+                function updateSplitPanesState(args) {
+                    if ($scope.splitPanesState.main.length > 1) {
+                        $scope.splitPanesState.main[0] = args.editorsPaneState;
+                        $scope.splitPanesState.main[1] = args.bottomPanesState;
+                    }
+                }
+
+                function findView(views, view) {
+                    return views.find(v => v.id === view.id);
+                }
+
+                function mapViewToTab(view) {
+                    return {
+                        id: view.id,
+                        type: VIEW,
+                        label: view.label,
+                        path: view.settings.path,
+                    };
+                }
+
+                function findCenterSplittedTabView(id, pane = null, parent = null) {
+
+                    let currentPane = pane || $scope.centerSplittedTabViews;
+
+                    if (currentPane.tabs) {
+                        const index = currentPane.tabs.findIndex(f => f.id === id);
+                        if (index >= 0)
+                            return { tabsView: currentPane, parent, index };
+
+                    } else if (currentPane.panes) {
+                        for (let childPane of currentPane.panes) {
+                            let result = findCenterSplittedTabView(id, childPane, currentPane);
+                            if (result)
+                                return result;
+                        }
+                    }
+
+                    return null;
+                }
+
+                function getCurrentCenterSplittedTabViewPane() {
+                    return $scope.centerSplittedTabViews.panes[0];
+                }
+
+                function forEachCenterSplittedTabView(callback, parent) {
+                    let parentNode = parent || $scope.centerSplittedTabViews;
+
+                    if (parentNode.tabs) {
+                        callback(parentNode);
+                    } else if (parentNode.panes) {
+                        for (let pane of parentNode.panes) {
+                            forEachCenterSplittedTabView(callback, pane);
+                        }
+                    }
+                }
+
+                function moveTab(tabId) {
+                    const result = findCenterSplittedTabView(tabId);
+                    if (result) {
+                        const splitView = result.parent;
+                        const srcTabsView = result.tabsView;
+
+                        if (srcTabsView.tabs.length === 1 && splitView.panes.length === 1)
+                            return;
+
+                        const tab = srcTabsView.tabs[result.index];
+
+                        srcTabsView.tabs.splice(result.index, 1);
+
+                        let destTabsView;
+                        if (splitView.panes.length === 1) {
+                            destTabsView = {
+                                tabs: [tab],
+                                selectedTab: tabId
+                            }
+                            splitView.panes.push(destTabsView);
+                        } else {
+                            const srcIndex = splitView.panes.indexOf(srcTabsView);
+                            destTabsView = splitView.panes[srcIndex === 0 ? 1 : 0];
+                            destTabsView.selectedTab = tabId;
+                            destTabsView.tabs.push(tab);
+
+                            if (srcTabsView.tabs.length === 0) {
+                                splitView.panes.splice(srcIndex, 1);
+                            }
+                        }
+
+                        $timeout(saveLayoutState, 1000);
+                    }
+                }
+
+                function tryCloseCenterTabs(tabs) {
+                    let dirtyFiles = tabs.filter(tab => tab.dirty);
+                    if (dirtyFiles.length > 0) {
+
+                        let tab = dirtyFiles[0];
+                        let result = findCenterSplittedTabView(tab.id);
+                        if (result) {
+                            result.tabsView.selectedTab = tab.id;
+                        }
+
+                        messageHub.showDialog(
+                            'You have unsaved changes',
+                            'Do you want to save the changes you made to ' + tab.label + '?',
+                            [{
+                                id: { id: 'save', file: tab.id, tabs: tabs },
+                                type: 'normal',
+                                label: 'Save',
+                            }, {
+                                id: { id: 'ignore', file: tab.id, tabs: tabs },
+                                type: 'normal',
+                                label: 'Don\'t Save',
+                            }, {
+                                id: { id: 'cancel' },
+                                type: 'transparent',
+                                label: 'Cancel',
+                            }],
+                            'layout.dialog.close'
+                        );
+                    } else {
+                        for (let i = 0; i < tabs.length; i++) {
+                            removeCenterTab(tabs[i].id);
+                        }
+
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                function removeCenterTab(id) {
+                    let result = findCenterSplittedTabView(id);
+                    if (result) {
+                        const { tabsView, parent: splitView } = result;
+                        tabsView.tabs.splice(result.index, 1);
+                        if (tabsView.tabs.length === 0 && splitView.panes.length > 1) {
+                            const index = splitView.panes.indexOf(tabsView);
+                            splitView.panes.splice(index, 1);
+                        }
+                        saveLayoutState();
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                function closeCenterTab(id) {
+                    if (removeCenterTab(id)) {
+                        $scope.$digest();
+                    }
+                }
+
+                let closingFileArgs;
+
+                messageHub.onDidReceiveMessage('layout.dialog.close', function (msg) {
+                    let args = msg.data;
+                    switch (args.id) {
+                        case 'save':
+                            closingFileArgs = args;
+                            messageHub.postMessage('workbench.editor.save', { file: args.file }, true);
+                            break;
+                        case 'ignore':
+                            closeCenterTab(args.file)
+                            messageHub.postMessage('editor.file.dirty', { file: args.file, isDirty: false }, true);
+
+                            let rest = args.tabs.filter(x => x.id !== args.file);
+                            if (rest.length > 0)
+                                if (tryCloseCenterTabs(rest)) {
+                                    $scope.$digest();
+                                }
+
+                            break;
+                    }
+                });
+
+                messageHub.onDidReceiveMessage('editor.file.saved', function (msg) {
+                    if (!closingFileArgs) return;
+
+                    let fileName = msg.data;
+                    if (fileName === closingFileArgs.file) {
+                        closeCenterTab(fileName);
+
+                        let rest = closingFileArgs.tabs.filter(x => x.id !== closingFileArgs.file);
+                        if (rest.length > 0)
+                            if (tryCloseCenterTabs(rest)) {
+                                $scope.$digest();
+                            }
+
+                        closingFileArgs = null;
+                    }
+                });
+
+                Layouts.manager = {
+                    openEditor: function (resourcePath, resourceLabel, contentType, editorId = "editor", extraArgs = null) {
+                        if (resourcePath) {
+                            let editorPath = Editors.editorProviders[editorId];
+                            if (!editorPath) {
+                                let editors = Editors.editorsForContentType[contentType];
+                                if (editors && editors.length > 0) {
+                                    if (editors.length == 1) {
+                                        editorId = editors[0].id;
+                                    } else {
+                                        let formEditors = editors.filter(function (e) {
+                                            switch (e.id) {
+                                                case "orion":
+                                                case "monaco":
+                                                case "ace":
+                                                    return false;
+                                                default:
+                                                    return true;
+                                            }
+                                        });
+                                        editorId = formEditors.length > 0 ? formEditors[0].id : editors[0].id;
+                                    }
+                                } else {
+                                    editorId = Editors.defaultEditorId;
+                                }
+
+                                editorPath = Editors.editorProviders[editorId];
+                            }
+
+                            let params = Object.assign({
+                                file: resourcePath,
+                                contentType: contentType
+                            }, extraArgs || {});
+
+                            if (editorId === 'flowable')
+                                editorPath += resourcePath;
+
+                            let result = findCenterSplittedTabView(resourcePath);
+                            let currentTabsView = result ? result.tabsView : getCurrentCenterSplittedTabViewPane();
+                            if (result) {
+                                currentTabsView.selectedTab = resourcePath;
+                            } else {
+                                let fileTab = {
+                                    id: resourcePath,
+                                    type: EDITOR,
+                                    label: resourceLabel,
+                                    path: editorPath,
+                                    params: params
+                                };
+
+                                currentTabsView.selectedTab = resourcePath;
+                                currentTabsView.tabs.push(fileTab);
+                            }
+                            $scope.$digest();
+
+                            saveLayoutState();
+                        }
+                    },
+                    closeEditor: function (resourcePath) {
+                        let result = findCenterSplittedTabView(resourcePath);
+                        if (result) {
+                            let tab = result.tabsView.tabs[result.index];
+                            if (tryCloseCenterTabs([tab])) {
+                                $scope.$digest();
+                            }
+                        }
+                    },
+                    closeOtherEditors: function (resourcePath) {
+                        let result = findCenterSplittedTabView(resourcePath);
+                        if (result) {
+                            let rest = result.tabsView.tabs.filter(x => x.id !== resourcePath);
+                            if (rest.length > 0) {
+                                if (tryCloseCenterTabs(rest)) {
+                                    $scope.$digest();
+                                }
+                            }
+                        }
+                    },
+                    closeAllEditors: function () {
+                        forEachCenterSplittedTabView(pane => {
+                            if (tryCloseCenterTabs(pane.tabs.slice())) {
+                                $scope.$digest();
+                            }
+                        }, $scope.centerSplittedTabViews);
+                    },
+                    setEditorDirty: function (resourcePath, dirty) {
+                        let result = findCenterSplittedTabView(resourcePath);
+                        if (result) {
+                            let fileTab = result.tabsView.tabs[result.index];
+                            fileTab.dirty = dirty;
+                            $scope.$digest();
+                        }
+                    },
+                    openView: function (viewId) {
+                        let view = $scope.views.find(v => v.id === viewId);
+                        if (view) {
+                            if (view.region.startsWith('left')) {
+                                let explorerViewTab = findView($scope.explorerTabs, view);
+                                if (explorerViewTab) {
+                                    explorerViewTab.expanded = true;
+                                } else {
+                                    explorerViewTab = mapViewToTab(view);
+                                    explorerViewTab.expanded = true;
+                                    $scope.explorerTabs.push(explorerViewTab);
+                                }
+
+                            } else if (view.region === 'center-middle' || view.region === 'center-top') {
+                                let result = findCenterSplittedTabView(view.id);
+                                let currentTabsView = result ? result.tabsView : getCurrentCenterSplittedTabViewPane();
+                                if (result) {
+                                    currentTabsView.selectedTab = view.id;
+                                } else {
+                                    let centerViewTab = mapViewToTab(view);
+                                    currentTabsView.selectedTab = view.id;
+                                    currentTabsView.tabs.push(centerViewTab);
+                                }
+
+                            } else {
+                                let bottomViewTab = findView($scope.bottomTabs, view);
+                                if (bottomViewTab) {
+                                    $scope.selection.selectedBottomTab = bottomViewTab.id;
+                                } else {
+                                    bottomViewTab = mapViewToTab(view);
+                                    $scope.selection.selectedBottomTab = bottomViewTab.id;
+                                    $scope.bottomTabs.push(bottomViewTab);
+                                }
+
+                                if ($scope.isBottomPaneCollapsed())
+                                    $scope.expandBottomPane();
+                            }
+
+                            saveLayoutState();
+                        }
+                    }
+                };
+                Layouts.manager.open = Layouts.manager.openView;
+            }],
+            templateUrl: '/services/v4/web/ide-core/ui/templates/layout.html'
+        };
+    }])
+    .directive('split', ['SplitPaneState', function (SplitPaneState) {
+        return {
+            restrict: 'E',
+            replace: true,
+            transclude: true,
+            scope: {
+                direction: '@',
+                width: '@',
+                height: '@',
+                state: '=?'
+            },
+            controller: ['$scope', function ($scope) {
+                $scope.panes = [];
+                $scope.state = $scope.state || [];
+
+                this.addPane = function (pane) {
+                    $scope.panes.push(pane);
+                    $scope.state.push(SplitPaneState.EXPANDED);
+
+                    $scope.panes.sort((a, b) => {
+                        let elementA = a.element[0];
+                        let elementB = b.element[0];
+                        if (elementA.previousElementSibling === null || elementB.nextElementSibling === null) return -1;
+                        if (elementA.nextElementSibling === null || elementB.previousElementSibling === null) return 1;
+                        if (elementA.nextElementSibling === elementB || elementB.previousElementSibling === elementA) return -1;
+                        if (elementB.nextElementSibling === elementA || elementA.previousElementSibling === elementB) return 1;
+                        return 0;
+                    });
+                };
+
+                this.removePane = function (pane) {
+                    let index = $scope.panes.indexOf(pane);
+                    if (index !== -1) {
+                        $scope.panes.splice(index, 1);
+                    }
+                };
+
+                function normalizeSizes(sizes, index = -1) {
+                    let isOpen = (size, i) => {
+                        return Math.floor(size) > 0 && (index === -1 || index !== i);
+                    };
+
+                    let totalSize = sizes.reduce((x, y) => x + y, 0);
+                    if (totalSize !== 100) {
+                        let openCount = sizes.reduce((count, size, i) => isOpen(size, i) ? count + 1 : count, 0);
+                        if (openCount > 0) {
+                            let d = (100 - totalSize) / openCount;
+                            for (let i = 0; i < sizes.length; i++) {
+                                if (isOpen(sizes[i], i))
+                                    sizes[i] += d;
+                            }
+                        }
+                    }
+                }
+
+                $scope.isHorizontal = function () {
+                    return $scope.direction === 'horizontal';
+                }
+
+                $scope.$watchCollection('panes', function () {
+                    if ($scope.split) {
+                        $scope.split.destroy();
+                        $scope.split = null;
+                    }
+
+                    if ($scope.panes.length === 0 || $scope.panes.some(a => a.element === undefined)) {
+                        return;
+                    }
+
+                    if ($scope.panes.length === 1) {
+                        $scope.panes[0].element.css('width', '100%');
+                        $scope.panes[0].element.css('height', '100%');
+                        return;
+                    }
+
+                    let sizes = $scope.panes.map(pane => pane.size || 0);
+
+                    normalizeSizes(sizes);
+
+                    let minSizes = $scope.panes.map(pane => pane.minSize);
+                    let elements = $scope.panes.map(pane => pane.element[0]);
+                    let snapOffsets = $scope.panes.map(pane => pane.snapOffset);
+
+                    $scope.split = Split(elements, {
+                        direction: $scope.direction,
+                        sizes: sizes,
+                        minSize: minSizes,
+                        expandToMin: true,
+                        gutterSize: 1,
+                        gutterAlign: 'start',
+                        snapOffset: snapOffsets,
+                        onDragEnd: function (newSizes) {
+                            for (let i = 0; i < newSizes.length; i++) {
+                                $scope.state[i] = Math.floor(newSizes[i]) === 0 ? SplitPaneState.COLLAPSED : SplitPaneState.EXPANDED;
+                            }
+                            $scope.$apply();
+                        },
+                    });
+                });
+
+                $scope.$watchCollection('state', function (newState, oldState) {
+                    if (newState.length === oldState.length) {
+                        //Process the collapsing first
+                        for (let i = 0; i < newState.length; i++) {
+                            if (newState[i] !== oldState[i]) {
+                                if (newState[i] === SplitPaneState.COLLAPSED) {
+                                    let sizes = $scope.split.getSizes();
+                                    let size = Math.floor(sizes[i]);
+                                    if (size > 0) {
+                                        $scope.panes[i].lastSize = size;
+                                        $scope.split.collapse(i);
+                                    }
+                                }
+                            }
+                        }
+                        // ... and then the expanding/restore if necessary
+                        for (let i = 0; i < newState.length; i++) {
+                            if (newState[i] !== oldState[i]) {
+                                if (newState[i] === SplitPaneState.EXPANDED) {
+                                    let sizes = $scope.split.getSizes();
+                                    let size = Math.floor(sizes[i]);
+                                    if (size === 0) {
+                                        let pane = $scope.panes[i];
+                                        sizes[i] = pane.lastSize || pane.size;
+                                        normalizeSizes(sizes, i);
+                                        $scope.split.setSizes(sizes);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }],
+            template: '<div ng-class="{split: true, horizontal: isHorizontal(), vertical: !isHorizontal()}" ng-transclude></div>'
+        };
+    }])
+    .directive('splitPane', function () {
+        return {
+            restrict: 'E',
+            require: '^split',
+            replace: true,
+            transclude: true,
+            scope: {
+                size: '@',
+                minSize: '@',
+                snapOffset: '@'
+            },
+            link: function (scope, element, attrs, bgSplitCtrl) {
+                let paneData = scope.paneData = {
+                    element: element,
+                    size: Number(scope.size),
+                    minSize: Number(scope.minSize),
+                    snapOffset: Number(scope.snapOffset)
+                };
+
+                bgSplitCtrl.addPane(paneData);
+
+                scope.$on('$destroy', function () {
+                    bgSplitCtrl.removePane(paneData);
+                });
             }
         }
-    };
+    })
+    .directive('explorerToolbar', function () {
+        return {
+            restrict: 'E',
+            replace: true,
+            scope: {
+                name: '@',
+            },
+            link: function (scope, element, attrs) {
+                scope.hidden = true;
 
-    this.resize = function () {
-        this.layout.updateSize();
-    };
+                scope.toggle = function () {
+                    scope.hidden = !scope.hidden;
+                };
 
-    this.reset = function () {
-        this.layout.destroy();
-        this.containerEl.empty();
-        this.layout.init(this.containerEl, this.viewNames);
-    };
-}
+                scope.hide = function () {
+                    scope.hidden = true;
+                }
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/toolbar.html',
+        };
+    })
+    .directive('accordion', ['$window', function ($window) {
+        return {
+            restrict: 'E',
+            replace: true,
+            transclude: true,
+            scope: {},
+            controller: function ($scope, $element) {
+                let views = $scope.views = [];
 
-function uuidv4() {
-    return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-    );
-}
+                let availableHeight;
+
+                function updateContentHeights(collapsingView = null) {
+                    let expandedViews = $scope.views.filter(view => view.expanded);
+                    let expandedViewsCount = expandedViews.length;
+                    if (collapsingView) expandedViewsCount--;
+
+                    let panelHeight = expandedViewsCount > 0 ? availableHeight / expandedViewsCount : 0;
+
+                    for (let i = 0; i < $scope.views.length; i++) {
+                        let view = $scope.views[i];
+                        view.style = {
+                            height: view.expanded && view !== collapsingView ? panelHeight + 'px' : '0'
+                        };
+                    }
+                }
+
+                function updateSize() {
+                    let totalHeight = $element[0].clientHeight;
+                    let headersHeight = getHeadersHeight();
+
+                    availableHeight = totalHeight - headersHeight;
+
+                    updateContentHeights();
+                }
+
+                function getHeadersHeight() {
+                    let headers = $element[0].querySelectorAll('.fd-panel__header');
+
+                    let h = 0;
+                    for (let i = 0; i < headers.length; i++) {
+                        h += headers[i].offsetHeight;
+                    }
+                    return h;
+                }
+
+                this.addView = function (view) {
+                    if (views.length === 0)
+                        view.expanded = true;
+
+                    views.push(view);
+
+                    updateContentHeights();
+                }
+
+                this.removeView = function (view) {
+                    let index = views.indexOf(view);
+                    if (index >= 0)
+                        views.splice(index, 1);
+
+                    updateContentHeights();
+                }
+
+                this.updateHeights = function (view) {
+                    updateContentHeights(view);
+                }
+
+                this.updateSizes = function () {
+                    updateSize();
+                }
+
+                angular.element($window).on('resize', function () {
+                    updateSize();
+                    $scope.$digest();
+                });
+
+                $scope.$on('$destroy', function () {
+                    angular.element($window).off('resize');
+                });
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/accordion.html'
+        };
+    }])
+    .directive('accordionPane', ['$timeout', function ($timeout) {
+        return {
+            restrict: 'E',
+            replace: true,
+            require: '^accordion',
+            scope: {
+                view: '<'
+            },
+            link: function (scope, element, attrs, accordionCtrl) {
+                accordionCtrl.addView(scope.view);
+
+                scope.toggleView = function (view) {
+                    if (!view.expanded) {
+                        view.expanded = true;
+                        $timeout(accordionCtrl.updateHeights);
+                    } else {
+                        accordionCtrl.updateHeights(view);
+                        $timeout(function () {
+                            view.expanded = false;
+                        }, 200);
+                    }
+                }
+
+                scope.$watch(scope.view, function () {
+                    accordionCtrl.updateSizes();
+                });
+
+                scope.$on('$destroy', function () {
+                    accordionCtrl.removeView(scope.view);
+                });
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/accordionPane.html'
+        };
+    }])
+    .directive('tabs', function () {
+        return {
+            restrict: 'E',
+            transclude: {
+                'buttons': '?buttons',
+                'panes': 'panes'
+            },
+            replace: true,
+            scope: {
+                selectedPane: '=',
+                closable: '@',
+                removeTab: '&',
+                moveTab: '&'
+            },
+            controller: function ($scope, $element) {
+                let panes = $scope.panes = [];
+
+                $scope.isPaneSelected = function (pane) {
+                    return pane.id === $scope.selectedPane;
+                }
+
+                $scope.select = function (pane) {
+                    if (this.isPaneSelected(pane))
+                        return;
+
+                    $scope.selectedPane = pane.id;
+                }
+
+                $scope.tabClick = function (pane, $event) {
+                    if ($event.target.classList.contains('fd-button')) {
+                        $scope.removeTab({ pane: pane });
+                        return;
+                    }
+
+                    this.select(pane);
+                };
+
+                $scope.tabDblclick = function (pane) {
+                    if ($scope.moveTab)
+                        $scope.moveTab({ pane: pane });
+                };
+
+                this.addPane = function (pane) {
+                    if (!$scope.selectedPane && panes.length == 0) {
+                        $scope.select(pane);
+                    }
+                    panes.push(pane);
+                }
+
+                this.removePane = function (pane) {
+                    let index = panes.indexOf(pane);
+                    if (index >= 0)
+                        panes.splice(index, 1);
+
+                    let nextSelectedPane;
+                    if ($scope.isPaneSelected(pane)) {
+                        if ($scope.lastSelectedPane)
+                            nextSelectedPane = panes.find(p => p.id === $scope.lastSelectedPane);
+
+                        if (!nextSelectedPane && panes.length > 0) {
+                            if (index < 0)
+                                index = 0
+                            else if (index >= panes.length)
+                                index = panes.length - 1;
+
+                            nextSelectedPane = panes[index];
+                        }
+                    }
+
+                    if (nextSelectedPane) {
+                        $scope.select(nextSelectedPane);
+                        $scope.lastSelectedPane = null;
+                    }
+                }
+
+                this.getSelectedPane = function () {
+                    return $scope.selectedPane;
+                }
+
+                $scope.$watch('selectedPane', function (newValue, oldValue) {
+                    $scope.lastSelectedPane = oldValue;
+                });
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/tabs.html'
+        };
+    })
+    .directive('tabPane', function () {
+        return {
+            restrict: 'E',
+            transclude: true,
+            replace: true,
+            require: '^tabs',
+            scope: {
+                tab: '='
+            },
+            link: function (scope, element, attrs, tabsCtrl) {
+                tabsCtrl.addPane(scope.tab);
+
+                scope.isPaneSelected = function () {
+                    return scope.tab.id === tabsCtrl.getSelectedPane();
+                }
+
+                scope.getParams = function () {
+                    return scope.tab.params ? JSON.stringify(scope.tab.params) : '';
+                }
+
+                scope.$on('$destroy', function () {
+                    tabsCtrl.removePane(scope.tab);
+                });
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/tabPane.html'
+        };
+    })
+    .directive('splittedTabs', function () {
+        return {
+            restrict: 'E',
+            transclude: true,
+            replace: true,
+            scope: {
+                direction: '=',
+                panes: '=',
+                removeTab: '&',
+                moveTab: '&'
+            },
+            link: function (scope, element, attrs, tabsCtrl) {
+                scope.onRemoveTab = function (pane) {
+                    scope.removeTab({ pane: pane });
+                };
+
+                scope.onMoveTab = function (pane) {
+                    scope.moveTab({ pane: pane });
+                };
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/splittedTabs.html'
+        };
+    });

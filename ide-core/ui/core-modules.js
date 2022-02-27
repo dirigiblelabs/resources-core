@@ -191,48 +191,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             return this.factories;
         }];
     })
-    /**
-     * Wrap the ViewRegistry class in an angular service object for dependency injection
-     */
-    .service('ViewRegistrySvc', ViewRegistry)
-    /**
-     * A view registry instance factory, using remote service for intializing the view definitions
-     */
-    .factory('viewRegistry', ['ViewRegistrySvc', '$resource', 'ViewFactories', function (ViewRegistrySvc, $resource, ViewFactories) {
-        Object.keys(ViewFactories).forEach(function (factoryName) {
-            ViewRegistrySvc.factory(factoryName, ViewFactories[factoryName]);
-        });
-        let get = function () {
-            return $resource('/services/v4/js/ide-core/services/views.js').query().$promise
-                .then(function (data) {
-                    data = data.map(function (v) {
-                        v.id = v.id || v.name.toLowerCase();
-                        v.label = v.label || v.name;
-                        v.factory = v.factory || 'frame';
-                        v.settings = {
-                            "path": v.link
-                        }
-                        v.region = v.region || 'left-top';
-                        return v;
-                    });
-                    //no extension point. provisioned "manually"
-                    data.push({ "id": "editor", "factory": "editor", "region": "center-middle", "label": "Editor", "settings": {} });
-                    //no extension point yet
-                    data.push({ "id": "result", "factory": "frame", "region": "center-bottom", "label": "Result", "settings": { "path": "../ide-database/sql/result.html" } });
-                    data.push({ "id": "properties", "factory": "frame", "region": "center-bottom", "label": "Properties", "settings": { "path": "../ide/properties.html" } });
-                    data.push({ "id": "sql", "factory": "frame", "region": "center-middle", "label": "SQL", "settings": { "path": "../ide-database/sql/editor.html" } });
-                    //register views
-                    data.forEach(function (viewDef) {
-                        ViewRegistrySvc.view(viewDef.id, viewDef.factory, viewDef.region, viewDef.label, viewDef.settings);
-                    });
-                    return ViewRegistrySvc;
-                });
-        };
-
-        return {
-            get: get
-        };
-    }])
+    // Do we really need this here?
     .factory('Layouts', [function () {
         return {
             manager: undefined
@@ -1087,43 +1046,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 };
             },
             templateUrl: '/services/v4/web/ide-core/ui/templates/ideStatusBar.html'
-        }
-    }])
-    .directive('perspectiveView', ['viewRegistry', 'Layouts', function (viewRegistry, Layouts) {
-        return {
-            restrict: 'E',
-            replace: true,
-            scope: {
-                layoutModel: '=',
-                layoutViews: '@', // Do we need this?
-            },
-            link: function (scope, element) {
-                let views;
-                if (scope.layoutViews) views = scope.layoutViews.split(',');
-                else views = scope.layoutModel.views;
-                let eventHandlers = scope.layoutModel.events;
-                let viewSettings = scope.layoutModel.viewSettings;
-                let layoutSettings = scope.layoutModel.layoutSettings;
-
-                viewRegistry.get().then(function (registry) {
-                    scope.layoutManager = new LayoutController(registry);
-                    if (eventHandlers) {
-                        Object.keys(eventHandlers).forEach(function (evtName) {
-                            let handler = eventHandlers[evtName];
-                            if (typeof handler === 'function')
-                                scope.layoutManager.addListener(evtName, handler);
-                        });
-                    }
-                    $(window).resize(function () {
-                        let container = $(".dg-main-container");
-                        let sidebar = $(".dg-sidebar");
-                        scope.layoutManager.layout.updateSize(container.width() - sidebar.width(), container.height());
-                    });
-                    scope.layoutManager.init(element, views, undefined, undefined, viewSettings, layoutSettings);
-                    Layouts.manager = scope.layoutManager;
-                });
-            },
-            template: '<div class="dg-perspective-view"></div>',
         }
     }]);
 
