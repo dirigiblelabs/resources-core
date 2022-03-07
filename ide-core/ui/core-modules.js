@@ -228,6 +228,154 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             templateUrl: '/services/v4/web/ide-core/ui/templates/brandIcon.html'
         };
     }])
+    .directive('ideContextmenu', ['messageHub', function (messageHub) {
+        return {
+            restrict: 'E',
+            replace: true,
+            link: function (scope, element) {
+                let openedMenuId = "";
+                let menu = element[0].querySelector(".fd-menu");
+                scope.menuItems = [];
+                scope.callbackTopic = "";
+
+                scope.menuClick = function (itemId) {
+                    messageHub.postMessage(scope.callbackTopic, itemId, true);
+                };
+
+                element.on('click', function () {
+                    element[0].classList.add("dg-hidden");
+                    hideAllMenus();
+                });
+
+                element.on('contextmenu', function (event) {
+                    event.preventDefault();
+                    element[0].classList.add("dg-hidden");
+                    hideAllMenus();
+                });
+
+                function hideAllMenus() {
+                    let submenus = element[0].querySelectorAll('.fd-menu__sublist');
+                    let submenusLinks = element[0].querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
+                    }
+                }
+
+                scope.menuHovered = function () {
+                    if (openedMenuId !== "") {
+                        let oldSubmenu = element[0].querySelector(`#${openedMenuId}`);
+                        let oldSubmenuLink = element[0].querySelector(`span[aria-controls="${openedMenuId}"]`);
+                        oldSubmenuLink.setAttribute("aria-expanded", false);
+                        oldSubmenuLink.classList.remove("is-expanded");
+                        oldSubmenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
+                    }
+                };
+
+                scope.showSubmenu = function (submenuId) {
+                    openedMenuId = submenuId;
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    let submenus = submenu.querySelectorAll('.fd-menu__sublist');
+                    let submenusLinks = submenu.querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
+                    }
+                    let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                    submenuLink.setAttribute("aria-expanded", true);
+                    submenuLink.classList.add("is-expanded");
+                    submenu.setAttribute("aria-hidden", false);
+                };
+
+                scope.hideSubmenu = function (submenuId, target) {
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    if (!submenu.contains(target)) {
+                        let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                        submenuLink.setAttribute("aria-expanded", false);
+                        submenuLink.classList.remove("is-expanded");
+                        submenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
+                    }
+                };
+
+                messageHub.onDidReceiveMessage(
+                    'ide-contextmenu.open',
+                    function (msg) {
+                        // console.log(msg.data);
+                        scope.$apply(function () {
+                            scope.menuItems = msg.data.items;
+                            scope.callbackTopic = msg.data.callbackTopic;
+                            menu.style.top = `${msg.data.posY}px`;
+                            menu.style.left = `${msg.data.posX}px`;
+                            element[0].classList.remove("dg-hidden");
+                        })
+                    },
+                    true
+                );
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/contextmenu.html'
+        };
+    }])
+    .directive('ideContextmenuSubmenu', function () {
+        return {
+            restrict: 'E',
+            replace: true,
+            scope: {
+                menuClick: "&",
+                menuItems: "<",
+                submenuIndex: "<",
+            },
+            link: function (scope, element, attr) {
+                let openedMenuId = "";
+                scope.menuClick = scope.menuClick();
+
+                scope.menuHovered = function () {
+                    if (openedMenuId !== "" && openedMenuId !== attr["id"]) {
+                        let oldSubmenu = element[0].querySelector(`#${openedMenuId}`);
+                        let oldSubmenuLink = element[0].querySelector(`span[aria-controls="${openedMenuId}"]`);
+                        oldSubmenuLink.setAttribute("aria-expanded", false);
+                        oldSubmenuLink.classList.remove("is-expanded");
+                        oldSubmenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
+                    }
+                };
+
+                scope.showSubmenu = function (submenuId) {
+                    openedMenuId = submenuId;
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    let submenus = submenu.querySelectorAll('.fd-menu__sublist');
+                    let submenusLinks = submenu.querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
+                    }
+                    let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                    submenuLink.setAttribute("aria-expanded", true);
+                    submenuLink.classList.add("is-expanded");
+                    submenu.setAttribute("aria-hidden", false);
+                };
+
+                scope.hideSubmenu = function (submenuId, target) {
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    if (!submenu.contains(target)) {
+                        let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                        submenuLink.setAttribute("aria-expanded", false);
+                        submenuLink.classList.remove("is-expanded");
+                        submenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
+                    }
+                };
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/contextmenuSubmenu.html'
+        };
+    })
     .directive('ideHeader', ['$window', '$resource', 'Theming', 'User', 'Layouts', 'messageHub', function ($window, $resource, Theming, User, Layouts, messageHub) {
         return {
             restrict: 'E',
