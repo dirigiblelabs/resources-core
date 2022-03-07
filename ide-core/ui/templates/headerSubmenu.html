@@ -1,4 +1,4 @@
-<ul class="fd-menu__sublist dg-hidden" aria-hidden="true" role="menu">
+<ul class="fd-menu__sublist dg-hidden" aria-hidden="true" role="menu" ng-class="isScrollable(parentItem.items)">
     <li class="fd-menu__item" role="presentation" ng-repeat-start="menuItem in parentItem.items track by $index"
         ng-init="subMenuId = ('SM' + submenuIndex + $parent.$index + $index + menuItem.name + parentItem.items.length + menuItem.items.length | removeSpaces)"
         id="{{ 'P' + subMenuId }}">

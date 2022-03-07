@@ -640,7 +640,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             templateUrl: '/services/v4/web/ide-core/ui/templates/ideHeader.html'
         };
     }])
-    .directive("headerHamburgerMenu", function () {
+    .directive("headerHamburgerMenu", ['messageHub', function (messageHub) {
         return {
             restrict: "E",
             replace: true,
@@ -650,12 +650,13 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             },
             link: function (scope, element) {
                 let isMenuOpen = false;
-                function documentClick(event) {
-                    if (isMenuOpen && !element[0].contains(event.target)) {
-                        scope.hideAllMenus();
-                    }
-                }
-                document.addEventListener("click", documentClick);
+                messageHub.onDidReceiveMessage(
+                    'header-menu.closeAll',
+                    function () {
+                        if (isMenuOpen) scope.hideAllMenus();
+                    },
+                    true
+                );
                 scope.menuClicked = function (menuButton) {
                     let menu = menuButton.parentElement.querySelector(".fd-menu");
                     if (menu.classList.contains("dg-hidden")) {
@@ -665,9 +666,11 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         menu.style.top = `${offset.bottom}px`;
                         menu.style.left = `${offset.left}px`;
                         menu.classList.remove("dg-hidden");
+                        messageHub.triggerEvent('ide-header.menuOpened', true);
                         isMenuOpen = true;
                     } else {
                         menu.classList.add("dg-hidden");
+                        messageHub.triggerEvent('ide-header.menuClosed', true);
                         isMenuOpen = false;
                     }
                 };
@@ -715,7 +718,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             },
             templateUrl: "/services/v4/web/ide-core/ui/templates/headerHamburgerMenu.html",
         };
-    })
+    }])
     .directive("headerMenu", ['messageHub', function (messageHub) {
         return {
             restrict: "E",
@@ -733,6 +736,13 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     },
                     true
                 );
+
+                scope.isScrollable = function (menuItems) {
+                    for (let i = 0; i < menuItems.length; i++)
+                        if (menuItems[i].items) return "";
+                    return "fd-menu--overflow dg-headermenu--overflow";
+                }
+
                 scope.menuClicked = function (menuButton) {
                     let menu = menuButton.parentElement.querySelector(".fd-menu");
                     if (menu.classList.contains("dg-hidden")) {
@@ -815,6 +825,12 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 isToplevel: "<",
             },
             link: function (scope, element) {
+                scope.isScrollable = function (menuItems) {
+                    for (let i = 0; i < menuItems.length; i++)
+                        if (menuItems[i].items) return "";
+                    return "dg-menu__sublist--overflow";
+                }
+
                 scope.hideAllSubmenus = function (parent) {
                     let submenuLists = parent.querySelectorAll(".fd-menu__sublist");
                     let submenuLinks = parent.querySelectorAll(".fd-menu__link[aria-haspopup]");
