@@ -10,7 +10,7 @@
         <header-menu menu-handler="menuClick" menu-list="menu"></header-menu>
     </div>
     <div class="fd-tool-header__group">
-        <div class="fd-tool-header__element">
+        <div class="fd-tool-header__element dg-backdrop-element">
             <button id="themePopoverButton"
                 class="fd-button fd-button--compact fd-button--transparent fd-button--menu fd-tool-header__button"
                 ng-click="themeButtonClicked()" aria-label="themes menu button" aria-controls="themePopover"
@@ -39,7 +39,7 @@
                 </div>
             </div>
         </div>
-        <div class="fd-tool-header__element">
+        <div class="fd-tool-header__element dg-backdrop-element">
             <button id="userPopoverButton"
                 class="fd-button fd-button--compact fd-button--transparent fd-tool-header__button"
                 ng-click="userButtonClicked()" aria-label="user menu button" aria-controls="userPopover"
@@ -67,4 +67,5 @@
             </div>
         </div>
     </div>
+    <div class="dg-menu__backdrop dg-hidden" ng-click="backdropClick()"></div>
 </div>

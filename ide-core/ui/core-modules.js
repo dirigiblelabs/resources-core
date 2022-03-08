@@ -228,6 +228,154 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             templateUrl: '/services/v4/web/ide-core/ui/templates/brandIcon.html'
         };
     }])
+    .directive('ideContextmenu', ['messageHub', function (messageHub) {
+        return {
+            restrict: 'E',
+            replace: true,
+            link: function (scope, element) {
+                let openedMenuId = "";
+                let menu = element[0].querySelector(".fd-menu");
+                scope.menuItems = [];
+                scope.callbackTopic = "";
+
+                scope.menuClick = function (itemId) {
+                    messageHub.postMessage(scope.callbackTopic, itemId, true);
+                };
+
+                element.on('click', function () {
+                    element[0].classList.add("dg-hidden");
+                    hideAllMenus();
+                });
+
+                element.on('contextmenu', function (event) {
+                    event.preventDefault();
+                    element[0].classList.add("dg-hidden");
+                    hideAllMenus();
+                });
+
+                function hideAllMenus() {
+                    let submenus = element[0].querySelectorAll('.fd-menu__sublist');
+                    let submenusLinks = element[0].querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
+                    }
+                }
+
+                scope.menuHovered = function () {
+                    if (openedMenuId !== "") {
+                        let oldSubmenu = element[0].querySelector(`#${openedMenuId}`);
+                        let oldSubmenuLink = element[0].querySelector(`span[aria-controls="${openedMenuId}"]`);
+                        oldSubmenuLink.setAttribute("aria-expanded", false);
+                        oldSubmenuLink.classList.remove("is-expanded");
+                        oldSubmenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
+                    }
+                };
+
+                scope.showSubmenu = function (submenuId) {
+                    openedMenuId = submenuId;
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    let submenus = submenu.querySelectorAll('.fd-menu__sublist');
+                    let submenusLinks = submenu.querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
+                    }
+                    let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                    submenuLink.setAttribute("aria-expanded", true);
+                    submenuLink.classList.add("is-expanded");
+                    submenu.setAttribute("aria-hidden", false);
+                };
+
+                scope.hideSubmenu = function (submenuId, target) {
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    if (!submenu.contains(target)) {
+                        let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                        submenuLink.setAttribute("aria-expanded", false);
+                        submenuLink.classList.remove("is-expanded");
+                        submenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
+                    }
+                };
+
+                messageHub.onDidReceiveMessage(
+                    'ide-contextmenu.open',
+                    function (msg) {
+                        // console.log(msg.data);
+                        scope.$apply(function () {
+                            scope.menuItems = msg.data.items;
+                            scope.callbackTopic = msg.data.callbackTopic;
+                            menu.style.top = `${msg.data.posY}px`;
+                            menu.style.left = `${msg.data.posX}px`;
+                            element[0].classList.remove("dg-hidden");
+                        })
+                    },
+                    true
+                );
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/contextmenu.html'
+        };
+    }])
+    .directive('ideContextmenuSubmenu', function () {
+        return {
+            restrict: 'E',
+            replace: true,
+            scope: {
+                menuClick: "&",
+                menuItems: "<",
+                submenuIndex: "<",
+            },
+            link: function (scope, element, attr) {
+                let openedMenuId = "";
+                scope.menuClick = scope.menuClick();
+
+                scope.menuHovered = function () {
+                    if (openedMenuId !== "" && openedMenuId !== attr["id"]) {
+                        let oldSubmenu = element[0].querySelector(`#${openedMenuId}`);
+                        let oldSubmenuLink = element[0].querySelector(`span[aria-controls="${openedMenuId}"]`);
+                        oldSubmenuLink.setAttribute("aria-expanded", false);
+                        oldSubmenuLink.classList.remove("is-expanded");
+                        oldSubmenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
+                    }
+                };
+
+                scope.showSubmenu = function (submenuId) {
+                    openedMenuId = submenuId;
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    let submenus = submenu.querySelectorAll('.fd-menu__sublist');
+                    let submenusLinks = submenu.querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
+                    }
+                    let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                    submenuLink.setAttribute("aria-expanded", true);
+                    submenuLink.classList.add("is-expanded");
+                    submenu.setAttribute("aria-hidden", false);
+                };
+
+                scope.hideSubmenu = function (submenuId, target) {
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    if (!submenu.contains(target)) {
+                        let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                        submenuLink.setAttribute("aria-expanded", false);
+                        submenuLink.classList.remove("is-expanded");
+                        submenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
+                    }
+                };
+            },
+            templateUrl: '/services/v4/web/ide-core/ui/templates/contextmenuSubmenu.html'
+        };
+    })
     .directive('ideHeader', ['$window', '$resource', 'Theming', 'User', 'Layouts', 'messageHub', function ($window, $resource, Theming, User, Layouts, messageHub) {
         return {
             restrict: 'E',
@@ -240,22 +388,11 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 let isMenuOpen = false;
                 scope.themes = Theming.getThemes();
                 scope.user = User.get();
+                let menuBackdrop = element[0].querySelector(".dg-menu__backdrop");
                 let themePopover = element[0].querySelector("#themePopover");
                 let themePopoverButton = element[0].querySelector("#themePopoverButton");
                 let userPopover = element[0].querySelector("#userPopover");
                 let userPopoverButton = element[0].querySelector("#userPopoverButton");
-                function documentClick(event) {
-                    if (isMenuOpen) {
-                        if (!themePopover.classList.contains("dg-hidden")) {
-                            if (!themePopover.parentElement.contains(event.target))
-                                toggleThemePopover(true);
-                        }
-                        if (!userPopover.classList.contains("dg-hidden")) {
-                            if (!userPopover.parentElement.contains(event.target))
-                                toggleUserPopover(true);
-                        }
-                    }
-                }
                 function toggleThemePopover(hidden = true) {
                     isMenuOpen = !hidden;
                     if (hidden) {
@@ -280,12 +417,56 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         userPopoverButton.setAttribute("aria-expanded", true);
                     }
                 }
-                document.addEventListener("click", documentClick);
 
                 function loadMenu() {
                     scope.menu = $resource(scope.url).query();
                 }
                 scope.branding = getBrandingInfo();
+
+                scope.showBackdrop = function () {
+                    menuBackdrop.classList.remove("dg-hidden");
+                };
+
+                scope.hideBackdrop = function () {
+                    menuBackdrop.classList.add("dg-hidden");
+                };
+
+                scope.backdropClick = function () {
+                    messageHub.triggerEvent('header-menu.closeAll', true);
+                    if (isMenuOpen) {
+                        if (!themePopover.classList.contains("dg-hidden")) {
+                            toggleThemePopover(true);
+                        }
+                        if (!userPopover.classList.contains("dg-hidden")) {
+                            toggleUserPopover(true);
+                        }
+                    }
+                    scope.hideBackdrop();
+                };
+
+                messageHub.onDidReceiveMessage(
+                    'ide-header.menuOpened',
+                    function () {
+                        if (isMenuOpen) {
+                            if (!themePopover.classList.contains("dg-hidden")) {
+                                toggleThemePopover(true);
+                            }
+                            if (!userPopover.classList.contains("dg-hidden")) {
+                                toggleUserPopover(true);
+                            }
+                        }
+                        scope.showBackdrop();
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    'ide-header.menuClosed',
+                    function () {
+                        if (!isMenuOpen) scope.hideBackdrop();
+                    },
+                    true
+                );
 
                 messageHub.onDidReceiveMessage(
                     'ide-core.openEditor',
@@ -414,21 +595,31 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 scope.themeButtonClicked = function () {
                     toggleUserPopover(true);
                     if (themePopover.classList.contains("dg-hidden")) {
+                        scope.showBackdrop();
+                        messageHub.triggerEvent('header-menu.closeAll', true);
                         let offset = themePopoverButton.getBoundingClientRect();
                         themePopover.style.top = `${offset.bottom}px`;
                         themePopover.style.right = `${$window.innerWidth - offset.right}px`;
                         toggleThemePopover(false);
-                    } else toggleThemePopover(true);
+                    } else {
+                        scope.hideBackdrop();
+                        toggleThemePopover(true);
+                    }
                 };
 
                 scope.userButtonClicked = function () {
                     toggleThemePopover(true);
                     if (userPopover.classList.contains("dg-hidden")) {
+                        scope.showBackdrop();
+                        messageHub.triggerEvent('header-menu.closeAll', true);
                         let offset = userPopoverButton.getBoundingClientRect();
                         userPopover.style.top = `${offset.bottom}px`;
                         userPopover.style.right = `${$window.innerWidth - offset.right}px`;
                         toggleUserPopover(false);
-                    } else toggleUserPopover(true);
+                    } else {
+                        scope.hideBackdrop();
+                        toggleUserPopover(true);
+                    }
                 };
 
                 scope.setTheme = function (themeId) {
@@ -449,7 +640,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             templateUrl: '/services/v4/web/ide-core/ui/templates/ideHeader.html'
         };
     }])
-    .directive("headerHamburgerMenu", function () {
+    .directive("headerHamburgerMenu", ['messageHub', function (messageHub) {
         return {
             restrict: "E",
             replace: true,
@@ -459,12 +650,13 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             },
             link: function (scope, element) {
                 let isMenuOpen = false;
-                function documentClick(event) {
-                    if (isMenuOpen && !element[0].contains(event.target)) {
-                        scope.hideAllMenus();
-                    }
-                }
-                document.addEventListener("click", documentClick);
+                messageHub.onDidReceiveMessage(
+                    'header-menu.closeAll',
+                    function () {
+                        if (isMenuOpen) scope.hideAllMenus();
+                    },
+                    true
+                );
                 scope.menuClicked = function (menuButton) {
                     let menu = menuButton.parentElement.querySelector(".fd-menu");
                     if (menu.classList.contains("dg-hidden")) {
@@ -474,9 +666,11 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         menu.style.top = `${offset.bottom}px`;
                         menu.style.left = `${offset.left}px`;
                         menu.classList.remove("dg-hidden");
+                        messageHub.triggerEvent('ide-header.menuOpened', true);
                         isMenuOpen = true;
                     } else {
                         menu.classList.add("dg-hidden");
+                        messageHub.triggerEvent('ide-header.menuClosed', true);
                         isMenuOpen = false;
                     }
                 };
@@ -524,8 +718,8 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             },
             templateUrl: "/services/v4/web/ide-core/ui/templates/headerHamburgerMenu.html",
         };
-    })
-    .directive("headerMenu", function () {
+    }])
+    .directive("headerMenu", ['messageHub', function (messageHub) {
         return {
             restrict: "E",
             replace: true,
@@ -535,12 +729,20 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             },
             link: function (scope, element) {
                 let isMenuOpen = false;
-                function documentClick(event) {
-                    if (isMenuOpen && !element[0].contains(event.target)) {
-                        scope.hideAllMenus();
-                    }
+                messageHub.onDidReceiveMessage(
+                    'header-menu.closeAll',
+                    function () {
+                        if (isMenuOpen) scope.hideAllMenus();
+                    },
+                    true
+                );
+
+                scope.isScrollable = function (menuItems) {
+                    for (let i = 0; i < menuItems.length; i++)
+                        if (menuItems[i].items) return "";
+                    return "fd-menu--overflow dg-headermenu--overflow";
                 }
-                document.addEventListener("click", documentClick);
+
                 scope.menuClicked = function (menuButton) {
                     let menu = menuButton.parentElement.querySelector(".fd-menu");
                     if (menu.classList.contains("dg-hidden")) {
@@ -550,9 +752,11 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         menu.style.top = `${offset.bottom}px`;
                         menu.style.left = `${offset.left}px`;
                         menu.classList.remove("dg-hidden");
+                        messageHub.triggerEvent('ide-header.menuOpened', true);
                         isMenuOpen = true;
                     } else {
                         menu.classList.add("dg-hidden");
+                        messageHub.triggerEvent('ide-header.menuClosed', true);
                         isMenuOpen = false;
                     }
                 };
@@ -561,6 +765,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     for (let i = 0; i < menus.length; i++) {
                         if (!menus[i].classList.contains("dg-hidden")) menus[i].classList.add("dg-hidden");
                     }
+                    messageHub.triggerEvent('ide-header.menuClosed', true);
                     isMenuOpen = false;
                 };
                 scope.hideAllSubmenus = function (parent) {
@@ -607,7 +812,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             },
             templateUrl: "/services/v4/web/ide-core/ui/templates/headerMenu.html",
         };
-    })
+    }])
     .directive("headerSubmenu", function () {
         return {
             restrict: "E",
@@ -620,6 +825,12 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 isToplevel: "<",
             },
             link: function (scope, element) {
+                scope.isScrollable = function (menuItems) {
+                    for (let i = 0; i < menuItems.length; i++)
+                        if (menuItems[i].items) return "";
+                    return "dg-menu__sublist--overflow";
+                }
+
                 scope.hideAllSubmenus = function (parent) {
                     let submenuLists = parent.querySelectorAll(".fd-menu__sublist");
                     let submenuLinks = parent.querySelectorAll(".fd-menu__link[aria-haspopup]");
