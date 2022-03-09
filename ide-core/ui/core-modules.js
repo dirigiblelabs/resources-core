@@ -54,6 +54,12 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     }
                 );
             },
+            getCurrentTheme: function () {
+                return {
+                    "id": theme["id"],
+                    "name": theme["name"]
+                };
+            },
             reset: function () {
                 // setting sendEvent to false because of the reload caused by Golden Layout
                 setTheme("quartz-light", false);
@@ -242,19 +248,21 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     messageHub.postMessage(scope.callbackTopic, itemId, true);
                 };
 
-                element.on('click', function () {
+                element.on('click', function (event) {
+                    event.stopPropagation();
                     element[0].classList.add("dg-hidden");
-                    hideAllMenus();
+                    scope.hideAllSubmenus();
                 });
 
                 element.on('contextmenu', function (event) {
                     event.preventDefault();
+                    event.stopPropagation();
                     element[0].classList.add("dg-hidden");
-                    hideAllMenus();
+                    scope.hideAllSubmenus();
                 });
 
-                function hideAllMenus() {
-                    let submenus = element[0].querySelectorAll('.fd-menu__sublist');
+                scope.hideAllSubmenus = function () {
+                    let submenus = element[0].querySelectorAll('.fd-menu__sublist[aria-hidden="false"]');
                     let submenusLinks = element[0].querySelectorAll('.is-expanded');
                     for (let i = 0; i < submenus.length; i++)
                         submenus[i].setAttribute("aria-hidden", true);
@@ -276,6 +284,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 };
 
                 scope.showSubmenu = function (submenuId) {
+                    scope.hideAllSubmenus();
                     openedMenuId = submenuId;
                     let submenu = element[0].querySelector(`#${submenuId}`);
                     let submenus = submenu.querySelectorAll('.fd-menu__sublist');
@@ -387,33 +396,51 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             link: function (scope, element) {
                 let isMenuOpen = false;
                 scope.themes = Theming.getThemes();
+                scope.currentTheme = Theming.getCurrentTheme();
                 scope.user = User.get();
                 let menuBackdrop = element[0].querySelector(".dg-menu__backdrop");
                 let themePopover = element[0].querySelector("#themePopover");
                 let themePopoverButton = element[0].querySelector("#themePopoverButton");
                 let userPopover = element[0].querySelector("#userPopover");
                 let userPopoverButton = element[0].querySelector("#userPopoverButton");
+
+                menuBackdrop.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    scope.backdropEvent();
+                });
+
+                menuBackdrop.addEventListener('contextmenu', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    scope.backdropEvent();
+                });
+
                 function toggleThemePopover(hidden = true) {
                     isMenuOpen = !hidden;
                     if (hidden) {
                         themePopover.classList.add("dg-hidden");
                         themePopover.setAttribute("aria-expanded", false);
+                        themePopover.setAttribute("aria-hidden", true);
                         themePopoverButton.setAttribute("aria-expanded", false);
                     } else {
                         themePopover.classList.remove("dg-hidden");
                         themePopover.setAttribute("aria-expanded", true);
+                        themePopover.setAttribute("aria-hidden", false);
                         themePopoverButton.setAttribute("aria-expanded", true);
                     }
                 }
+
                 function toggleUserPopover(hidden = true) {
                     isMenuOpen = !hidden;
                     if (hidden) {
                         userPopover.classList.add("dg-hidden");
                         userPopover.setAttribute("aria-expanded", false);
+                        userPopover.setAttribute("aria-hidden", true);
                         userPopoverButton.setAttribute("aria-expanded", false);
                     } else {
                         userPopover.classList.remove("dg-hidden");
                         userPopover.setAttribute("aria-expanded", true);
+                        userPopover.setAttribute("aria-hidden", false);
                         userPopoverButton.setAttribute("aria-expanded", true);
                     }
                 }
@@ -421,6 +448,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 function loadMenu() {
                     scope.menu = $resource(scope.url).query();
                 }
+
                 scope.branding = getBrandingInfo();
 
                 scope.showBackdrop = function () {
@@ -431,7 +459,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     menuBackdrop.classList.add("dg-hidden");
                 };
 
-                scope.backdropClick = function () {
+                scope.backdropEvent = function () {
                     messageHub.triggerEvent('header-menu.closeAll', true);
                     if (isMenuOpen) {
                         if (!themePopover.classList.contains("dg-hidden")) {
@@ -622,7 +650,9 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     }
                 };
 
-                scope.setTheme = function (themeId) {
+                scope.setTheme = function (themeId, name) {
+                    scope.currentTheme.id = themeId;
+                    scope.currentTheme.name = name;
                     Theming.setTheme(themeId);
                     toggleThemePopover(true);
                 };
@@ -650,6 +680,8 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             },
             link: function (scope, element) {
                 let isMenuOpen = false;
+                scope.menuHandler = scope.menuHandler();
+
                 messageHub.onDidReceiveMessage(
                     'header-menu.closeAll',
                     function () {
@@ -657,6 +689,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     },
                     true
                 );
+
                 scope.menuClicked = function (menuButton) {
                     let menu = menuButton.parentElement.querySelector(".fd-menu");
                     if (menu.classList.contains("dg-hidden")) {
@@ -674,45 +707,51 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         isMenuOpen = false;
                     }
                 };
+
                 scope.hideAllMenus = function () {
                     let menus = element[0].querySelectorAll(".fd-menu");
                     for (let i = 0; i < menus.length; i++) {
                         if (!menus[i].classList.contains("dg-hidden")) menus[i].classList.add("dg-hidden");
                     }
+                    messageHub.triggerEvent('ide-header.menuClosed', true);
                     isMenuOpen = false;
                 };
-                scope.hideAllSubmenus = function (parent) {
-                    let submenuLists = parent.querySelectorAll(".fd-menu__sublist");
-                    let submenuLinks = parent.querySelectorAll(".fd-menu__link[aria-haspopup]");
-                    if (submenuLists.length !== submenuLinks.length)
-                        console.error("Error: Submenu list count is different then the submenu link count.");
-                    for (let i = 0; i < submenuLists.length; i++) {
-                        submenuLinks[i].classList.remove("is-expanded");
-                        submenuLinks[i].setAttribute("aria-expanded", false);
-                        submenuLists[i].classList.add("dg-hidden");
-                        submenuLists[i].setAttribute("aria-hidden", true);
+
+                scope.hideAllSubmenus = function () {
+                    let submenus = element[0].querySelectorAll('.fd-menu__sublist[aria-hidden="false"]');
+                    let submenusLinks = element[0].querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
                     }
                 };
-                scope.submenuShow = function (submenuId) {
-                    let submenu = element[0].querySelector("#" + submenuId);
-                    let submenuList = submenu.querySelector(".fd-menu__sublist");
-                    let submenuLink = submenu.querySelector(".fd-menu__link");
-                    if (!submenuLink.classList.contains("is-expanded")) {
-                        submenuLink.classList.add("is-expanded");
-                        submenuLink.setAttribute("aria-expanded", true);
-                        submenuList.classList.remove("dg-hidden");
-                        submenuList.setAttribute("aria-hidden", false);
+
+                scope.showSubmenu = function (submenuId) {
+                    scope.hideAllSubmenus();
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    let submenus = submenu.querySelectorAll('.fd-menu__sublist');
+                    let submenusLinks = submenu.querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
                     }
+                    let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                    submenuLink.setAttribute("aria-expanded", true);
+                    submenuLink.classList.add("is-expanded");
+                    submenu.setAttribute("aria-hidden", false);
                 };
-                scope.submenuHide = function (submenuId, target) {
-                    let submenu = element[0].querySelector("#" + submenuId);
+
+                scope.hideSubmenu = function (submenuId, target) {
+                    let submenu = element[0].querySelector(`#${submenuId}`);
                     if (!submenu.contains(target)) {
-                        let submenuList = submenu.querySelector(".fd-menu__sublist");
-                        let submenuLink = submenu.querySelector(".fd-menu__link");
-                        submenuLink.classList.remove("is-expanded");
+                        let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
                         submenuLink.setAttribute("aria-expanded", false);
-                        submenuList.classList.add("dg-hidden");
-                        submenuList.setAttribute("aria-hidden", true);
+                        submenuLink.classList.remove("is-expanded");
+                        submenu.setAttribute("aria-hidden", true);
                     }
                 };
             },
@@ -729,19 +768,36 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             },
             link: function (scope, element) {
                 let isMenuOpen = false;
+                let openedMenuId = "";
+                scope.menuHandler = scope.menuHandler();
+
                 messageHub.onDidReceiveMessage(
                     'header-menu.closeAll',
                     function () {
-                        if (isMenuOpen) scope.hideAllMenus();
+                        if (isMenuOpen) {
+                            scope.hideAllMenus();
+                            scope.hideAllSubmenus();
+                        }
                     },
                     true
                 );
 
                 scope.isScrollable = function (menuItems) {
                     for (let i = 0; i < menuItems.length; i++)
-                        if (menuItems[i].items) return "";
-                    return "fd-menu--overflow dg-headermenu--overflow";
+                        if (menuItems[i].items) return '';
+                    return 'fd-menu--overflow dg-headermenu--overflow';
                 }
+
+                scope.menuHovered = function () {
+                    if (openedMenuId !== "") {
+                        let oldSubmenu = element[0].querySelector(`#${openedMenuId}`);
+                        let oldSubmenuLink = element[0].querySelector(`span[aria-controls="${openedMenuId}"]`);
+                        oldSubmenuLink.setAttribute("aria-expanded", false);
+                        oldSubmenuLink.classList.remove("is-expanded");
+                        oldSubmenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
+                    }
+                };
 
                 scope.menuClicked = function (menuButton) {
                     let menu = menuButton.parentElement.querySelector(".fd-menu");
@@ -760,6 +816,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         isMenuOpen = false;
                     }
                 };
+
                 scope.hideAllMenus = function () {
                     let menus = element[0].querySelectorAll(".fd-menu");
                     for (let i = 0; i < menus.length; i++) {
@@ -768,46 +825,50 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     messageHub.triggerEvent('ide-header.menuClosed', true);
                     isMenuOpen = false;
                 };
-                scope.hideAllSubmenus = function (parent) {
-                    let submenuLists = parent.querySelectorAll(".fd-menu__sublist");
-                    let submenuLinks = parent.querySelectorAll(".fd-menu__link[aria-haspopup]");
-                    if (submenuLists.length !== submenuLinks.length)
-                        console.error("Error: Submenu list count is different then the submenu link count.");
-                    for (let i = 0; i < submenuLists.length; i++) {
-                        if (submenuLinks[i].getAttribute("aria-expanded")) {
-                            submenuLinks[i].classList.remove("is-expanded");
-                            submenuLinks[i].setAttribute("aria-expanded", false);
-                            submenuLists[i].classList.add("dg-hidden");
-                            submenuLists[i].setAttribute("aria-hidden", true);
-                        }
+
+                scope.hideAllSubmenus = function () {
+                    let submenus = element[0].querySelectorAll('.fd-menu__sublist[aria-hidden="false"]');
+                    let submenusLinks = element[0].querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
                     }
                 };
-                scope.submenuShow = function (submenuId) {
-                    let submenu = element[0].querySelector("#" + submenuId);
-                    let submenuList = submenu.querySelector(".fd-menu__sublist");
-                    let submenuLink = submenu.querySelector(".fd-menu__link");
-                    if (!submenuLink.classList.contains("is-expanded")) {
-                        scope.hideAllSubmenus(submenu.parentElement);
-                        submenuLink.classList.add("is-expanded");
-                        submenuLink.setAttribute("aria-expanded", true);
-                        submenuList.classList.remove("dg-hidden");
-                        submenuList.setAttribute("aria-hidden", false);
+
+                scope.showSubmenu = function (submenuId) {
+                    scope.hideAllSubmenus();
+                    openedMenuId = submenuId;
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    let submenus = submenu.querySelectorAll('.fd-menu__sublist');
+                    let submenusLinks = submenu.querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
                     }
+                    let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                    submenuLink.setAttribute("aria-expanded", true);
+                    submenuLink.classList.add("is-expanded");
+                    submenu.setAttribute("aria-hidden", false);
                 };
-                scope.submenuHide = function (submenuId, target) {
-                    let submenu = element[0].querySelector("#" + submenuId);
+
+                scope.hideSubmenu = function (submenuId, target) {
+                    let submenu = element[0].querySelector(`#${submenuId}`);
                     if (!submenu.contains(target)) {
-                        let submenuList = submenu.querySelector(".fd-menu__sublist");
-                        let submenuLink = submenu.querySelector(".fd-menu__link");
-                        submenuLink.classList.remove("is-expanded");
+                        let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
                         submenuLink.setAttribute("aria-expanded", false);
-                        submenuList.classList.add("dg-hidden");
-                        submenuList.setAttribute("aria-hidden", true);
+                        submenuLink.classList.remove("is-expanded");
+                        submenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
                     }
                 };
+
                 scope.menuItemClick = function (item, subItem) {
                     scope.hideAllMenus();
-                    scope.menuHandler()(item, subItem);
+                    scope.menuHandler(item, subItem);
                 };
             },
             templateUrl: "/services/v4/web/ide-core/ui/templates/headerMenu.html",
@@ -823,55 +884,74 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 menuHandler: "&",
                 hideMenuFn: "&",
                 isToplevel: "<",
+                idPrefix: "<",
             },
-            link: function (scope, element) {
+            link: function (scope, element, attr) {
+                let openedMenuId = "";
+                scope.hideMenuFn = scope.hideMenuFn();
+                scope.menuHandler = scope.menuHandler();
+
                 scope.isScrollable = function (menuItems) {
                     for (let i = 0; i < menuItems.length; i++)
                         if (menuItems[i].items) return "";
                     return "dg-menu__sublist--overflow";
                 }
 
-                scope.hideAllSubmenus = function (parent) {
-                    let submenuLists = parent.querySelectorAll(".fd-menu__sublist");
-                    let submenuLinks = parent.querySelectorAll(".fd-menu__link[aria-haspopup]");
-                    if (submenuLists.length !== submenuLinks.length)
-                        console.error("Error: Submenu list count is different then the submenu link count.");
-                    for (let i = 0; i < submenuLists.length; i++) {
-                        if (submenuLinks[i].getAttribute("aria-expanded")) {
-                            submenuLinks[i].classList.remove("is-expanded");
-                            submenuLinks[i].setAttribute("aria-expanded", false);
-                            submenuLists[i].classList.add("dg-hidden");
-                            submenuLists[i].setAttribute("aria-hidden", true);
-                        }
+                scope.menuHovered = function () {
+                    if (openedMenuId !== "" && openedMenuId !== attr["id"]) {
+                        let oldSubmenu = element[0].querySelector(`#${openedMenuId}`);
+                        let oldSubmenuLink = element[0].querySelector(`span[aria-controls="${openedMenuId}"]`);
+                        oldSubmenuLink.setAttribute("aria-expanded", false);
+                        oldSubmenuLink.classList.remove("is-expanded");
+                        oldSubmenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
                     }
                 };
-                scope.submenuShow = function (submenuId) {
-                    let submenu = element[0].querySelector("#" + submenuId);
-                    let submenuList = submenu.querySelector(".fd-menu__sublist");
-                    let submenuLink = submenu.querySelector(".fd-menu__link");
-                    if (!submenuLink.classList.contains("is-expanded")) {
-                        scope.hideAllSubmenus(submenu.parentElement);
-                        submenuLink.classList.add("is-expanded");
-                        submenuLink.setAttribute("aria-expanded", true);
-                        submenuList.classList.remove("dg-hidden");
-                        submenuList.setAttribute("aria-hidden", false);
+
+                scope.hideAllSubmenus = function () {
+                    let submenus = element[0].querySelectorAll('.fd-menu__sublist[aria-hidden="false"]');
+                    let submenusLinks = element[0].querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
                     }
                 };
-                scope.submenuHide = function (submenuId, target) {
-                    let submenu = element[0].querySelector("#" + submenuId);
+
+                scope.showSubmenu = function (submenuId) {
+                    scope.hideAllSubmenus();
+                    openedMenuId = submenuId;
+                    let submenu = element[0].querySelector(`#${submenuId}`);
+                    let submenus = submenu.querySelectorAll('.fd-menu__sublist');
+                    let submenusLinks = submenu.querySelectorAll('.is-expanded');
+                    for (let i = 0; i < submenus.length; i++)
+                        submenus[i].setAttribute("aria-hidden", true);
+                    for (let i = 0; i < submenusLinks.length; i++) {
+                        submenusLinks[i].setAttribute("aria-expanded", false);
+                        submenusLinks[i].classList.remove("is-expanded");
+                    }
+                    let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
+                    submenuLink.setAttribute("aria-expanded", true);
+                    submenuLink.classList.add("is-expanded");
+                    submenu.setAttribute("aria-hidden", false);
+                };
+
+                scope.hideSubmenu = function (submenuId, target) {
+                    let submenu = element[0].querySelector(`#${submenuId}`);
                     if (!submenu.contains(target)) {
-                        let submenuList = submenu.querySelector(".fd-menu__sublist");
-                        let submenuLink = submenu.querySelector(".fd-menu__link");
-                        submenuLink.classList.remove("is-expanded");
+                        let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
                         submenuLink.setAttribute("aria-expanded", false);
-                        submenuList.classList.add("dg-hidden");
-                        submenuList.setAttribute("aria-hidden", true);
+                        submenuLink.classList.remove("is-expanded");
+                        submenu.setAttribute("aria-hidden", true);
+                        openedMenuId = "";
                     }
                 };
+
                 scope.menuItemClick = function (item, subItem) {
-                    scope.hideMenuFn()();
-                    if (scope.isToplevel) scope.menuHandler()(subItem); // Temp fix for legacy menu api
-                    else scope.menuHandler()(item, subItem);
+                    scope.hideMenuFn();
+                    if (scope.isToplevel) scope.menuHandler(subItem); // Temp fix for legacy menu api
+                    else scope.menuHandler(item, subItem);
                 };
             },
             templateUrl: "/services/v4/web/ide-core/ui/templates/headerSubmenu.html",
