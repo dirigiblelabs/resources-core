@@ -162,6 +162,8 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             if (initialOpenViewsChanged)
                                 saveLayoutState();
 
+                            shortenCenterTabsLabels();
+
                         } else {
                             let openViews = $scope.initialOpenViews.map(viewById);
 
@@ -486,6 +488,9 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             //that's the last tab in the tabs view -> remove the wrapping split pane
                             removeSplitPane(splitView, tabsView);
                         }
+
+                        shortenCenterTabsLabels();
+
                         saveLayoutState();
                         return true;
                     }
@@ -538,6 +543,102 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                         closingFileArgs = null;
                     }
                 });
+
+                function shortenCenterTabsLabels() {
+
+                    const getTabPath = tab => {
+                        const index = tab.id.lastIndexOf('/');
+                        return tab.id.substring(0, index > 0 ? index : x.id.length);
+                    }
+
+                    const allTabs = [];
+                    forEachCenterSplittedTabView(pane => allTabs.push(...pane.tabs.filter(x => x.type === EDITOR)), $scope.centerSplittedTabViews);
+
+                    const duplicatedTabs = allTabs.reduce((ret, tab) => {
+                        let duplicates = ret.get(tab.label);
+                        if (duplicates === undefined) {
+                            duplicates = [];
+                            ret.set(tab.label, duplicates);
+                        }
+
+                        duplicates.push(tab);
+
+                        return ret;
+                    }, new Map());
+
+                    duplicatedTabs.forEach(tabs => {
+                        if (tabs.length == 1) {
+                            //no duplication so just reset the description
+                            tabs[0].description = '';
+                            return;
+                        }
+
+                        const paths = tabs.map(getTabPath);
+                        const shortenedPaths = shortenPaths(paths);
+
+                        tabs.forEach((tab, index) => tab.description = shortenedPaths[index]);
+                    });
+                }
+
+                function shortenPaths(paths) {
+                    const shortenedPaths = [];
+                    const pathSeparator = '/';
+                    const ellipsis = '..';
+
+                    let match;
+                    for (let pathIndex = 0; pathIndex < paths.length; pathIndex++) {
+                        let path = paths[pathIndex];
+
+                        if (path.indexOf(pathSeparator) === 0) {
+                            prefix = path.substring(0, path.indexOf(pathSeparator) + pathSeparator.length);
+                            path = path.substring(path.indexOf(pathSeparator) + pathSeparator.length);
+                        }
+
+                        match = true;
+
+                        const segments = path.split(pathSeparator);
+                        for (let subpathLength = 1; match && subpathLength <= segments.length; subpathLength++) {
+                            for (let start = segments.length - subpathLength; match && start >= 0; start--) {
+                                match = false;
+
+                                let subpath = segments.slice(start, start + subpathLength).join(pathSeparator);
+
+                                for (let otherPathIndex = 0; !match && otherPathIndex < paths.length; otherPathIndex++) {
+
+                                    if (otherPathIndex !== pathIndex && paths[otherPathIndex] && paths[otherPathIndex].indexOf(subpath) > -1) {
+                                        const isSubpathEnding = (start + subpathLength === segments.length);
+                                        const subpathWithSep = (start > 0 && paths[otherPathIndex].indexOf(pathSeparator) > -1) ? pathSeparator + subpath : subpath;
+                                        const isOtherPathEnding = paths[otherPathIndex].endsWith(subpathWithSep);
+
+                                        match = !isSubpathEnding || isOtherPathEnding;
+                                    }
+                                }
+
+                                if (!match) {
+                                    let result = '';
+
+                                    if (start > 0) {
+                                        result += ellipsis + pathSeparator;
+                                    }
+
+                                    result += subpath;
+
+                                    if (start + subpathLength < segments.length) {
+                                        result += pathSeparator + ellipsis;
+                                    }
+
+                                    shortenedPaths[pathIndex] = result;
+                                }
+                            }
+                        }
+
+                        if (match) {
+                            shortenedPaths[pathIndex] = path;
+                        }
+                    }
+
+                    return shortenedPaths;
+                }
 
                 Layouts.manager = {
                     openEditor: function (resourcePath, resourceLabel, contentType, editorId = "editor", extraArgs = null) {
@@ -592,6 +693,9 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                                 currentTabsView.selectedTab = resourcePath;
                                 currentTabsView.tabs.push(fileTab);
                             }
+
+                            shortenCenterTabsLabels();
+
                             $scope.$digest();
 
                             saveLayoutState();
