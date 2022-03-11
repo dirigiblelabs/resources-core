@@ -244,8 +244,8 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 scope.menuItems = [];
                 scope.callbackTopic = "";
 
-                scope.menuClick = function (itemId) {
-                    messageHub.postMessage(scope.callbackTopic, itemId, true);
+                scope.menuClick = function (itemId, data) {
+                    messageHub.postMessage(scope.callbackTopic, { itemId: itemId, data: data }, true);
                 };
 
                 element.on('click', function (event) {
