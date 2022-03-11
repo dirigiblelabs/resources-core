@@ -48,33 +48,45 @@ angular.module('ideUI', ['ideMessageHub'])
             restrict: 'A',
             replace: false,
             scope: {
-                callback: '&dgContextmenu'
+                callback: '&dgContextmenu',
+                excludedElements: '='
             },
             link: function (scope, element) {
                 scope.callback = scope.callback();
                 element.on('contextmenu', function (event) {
-                    event.preventDefault();
-                    let posX;
-                    let posY;
-                    if ($window.frameElement) {
-                        let frame = $window.frameElement.getBoundingClientRect();
-                        posX = frame.x + event.clientX;
-                        posY = frame.y + event.clientY;
-                    } else {
-                        posX = event.clientX;
-                        posY = event.clientY;
+                    if (scope.excludedElements) {
+                        if (scope.excludedElements.ids && scope.excludedElements.ids.includes(event.target.id)) return;
+                        if (scope.excludedElements.classes) {
+                            for (let i = 0; i < scope.excludedElements.classes.length; i++) {
+                                if (event.target.classList.contains(scope.excludedElements.classes[i])) return;
+                            }
+                        }
+                        if (scope.excludedElements.types && scope.excludedElements.types.includes(event.target.tagName)) return;
                     }
+                    event.preventDefault();
                     let menu = scope.callback(event.target);
-                    messageHub.postMessage(
-                        'ide-contextmenu.open',
-                        {
-                            posX: posX,
-                            posY: posY,
-                            callbackTopic: menu.callbackTopic,
-                            items: menu.items
-                        },
-                        true
-                    );
+                    if (menu) {
+                        let posX;
+                        let posY;
+                        if ($window.frameElement) {
+                            let frame = $window.frameElement.getBoundingClientRect();
+                            posX = frame.x + event.clientX;
+                            posY = frame.y + event.clientY;
+                        } else {
+                            posX = event.clientX;
+                            posY = event.clientY;
+                        }
+                        messageHub.postMessage(
+                            'ide-contextmenu.open',
+                            {
+                                posX: posX,
+                                posY: posY,
+                                callbackTopic: menu.callbackTopic,
+                                items: menu.items
+                            },
+                            true
+                        );
+                    }
                 });
             }
         };

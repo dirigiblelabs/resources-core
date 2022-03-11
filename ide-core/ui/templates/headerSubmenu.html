@@ -1,19 +1,22 @@
-<ul class="fd-menu__sublist dg-hidden" aria-hidden="true" role="menu" ng-class="isScrollable(parentItem.items)">
-    <li class="fd-menu__item" role="presentation" ng-repeat-start="menuItem in parentItem.items track by $index"
-        ng-init="subMenuId = ('SM' + submenuIndex + $parent.$index + $index + menuItem.name + parentItem.items.length + menuItem.items.length | removeSpaces)"
-        id="{{ 'P' + subMenuId }}">
+<ul class="fd-menu__sublist" aria-hidden="true" role="menu" ng-class="isScrollable(parentItem.items)">
+    <li class="fd-menu__item" role="presentation" ng-repeat-start="menuItem in parentItem.items track by $index">
         <span ng-if="!menuItem.items" class="fd-menu__link" role="menuitem"
-            ng-click="menuItemClick(parentItem, menuItem)">
+            ng-click="menuItemClick(parentItem, menuItem)" ng-mouseenter="menuHovered()">
             <span class="fd-menu__title">{{ menuItem.name }}</span>
         </span>
-        <span ng-if="menuItem.items" class="fd-menu__link" role="menuitem" aria-expanded="false" aria-haspopup="true"
-            aria-controls="{{ subMenuId }}" ng-mouseenter="submenuShow('P' + subMenuId)"
-            ng-mouseleave="submenuHide('P' + subMenuId, $event.relatedTarget)">
+        <span ng-if="menuItem.items" class="fd-menu__link has-child" aria-expanded="false" aria-haspopup="true"
+            role="menuitem"
+            ng-init="subMenuId = (idPrefix + 'SM' + submenuIndex + $parent.$index + $index + menuItem.name + parentItem.items.length + menuItem.items.length | removeSpaces)"
+            aria-controls="{{ subMenuId }}" ng-click="$event.stopPropagation()" ng-mouseenter="showSubmenu(subMenuId)"
+            ng-mouseleave="hideSubmenu(subMenuId, $event.relatedTarget)">
             <span class="fd-menu__title">{{ menuItem.name }}</span>
             <span class="fd-menu__addon-after fd-menu__addon-after--submenu"></span>
         </span>
-        <header-submenu ng-if="menuItem.items" id="{{ subMenuId }}" menu-handler="menuHandler()"
-            hide-menu-fn="hideMenuFn()" parent-item="menuItem" submenu-index="$parent.$index"></header-submenu>
+        <header-submenu ng-if="menuItem.items"
+            id="{{ (idPrefix + 'SM' + submenuIndex + $parent.$index + $index + menuItem.name + parentItem.items.length + menuItem.items.length | removeSpaces) }}"
+            menu-handler="menuHandler" hide-menu-fn="hideMenuFn" parent-item="menuItem" submenu-index="$parent.$index"
+            id-prefix="idPrefix">
+        </header-submenu>
     </li>
     <span ng-if="menuItem.divider" class="fd-menu__separator" ng-repeat-end></span>
 </ul>
