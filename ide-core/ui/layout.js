@@ -842,7 +842,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     if (oldDirection)
                         $element.removeClass(oldDirection);
 
-                    $element.addClass(['split', newDirection || 'horizontal']);
+                    $element.addClass(['dg-split', newDirection || 'horizontal']);
                 });
 
                 $scope.$watchCollection('panes', function () {
@@ -933,6 +933,8 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 snapOffset: '@'
             },
             link: function (scope, element, attrs, bgSplitCtrl) {
+                element.addClass('dg-split-pane');
+
                 let paneData = scope.paneData = {
                     element: element,
                     size: Number(scope.size),

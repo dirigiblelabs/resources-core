@@ -1,6 +1,6 @@
-<div class="tabs-container">
-  <div class="tabs-list-container">
-    <ul class="fd-tabs fd-tabs-closable" role="tablist">
+<div class="dg-tabs">
+  <div class="dg-tabs-list">
+    <ul class="fd-tabs" role="tablist">
       <li ng-repeat="pane in panes" aria-selected="{{isPaneSelected(pane)}}" role="tab" class="fd-tabs__item"
         ng-class="{'dirty': pane.dirty}">
         <a class="fd-tabs__link" href="" ng-click="tabClick(pane, $event)" ng-dblclick="tabDblclick(pane)"
@@ -15,7 +15,7 @@
         </a>
       </li>
     </ul>
-    <div class="tabs-list-buttons" ng-transclude="buttons"></div>
+    <div class="dg-tabs-list-buttons" ng-transclude="buttons"></div>
   </div>
-  <div class="tabs-content" ng-transclude="panes"></div>
+  <div class="dg-tabs-content" ng-transclude="panes"></div>
 </div>
