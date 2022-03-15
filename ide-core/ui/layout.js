@@ -186,6 +186,33 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             }
                         }, true);
 
+                        $scope.$watch('centerSplittedTabViews', function (newValue, oldValue) {
+                            if (!angular.equals(newValue, oldValue)) {
+                                saveLayoutState();
+                            }
+                        }, true);
+
+                        $scope.$watch('explorerTabs', function (newValue, oldValue) {
+                            const collectionsEqual = (a, b, ...props) => {
+                                if (a && !b || !a && b) return false;
+                                if (!a && !b) return true;
+                                if (a.length !== b.length) return false;
+                                for (let i = 0; i < a.length; i++) {
+                                    const x = a[i];
+                                    const y = b[i];
+                                    for (let p of props) {
+                                        if (!angular.equals(x[p], y[p]))
+                                            return false;
+                                    }
+                                }
+                                return true;
+                            }
+
+                            if (!collectionsEqual(newValue, oldValue, 'hidden')) {
+                                saveLayoutState();
+                            }
+                        }, true);
+
                         if (eventHandlers) {
                             Object.keys(eventHandlers).forEach(function (evtName) {
                                 let handler = eventHandlers[evtName];
@@ -269,14 +296,16 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     let state = {
                         initialOpenViews: $scope.initialOpenViews,
                         explorer: {
-                            tabs: $scope.explorerTabs.map(x => ({ id: x.id, type: x.type, label: x.label, path: x.path }))
+                            tabs: $scope.explorerTabs.map(({ id, type, label, path, hidden }) => ({ id, type, label, path, hidden }))
                         },
                         bottom: {
-                            tabs: $scope.bottomTabs.map(x => ({ id: x.id, type: x.type, label: x.label, path: x.path })),
+                            tabs: $scope.bottomTabs.map(({ id, type, label, path }) => ({ id, type, label, path })),
                             selected: $scope.selection.selectedBottomTab
                         },
                         center: saveCenterSplittedTabViews($scope.centerSplittedTabViews)
                     };
+
+                    console.debug('Saving DIRIGIBLE.IDE.LAYOUT state');
 
                     localStorage.setItem('DIRIGIBLE.IDE.LAYOUT.state.' + $scope.id, JSON.stringify(state));
                 }
@@ -380,8 +409,6 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                                 ]
                             }
                         }
-
-                        $timeout(saveLayoutState, 1000);
                     }
                 }
 
@@ -435,8 +462,6 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                                 splitView.panes.splice(srcIndex, 1);
                             }
                         }
-
-                        $timeout(saveLayoutState, 1000);
                     }
                 }
 
@@ -490,8 +515,6 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                         }
 
                         shortenCenterTabsLabels();
-
-                        saveLayoutState();
                         return true;
                     }
 
@@ -697,8 +720,6 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             shortenCenterTabsLabels();
 
                             $scope.$digest();
-
-                            saveLayoutState();
                         }
                     },
                     closeEditor: function (resourcePath) {
@@ -742,6 +763,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             if (view.region.startsWith('left')) {
                                 let explorerViewTab = findView($scope.explorerTabs, view);
                                 if (explorerViewTab) {
+                                    explorerViewTab.hidden = false;
                                     explorerViewTab.expanded = true;
                                 } else {
                                     explorerViewTab = mapViewToTab(view);
@@ -773,8 +795,6 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                                 if ($scope.isBottomPaneCollapsed())
                                     $scope.expandBottomPane();
                             }
-
-                            saveLayoutState();
                         }
                     }
                 };
@@ -956,6 +976,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
             replace: true,
             scope: {
                 name: '@',
+                items: '='
             },
             link: function (scope, element, attrs) {
                 scope.hidden = true;
@@ -966,6 +987,18 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
 
                 scope.hide = function () {
                     scope.hidden = true;
+                };
+
+                scope.isLastVisibleItem = function (item) {
+                    return !item.hidden && scope.items.reduce((c, x) => {
+                        if (x.id !== item.id && !x.hidden)
+                            c++;
+                        return c;
+                    }, 0) === 0;
+                };
+
+                scope.toggleVisibility = function (item) {
+
                 }
             },
             templateUrl: '/services/v4/web/ide-core/ui/templates/toolbar.html',
@@ -1030,7 +1063,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     if (index >= 0)
                         views.splice(index, 1);
 
-                    updateContentHeights();
+                    updateSize();
                 }
 
                 this.updateHeights = function (view) {
