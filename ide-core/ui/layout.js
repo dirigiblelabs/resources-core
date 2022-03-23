@@ -1134,7 +1134,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 removeTab: '&',
                 moveTab: '&'
             },
-            controller: function ($scope, $element) {
+            controller: ['$scope', '$element', 'messageHub', function ($scope, $element, messageHub) {
                 let panes = $scope.panes = [];
 
                 $scope.isPaneSelected = function (pane) {
@@ -1157,16 +1157,24 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     this.select(pane);
                 };
 
+                $scope.moreTabsItemClick = function (pane) {
+                    this.select(pane);
+                    $scope.moreTabsExpanded = false;
+                }
+
                 $scope.tabDblclick = function (pane) {
                     if ($scope.moveTab)
                         $scope.moveTab({ pane: pane });
                 };
+
+                $scope.moreTabsExpanded = false;
 
                 this.addPane = function (pane) {
                     if (!$scope.selectedPane && panes.length == 0) {
                         $scope.select(pane);
                     }
                     panes.push(pane);
+                    updateTabsVisibilityDelayed();
                 }
 
                 this.removePane = function (pane) {
@@ -1193,16 +1201,105 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                         $scope.select(nextSelectedPane);
                         $scope.lastSelectedPane = null;
                     }
+
+                    updateTabsVisibilityDelayed();
                 }
 
                 this.getSelectedPane = function () {
                     return $scope.selectedPane;
                 }
 
+                const updateTabsVisibility = (containerWidth = -1) => {
+                    if (containerWidth === -1)
+                        containerWidth = tabsListEl[0].clientWidth;
+
+                    const tabElements = $element.find('li.fd-tabs__item[role="tab"]');
+                    const selectedTabEl = $element.find('li.fd-tabs__item[aria-selected="true"]');
+                    const moreButtonEl = $element.find('li.fd-tabs__item[role="button"]');
+                    const moreTabsPopoverBody = $element.find('li.fd-tabs__item[role="button"] .fd-popover__body');
+                    const moreTabsBtnElements = moreTabsPopoverBody.find('.fd-button');
+
+                    selectedTabEl.removeClass('dg-hidden');
+                    moreButtonEl.removeClass('dg-hidden');
+
+                    let width = selectedTabEl.length > 0 ? selectedTabEl.outerWidth(true) : 0;
+                    let moreBtnWidth = moreButtonEl.outerWidth(true);
+
+                    let tabVisible = true;
+                    let selectedTabVisibile = true;
+
+                    if (width > containerWidth - moreBtnWidth) {
+                        tabVisible = false;
+                        selectedTabVisibile = false;
+                        moreTabsPopoverBody.removeClass('fd-popover__body--right').addClass('fd-popover__body--left');
+                    } else {
+                        moreTabsPopoverBody.removeClass('fd-popover__body--left').addClass('fd-popover__body--right');
+                    }
+
+                    let nonSelectedTabsIndex = 0;
+                    for (let i = 0; i < tabElements.length; i++) {
+                        const tabEl = tabElements[i];
+                        const moreTabEl = moreTabsBtnElements[i];
+                        const $tabEl = $(tabEl);
+                        const $moreTabEl = $(moreTabEl);
+
+                        if (selectedTabVisibile && $tabEl.attr('aria-selected') === 'true') {
+                            $moreTabEl.addClass('dg-hidden');
+                            continue;
+                        }
+
+                        if (!tabVisible) {
+                            $tabEl.addClass('dg-hidden');
+                            $moreTabEl.removeClass('dg-hidden');
+                            continue;
+                        }
+
+                        $tabEl.removeClass('dg-hidden');
+
+                        width += $tabEl.outerWidth(true);
+
+                        let availableWidth = containerWidth;
+                        if (nonSelectedTabsIndex < tabElements.length - 2)
+                            availableWidth -= moreBtnWidth;
+
+                        if (width > availableWidth) {
+                            tabVisible = false;
+                            $tabEl.addClass('dg-hidden');
+                            $moreTabEl.removeClass('dg-hidden');
+                        } else {
+                            $moreTabEl.addClass('dg-hidden');
+                        }
+
+                        nonSelectedTabsIndex++;
+                    }
+
+                    if (tabVisible) {
+                        moreButtonEl.addClass('dg-hidden');
+                    }
+                }
+
+                const updateTabsVisibilityDelayed = () => {
+                    setTimeout(updateTabsVisibility, 0);
+                }
+
+                const ro = new ResizeObserver(entries => {
+                    const width = entries[0].contentRect.width;
+                    updateTabsVisibility(width);
+                });
+
+                const tabsListEl = $element.find('ul.fd-tabs');
+                ro.observe(tabsListEl[0]);
+
                 $scope.$watch('selectedPane', function (newValue, oldValue) {
                     $scope.lastSelectedPane = oldValue;
+                    messageHub.postMessage('editor.focus', { file: newValue }, true);
+                    updateTabsVisibilityDelayed();
                 });
-            },
+
+                $scope.$on('$destroy', function () {
+                    ro.unobserve(tabsListEl[0]);
+                });
+            }],
             templateUrl: '/services/v4/web/ide-core/ui/templates/tabs.html'
         };
     })
