@@ -103,6 +103,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 }
 
                 $scope.initialOpenViews = $scope.viewsLayoutModel.views;
+                $scope.focusedTabView = null;
 
                 let eventHandlers = $scope.viewsLayoutModel.events;
                 //let viewSettings = $scope.viewsLayoutModel.viewSettings;
@@ -179,6 +180,8 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                                 .filter(byCenterRegion)
                                 .map(mapViewToTab);
                         }
+
+                        $scope.focusedTabView = getFirstCenterSplittedTabViewPane($scope.centerSplittedTabViews);
 
                         $scope.$watch('selection', function (newSelection, oldSelection) {
                             if (!angular.equals(newSelection, oldSelection)) {
@@ -351,12 +354,16 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     return null;
                 }
 
-                function getCurrentCenterSplittedTabViewPane() {
-                    let pane = $scope.centerSplittedTabViews.panes[0];
+                function getFirstCenterSplittedTabViewPane(parent) {
+                    let pane = parent;
                     while (pane.panes) {
                         pane = pane.panes[0];
                     }
                     return pane;
+                }
+
+                function getCurrentCenterSplittedTabViewPane() {
+                    return $scope.focusedTabView || getFirstCenterSplittedTabViewPane($scope.centerSplittedTabViews);
                 }
 
                 function forEachCenterSplittedTabView(callback, parent) {
@@ -417,6 +424,9 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                         const index = splitView.panes.indexOf(splitPane);
                         splitView.panes.splice(index, 1);
 
+                        let focusedSplitView;
+                        let focusedPaneIndex;
+
                         if (splitView.parent && splitView.panes.length === 1) {
                             //if this is the last split pane then remove the wrapping split view
                             const pane = splitView.panes[0];
@@ -428,7 +438,15 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                                 //... otherwise just replace the wrapping split view with the tabs view 
                                 splitView.parent.panes[splitView.indexInParent] = pane;
                             }
+
+                            focusedSplitView = splitView.parent;
+                            focusedPaneIndex = splitView.indexInParent;
+                        } else {
+                            focusedSplitView = splitView;
+                            focusedPaneIndex = index < splitView.panes.length ? index : splitView.panes.length - 1;
                         }
+
+                        $scope.focusedTabView = getFirstCenterSplittedTabViewPane(focusedSplitView.panes[focusedPaneIndex]);
                     }
                 }
 
@@ -565,6 +583,12 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
 
                         closingFileArgs = null;
                     }
+                });
+
+                messageHub.onDidReceiveMessage('editor.focus.gained', function (msg) {
+                    const file = msg.data.file;
+                    $scope.focusedTabView = findCenterSplittedTabView(file).tabsView;
+                    $scope.$digest();
                 });
 
                 function shortenCenterTabsLabels() {
@@ -704,6 +728,11 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             let currentTabsView = result ? result.tabsView : getCurrentCenterSplittedTabViewPane();
                             if (result) {
                                 currentTabsView.selectedTab = resourcePath;
+                                let fileTab = currentTabsView.tabs[result.index];
+                                if (fileTab.path !== editorPath) {
+                                    fileTab.path = editorPath;
+                                    fileTab.params = params;
+                                }
                             } else {
                                 let fileTab = {
                                     id: resourcePath,
@@ -1130,9 +1159,9 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
             replace: true,
             scope: {
                 selectedPane: '=',
+                focused: '<',
                 closable: '@',
                 removeTab: '&',
-                moveTab: '&'
             },
             controller: ['$scope', '$element', 'messageHub', function ($scope, $element, messageHub) {
                 let panes = $scope.panes = [];
@@ -1142,8 +1171,10 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 }
 
                 $scope.select = function (pane) {
-                    if (this.isPaneSelected(pane))
+                    if (this.isPaneSelected(pane)) {
+                        requestFocus();
                         return;
+                    }
 
                     $scope.selectedPane = pane.id;
                 }
@@ -1161,11 +1192,6 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     this.select(pane);
                     $scope.moreTabsExpanded = false;
                 }
-
-                $scope.tabDblclick = function (pane) {
-                    if ($scope.moveTab)
-                        $scope.moveTab({ pane: pane });
-                };
 
                 $scope.moreTabsExpanded = false;
 
@@ -1207,6 +1233,10 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
 
                 this.getSelectedPane = function () {
                     return $scope.selectedPane;
+                }
+
+                const requestFocus = function () {
+                    messageHub.postMessage('editor.focus.gain', { file: $scope.selectedPane }, true);
                 }
 
                 const updateTabsVisibility = (containerWidth = -1) => {
@@ -1292,7 +1322,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
 
                 $scope.$watch('selectedPane', function (newValue, oldValue) {
                     $scope.lastSelectedPane = oldValue;
-                    messageHub.postMessage('editor.focus', { file: newValue }, true);
+                    requestFocus();
                     updateTabsVisibilityDelayed();
                 });
 
@@ -1338,6 +1368,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
             scope: {
                 direction: '=',
                 panes: '=',
+                focusedPane: '<',
                 removeTab: '&',
                 moveTab: '&',
                 splitTabs: '&'
@@ -1366,6 +1397,10 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     const tab = pane.tabs.find(x => x.id === pane.selectedTab);
                     return tab && !tab.dirty;
                 };
+
+                scope.isFocused = function (pane) {
+                    return pane === scope.focusedPane;
+                }
             },
             templateUrl: '/services/v4/web/ide-core/ui/templates/splittedTabs.html'
         };
