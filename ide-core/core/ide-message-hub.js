@@ -20,7 +20,7 @@ angular.module('ideMessageHub', [])
                 if (typeof callbackFunc !== 'function')
                     throw Error('Callback argument must be a function');
                 if (!absolute && this.eventIdPrefix !== "") eventId = this.eventIdPrefix + this.eventIdDelimiter + eventId;
-                messageHub.subscribe(callbackFunc, eventId);
+                return messageHub.subscribe(callbackFunc, eventId);
             }.bind(this);
             let setStatusMessage = function (message) {
                 messageHub.post({
@@ -83,6 +83,44 @@ angular.module('ideMessageHub', [])
                     callbackTopic: callbackTopic
                 }, 'ide.dialog');
             };
+
+            let showDialogAsync = function (
+                title = "",
+                body = "",
+                buttons = [{
+                    id: "b1",
+                    type: "normal", // normal, emphasized, transparent
+                    label: "Ok",
+                }],
+                loader = false,
+                header = "",
+                subheader = "",
+                footer = ""
+            ) {
+                return new Promise((resolve, reject) => {
+                    if (buttons.length === 0)
+                        reject(new Error("Dialog: There must be at least one button"));
+
+                    const callbackTopic = `ide.dialog.${new Date().valueOf()}`;
+
+                    messageHub.post({
+                        header: header,
+                        subheader: subheader,
+                        title: title,
+                        body: body,
+                        footer: footer,
+                        loader: loader,
+                        buttons: buttons,
+                        callbackTopic: callbackTopic
+                    }, 'ide.dialog');
+
+                    const handler = messageHub.subscribe(function (msg) {
+                        messageHub.unsubscribe(handler);
+                        resolve(msg);
+                    }, callbackTopic);
+                });
+            };
+
             let showSelectDialog = function (
                 title,
                 listItems,
@@ -117,6 +155,9 @@ angular.module('ideMessageHub', [])
                     callbackTopic: callbackTopic
                 }, 'ide.dialogWindow');
             };
+            let unsubscribe = function (handler) {
+                messageHub.unsubscribe(handler);
+            };
             return {
                 setStatusMessage: setStatusMessage,
                 setStatusError: setStatusError,
@@ -126,11 +167,13 @@ angular.module('ideMessageHub', [])
                 announceAlertWarning: announceAlertWarning,
                 announceAlertError: announceAlertError,
                 showDialog: showDialog,
+                showDialogAsync: showDialogAsync,
                 showSelectDialog: showSelectDialog,
                 showDialogWindow: showDialogWindow,
                 triggerEvent: trigger,
                 'postMessage': post,
-                onDidReceiveMessage: onMessage
+                onDidReceiveMessage: onMessage,
+                unsubscribe: unsubscribe
             };
         }];
     })

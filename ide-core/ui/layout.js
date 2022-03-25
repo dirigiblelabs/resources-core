@@ -105,6 +105,8 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 $scope.initialOpenViews = $scope.viewsLayoutModel.views;
                 $scope.focusedTabView = null;
 
+                let closingFileArgs;
+                let reloadingFileArgs;
                 let eventHandlers = $scope.viewsLayoutModel.events;
                 //let viewSettings = $scope.viewsLayoutModel.viewSettings;
 
@@ -483,6 +485,59 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     }
                 }
 
+                function showFileSaveDialog(fileName, filePath, args = {}) {
+                    return new Promise((resolve, reject) => {
+                        messageHub.showDialogAsync(
+                            'You have unsaved changes',
+                            `Do you want to save the changes you made to ${fileName}?`,
+                            [{
+                                id: { id: 'save', file: filePath, ...args },
+                                type: 'normal',
+                                label: 'Save',
+                            }, {
+                                id: { id: 'ignore', file: filePath, ...args },
+                                type: 'normal',
+                                label: 'Don\'t Save',
+                            }, {
+                                id: { id: 'cancel' },
+                                type: 'transparent',
+                                label: 'Cancel',
+                            }]
+                        ).then(({ data }) => {
+                            const { id, file } = data;
+                            switch (id) {
+                                case 'save':
+                                    messageHub.postMessage('workbench.editor.save', { file }, true);
+                                    break;
+                                case 'ignore':
+                                    messageHub.postMessage('editor.file.dirty', { file, isDirty: false }, true);
+                                    break;
+                            }
+                            resolve(data);
+
+                        }).catch(reject);
+                    });
+                }
+
+                function tryReloadCenterTab(tab, editorPath, params) {
+                    if (tab.dirty) {
+                        showFileSaveDialog(tab.label, tab.id, { editorPath, params })
+                            .then(args => {
+                                switch (args.id) {
+                                    case 'save':
+                                        reloadingFileArgs = args;
+                                        break;
+                                    case 'ignore':
+                                        reloadCenterTab(args.file, args.editorPath, args.params);
+                                        $scope.$digest();
+                                        break;
+                                }
+                            });
+                    } else {
+                        reloadCenterTab(tab.id, editorPath, params);
+                    }
+                }
+
                 function tryCloseCenterTabs(tabs) {
                     let dirtyFiles = tabs.filter(tab => tab.dirty);
                     if (dirtyFiles.length > 0) {
@@ -493,24 +548,24 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             result.tabsView.selectedTab = tab.id;
                         }
 
-                        messageHub.showDialog(
-                            'You have unsaved changes',
-                            'Do you want to save the changes you made to ' + tab.label + '?',
-                            [{
-                                id: { id: 'save', file: tab.id, tabs: tabs },
-                                type: 'normal',
-                                label: 'Save',
-                            }, {
-                                id: { id: 'ignore', file: tab.id, tabs: tabs },
-                                type: 'normal',
-                                label: 'Don\'t Save',
-                            }, {
-                                id: { id: 'cancel' },
-                                type: 'transparent',
-                                label: 'Cancel',
-                            }],
-                            'layout.dialog.close'
-                        );
+                        showFileSaveDialog(tab.label, tab.id, { tabs })
+                            .then(args => {
+                                switch (args.id) {
+                                    case 'save':
+                                        closingFileArgs = args;
+                                        break;
+                                    case 'ignore':
+                                        closeCenterTab(args.file)
+
+                                        let rest = args.tabs.filter(x => x.id !== args.file);
+                                        if (rest.length > 0)
+                                            if (tryCloseCenterTabs(rest)) {
+                                                $scope.$digest();
+                                            }
+
+                                        break;
+                                }
+                            });
                     } else {
                         for (let i = 0; i < tabs.length; i++) {
                             removeCenterTab(tabs[i].id);
@@ -545,43 +600,40 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     }
                 }
 
-                let closingFileArgs;
+                function reloadCenterTab(id, editorPath, params) {
+                    let result = findCenterSplittedTabView(id);
+                    if (result) {
+                        const tab = result.tabsView.tabs[result.index];
+                        tab.path = editorPath;
+                        tab.params = params;
+                    }
+                }
 
-                messageHub.onDidReceiveMessage('layout.dialog.close', function (msg) {
-                    let args = msg.data;
-                    switch (args.id) {
-                        case 'save':
-                            closingFileArgs = args;
-                            messageHub.postMessage('workbench.editor.save', { file: args.file }, true);
-                            break;
-                        case 'ignore':
-                            closeCenterTab(args.file)
-                            messageHub.postMessage('editor.file.dirty', { file: args.file, isDirty: false }, true);
+                messageHub.onDidReceiveMessage('editor.file.saved', function (msg) {
+                    if (closingFileArgs) {
+                        let fileName = msg.data;
+                        if (fileName === closingFileArgs.file) {
+                            closeCenterTab(fileName);
 
-                            let rest = args.tabs.filter(x => x.id !== args.file);
+                            let rest = closingFileArgs.tabs.filter(x => x.id !== closingFileArgs.file);
                             if (rest.length > 0)
                                 if (tryCloseCenterTabs(rest)) {
                                     $scope.$digest();
                                 }
 
-                            break;
+                            closingFileArgs = null;
+                        }
                     }
-                });
 
-                messageHub.onDidReceiveMessage('editor.file.saved', function (msg) {
-                    if (!closingFileArgs) return;
+                    if (reloadingFileArgs) {
+                        const fileName = msg.data;
+                        const { file, editorPath, params } = reloadingFileArgs;
 
-                    let fileName = msg.data;
-                    if (fileName === closingFileArgs.file) {
-                        closeCenterTab(fileName);
-
-                        let rest = closingFileArgs.tabs.filter(x => x.id !== closingFileArgs.file);
-                        if (rest.length > 0)
-                            if (tryCloseCenterTabs(rest)) {
-                                $scope.$digest();
-                            }
-
-                        closingFileArgs = null;
+                        if (fileName === file) {
+                            reloadCenterTab(file, editorPath, params);
+                            $scope.$digest();
+                            reloadingFileArgs = null;
+                        }
                     }
                 });
 
@@ -730,8 +782,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                                 currentTabsView.selectedTab = resourcePath;
                                 let fileTab = currentTabsView.tabs[result.index];
                                 if (fileTab.path !== editorPath) {
-                                    fileTab.path = editorPath;
-                                    fileTab.params = params;
+                                    tryReloadCenterTab(fileTab, editorPath, params);
                                 }
                             } else {
                                 let fileTab = {
