@@ -28,19 +28,32 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
         function setTheme(themeId, sendEvent = true) {
             for (let i = 0; i < themes.length; i++) {
                 if (themes[i].id === themeId) {
-                    localStorage.setItem(
-                        'DIRIGIBLE.theme',
-                        JSON.stringify(themes[i])
-                    )
-                    theme = themes[i];
-                    // legacySwitcher is deprecated. Remove once all views have been migrated.
-                    if (themes[i].oldThemeId) legacySwitcher.get({ 'themeId': themes[i].oldThemeId });
+                    setThemeObject(themes[i], sendEvent);
                 }
             }
+        }
+
+        function setThemeObject(themeObj, sendEvent = true) {
+            localStorage.setItem(
+                'DIRIGIBLE.theme',
+                JSON.stringify(themeObj),
+            )
+            theme = themeObj;
+            // legacySwitcher is deprecated. Remove once all views have been migrated.
+            if (themeObj.oldThemeId) legacySwitcher.get({ 'themeId': themeObj.oldThemeId });
             if (sendEvent) messageHub.triggerEvent("ide.themeChange", true);
         }
 
         if (!theme) setTheme("quartz-light");
+        else {
+            for (let i = 0; i < themes.length; i++) {
+                if (themes[i].id === theme.id) {
+                    if (themes[i].version !== theme.version) {
+                        setThemeObject(themes[i]);
+                    }
+                }
+            }
+        }
 
         return {
             setTheme: setTheme,
