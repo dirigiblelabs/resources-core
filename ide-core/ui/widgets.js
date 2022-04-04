@@ -983,11 +983,26 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             template: `<div class="fd-table--fixed" ng-transclude></div>`
         }
     }]).directive('fdTableHeader', [function () {
+        /**
+         * sticky: Boolean - Makes header sticky when scrolling the table
+         */
         return {
             restrict: 'A',
             transclude: true,
             replace: true,
-            template: `<thead class="fd-table__header" ng-transclude></thead>`
+            scope: {
+                sticky: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-table__header'];
+                    if (scope.sticky) {
+                        classList.push('dg-table__header-sticky')
+                    }
+                    return classList.join(' ');
+                };
+            },
+            template: `<thead ng-class="getClasses()" ng-transclude></thead>`
         }
     }]).directive('fdTableBody', [function () {
         /**
@@ -1015,11 +1030,26 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             template: `<tbody ng-class="getClasses()" ng-transclude></tbody>`
         }
     }]).directive('fdTableFooter', [function () {
+        /**
+         * sticky: Boolean - Makes footer sticky when scrolling the table
+         */
         return {
             restrict: 'A',
             transclude: true,
             replace: true,
-            template: `<tfoot class="fd-table__footer" ng-transclude></tfoot>`
+            scope: {
+                sticky: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-table__footer'];
+                    if (scope.sticky) {
+                        classList.push('dg-table__footer-sticky')
+                    }
+                    return classList.join(' ');
+                };
+            },
+            template: `<tfoot ng-class="getClasses()" ng-transclude></tfoot>`
         }
     }]).directive('fdTableRow', [function () {
         /**
