@@ -494,6 +494,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
         /**
          * compact: Boolean - Checkbox label size.
          * fdRequired: Boolean - If the checkbox is required.
+         * empty: Boolean - If the label has text
          */
         return {
             restrict: 'E',
@@ -502,9 +503,10 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             scope: {
                 compact: '@',
                 fdRequired: '@',
+                empty: '@'
             },
             link: {
-                pre: function (scope, element) {
+                pre: function (scope) {
                     scope.getClasses = function () {
                         let classList = [];
                         if (scope.compact === 'true') classList.push('fd-checkbox__label--compact');
@@ -514,7 +516,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 },
             },
             template: `<label class="fd-checkbox__label" ng-class="getClasses()">
-                <div class="fd-checkbox__label-container"><span class="fd-checkbox__text" ng-transclude></span></div>
+                <div ng-if="empty!=='true'" class="fd-checkbox__label-container"><span class="fd-checkbox__text" ng-transclude></span></div>
             </label>`,
         }
     }]).directive('fdRadio', [function () {
@@ -909,5 +911,357 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             transclude: false,
             replace: true,
             template: '<span class="fd-menu__separator"></span>'
+        }
+    }]).directive('fdTable', [function () {
+        /**
+         * innerBorders: String - Table inner borders. One of 'horizontal', 'vertical', 'none' or 'all' (default value)
+         * outerBorders: String - Table outer borders. One of 'horizontal', 'vertical', 'none' or 'all (default value)
+         * displayMode: String - The size of the table. Could be one of 'compact', 'condensed' or 'standard' (default value)
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                innerBorders: '@',
+                outerBorders: '@',
+                displayMode: '@'
+            },
+            controller: ['$scope', '$element', function ($scope, $element) {
+
+                this.setAriaDescribedBy = function (id) {
+                    $element[0].setAttribute('aria-describedby', id);
+                };
+
+                $scope.getClasses = function () {
+                    let classList = ['fd-table'];
+                    if ($scope.innerBorders === 'horizontal' || $scope.innerBorders === 'none') {
+                        classList.push('fd-table--no-horizontal-borders');
+                    }
+                    if ($scope.innerBorders === 'vertical' || $scope.innerBorders === 'none') {
+                        classList.push('fd-table--no-vertical-borders');
+                    }
+                    if ($scope.displayMode === 'compact') {
+                        classList.push('fd-table--compact');
+                    } else if ($scope.displayMode === 'condensed') {
+                        classList.push('fd-table--condensed');
+                    }
+                    switch ($scope.outerBorders) {
+                        case 'vertical':
+                            classList.push('dg-table--no-outer-horizontal-borders');
+                            break;
+                        case 'horizontal':
+                            classList.push('dg-table--no-outer-vertical-borders');
+                            break;
+                        case 'none':
+                            classList.push('fd-table--no-outer-border');
+                            break;
+                    }
+                    return classList.join(' ');
+                };
+            }],
+            template: `<table ng-class="getClasses()" ng-transclude></table>`
+        }
+    }]).directive('fdTableCaption', ['uuid', function (uuid) {
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            require: '^fdTable',
+            link: function (scope, element, attrs, tableCtrl) {
+                let id = `fdt-${uuid.generate()}`
+                element[0].setAttribute('id', id);
+                tableCtrl.setAriaDescribedBy(id);
+            },
+            template: '<caption class="fd-table__caption" aria-live="polite" ng-transclude></caption>'
+        }
+    }]).directive('fdTableFixed', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-table--fixed" ng-transclude></div>`
+        }
+    }]).directive('fdTableHeader', [function () {
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            template: `<thead class="fd-table__header" ng-transclude></thead>`
+        }
+    }]).directive('fdTableBody', [function () {
+        /**
+         * innerBorders: String - Table inner borders. One of 'horizontal', 'vertical', 'none' or 'all' (default value)
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                innerBorders: '@'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-table__body'];
+                    if (scope.innerBorders === 'horizontal' || scope.innerBorders === 'none') {
+                        classList.push('fd-table__body--no-horizontal-borders');
+                    }
+                    if (scope.innerBorders === 'vertical' || scope.innerBorders === 'none') {
+                        classList.push('fd-table__body--no-vertical-borders');
+                    }
+                    return classList.join(' ');
+                };
+            },
+            template: `<tbody ng-class="getClasses()" ng-transclude></tbody>`
+        }
+    }]).directive('fdTableFooter', [function () {
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            template: `<tfoot class="fd-table__footer" ng-transclude></tfoot>`
+        }
+    }]).directive('fdTableRow', [function () {
+        /**
+         * selected: Boolean - Whether or not the table row is selected. Defaults to 'false'
+         * activable: Boolean - Displays the row as active when clicked. Defaults to 'false'
+         * hoverable: Boolean - Highlights the row on hover. Defaults to 'false'
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                selected: '<',
+                activable: '<',
+                hoverable: '<'
+            },
+            link: function (scope, element) {
+                scope.$watch('selected', function () {
+                    if (scope.selected) {
+                        element[0].setAttribute('aria-selected', 'true');
+                    } else {
+                        element[0].removeAttribute('aria-selected');
+                    }
+                })
+                scope.getClasses = function () {
+                    let classList = ['fd-table__row'];
+                    if (scope.activable) {
+                        classList.push('fd-table__cell--activable');
+                    }
+                    if (scope.hoverable) {
+                        classList.push('fd-table__cell--hoverable');
+                    }
+                    return classList.join(' ');
+                };
+            },
+            template: `<tr ng-class="getClasses()" ng-transclude></tr>`
+        }
+    }]).directive('fdTableHeaderCell', [function () {
+        /**
+         * contentType: String - The type of the inner element. Could be one of 'checkbox', 'statusIndicator' or 'any' (default value)
+         * fixed: Boolean|String - Renders the cell as fixed. Could be one of 'true', 'false' or 'last' (if that's the last fixed cell). Defaults to 'false'
+         * activable: Boolean - Displays the cell as active when clicked. Defaults to 'false'
+         * hoverable: Boolean - Highlights the cell on hover. Defaults to 'false'
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                contentType: '@',
+                fixed: '@',
+                activable: '<',
+                hoverable: '<',
+            },
+            link: {
+                post: function (scope, element) {
+                    scope.getClasses = function () {
+                        let classList = ['fd-table__cell'];
+                        switch (scope.contentType) {
+                            case 'checkbox':
+                                classList.push('fd-table__cell--checkbox');
+                                break;
+                            case 'statusIndicator':
+                                classList.push('fd-table__cell--status-indicator');
+                                break;
+
+                        }
+                        if (scope.fixed) {
+                            classList.push('fd-table__cell--fixed');
+                            if (scope.fixed === 'last') {
+                                classList.push('fd-table__cell--fixed-last');
+                            }
+                        }
+                        if (scope.activable) {
+                            classList.push('fd-table__cell--activable');
+                        }
+                        if (scope.hoverable) {
+                            classList.push('fd-table__cell--hoverable');
+                        }
+                        return classList.join(' ');
+                    };
+
+                    if (element.closest('tbody').length > 0) {
+                        element[0].setAttribute('scope', 'row');
+                    } else if (element.closest('thead').length > 0) {
+                        element[0].setAttribute('scope', 'col');
+                    }
+                }
+            },
+            template: `<th ng-class="getClasses()" ng-transclude></th>`
+        }
+    }]).directive('fdTableCell', [function () {
+        /**
+         * contentType: String - The type of the inner element. Could be one of 'checkbox', 'statusIndicator' or 'any' (default value)
+         * fitContent: Boolean - Sets width to fit the cell content
+         * activable: Boolean - Displays the cell as active when clicked. Defaults to 'false'
+         * hoverable: Boolean - Highlights the cell on hover. Defaults to 'false'
+         * navigated: Boolean - Displays the cell as navigated. Defaults to 'false'
+         * noData: Boolean - Displays empty row
+         * statusIndicator: String - the type of the status indicator. Could be one of 'valid', 'warning', 'error', 'information' or 'default' (default value)
+         * nestingLevel: Number - The row nesting level (starting from 1) for tables with row groups 
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                contentType: '@',
+                fitContent: '<',
+                activable: '<',
+                hoverable: '<',
+                navigated: '<',
+                noData: '<',
+                statusIndicator: '@',
+                nestingLevel: '<'
+            },
+            link: function (scope, element) {
+                scope.getClasses = function () {
+                    let classList = ['fd-table__cell'];
+                    if (scope.noData) {
+                        classList.push('fd-table__cell--no-data');
+                        element[0].setAttribute('colspan', '100%');
+                    }
+                    switch (scope.contentType) {
+                        case 'checkbox':
+                            classList.push('fd-table__cell--checkbox');
+                            break;
+                        case 'statusIndicator':
+                            classList.push('fd-table__cell--status-indicator');
+                            break;
+                    }
+                    if (scope.statusIndicator) {
+                        classList.push(`fd-table__cell--status-indicator--${scope.statusIndicator}`);
+                    }
+                    if (scope.fitContent) {
+                        classList.push('fd-table__cell--fit-content');
+                    }
+                    if (scope.activable) {
+                        classList.push('fd-table__cell--activable');
+                    }
+                    if (scope.hoverable) {
+                        classList.push('fd-table__cell--hoverable');
+                    }
+                    if (scope.navigated) {
+                        classList.push('fd-table__cell--navigated');
+                    }
+                    return classList.join(' ');
+                };
+
+                if (scope.nestingLevel) {
+                    element[0].setAttribute('data-nesting-level', scope.nestingLevel);
+                }
+            },
+            template: `<td ng-class="getClasses()" ng-transclude></td>`
+        }
+    }]).directive('fdTableGroup', [function () {
+        return {
+            restrict: 'A',
+            controller: ['$scope', '$element', function ($scope, $element) {
+                $element.addClass('fd-table--group');
+
+                let groupCells = [];
+                this.addGroupCell = function (element) {
+                    groupCells.push(element);
+                }
+
+                this.updateNestedRowsVisibility = function (element, expanded) {
+                    let rowExpanded = expanded;
+                    let nestingLevel = $(element).data('nesting-level');
+                    $(element).parent().nextAll('tr')
+                        .each(function () {
+                            const row = $(this);
+                            let cells = row.children('td[data-nesting-level]');
+                            if (cells.length === 0 || nestingLevel >= cells.first().data('nesting-level')) return false;
+
+                            if (expanded) {
+                                if (rowExpanded)
+                                    row.removeClass('dg-hidden');
+
+                                const currentRowExpanded = row.attr('aria-expanded');
+                                if (currentRowExpanded !== undefined)
+                                    rowExpanded = currentRowExpanded === 'true';
+                            } else {
+                                row.addClass('dg-hidden');
+                            }
+                        });
+                }
+
+                $element.ready(() => {
+                    groupCells.sort((a, b) => $(b).data('nesting-level') - $(a).data('nesting-level'));
+                    for (let element of groupCells) {
+                        this.updateNestedRowsVisibility(element, $(element).parent().attr('aria-expanded') === 'true');
+                    }
+                })
+            }]
+        };
+    }]).directive('fdTableGroupCell', [function () {
+        /**
+         * nestingLevel: Number - The row nesting level (starting from 1) for tables with row groups 
+         * expanded Boolean - Whether the row group is expanded or not
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                nestingLevel: '<',
+                expanded: '<'
+            },
+            require: '^fdTableGroup',
+            link: function (scope, element, attrs, tableCtrl) {
+                tableCtrl.addGroupCell(element);
+
+                scope.getClasses = function () {
+                    let classList = ['fd-table__expand'];
+
+                    if (scope.expanded) {
+                        classList.push('fd-table__expand--open');
+                    }
+
+                    return classList.join(' ');
+                };
+
+                scope.toggleExpanded = function () {
+                    scope.expanded = !scope.expanded;
+                    updateAriaExpanded();
+                    tableCtrl.updateNestedRowsVisibility(element, scope.expanded);
+                };
+
+                const updateAriaExpanded = function () {
+                    $(element).parent().attr('aria-expanded', scope.expanded ? 'true' : 'false');
+                }
+
+                if (scope.nestingLevel) {
+                    element[0].setAttribute('data-nesting-level', scope.nestingLevel);
+                }
+
+                updateAriaExpanded();
+            },
+            template: `<td class="fd-table__cell fd-table__cell--group fd-table__cell--expand" colspan="100%" ng-click="toggleExpanded()">
+                <span ng-class="getClasses()"></span>
+                <span class="fd-table__text--no-wrap" ng-transclude></span>
+            </td>`
         }
     }]);
