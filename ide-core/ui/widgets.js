@@ -1249,7 +1249,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     }]).directive('fdTableGroupCell', [function () {
         /**
          * nestingLevel: Number - The row nesting level (starting from 1) for tables with row groups 
-         * expanded Boolean - Whether the row group is expanded or not
+         * expanded: Boolean - Whether the row group is expanded or not
          */
         return {
             restrict: 'A',
@@ -1293,5 +1293,138 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 <span ng-class="getClasses()"></span>
                 <span class="fd-table__text--no-wrap" ng-transclude></span>
             </td>`
+        }
+    }]).directive('fdToolbar', [function () {
+        /**
+         * type: String - The type of the toolbar. One of 'transparent', 'auto', 'info' or 'solid' (default value)
+         * size: String - The size of the toolbar. One of 'cozy' or 'compact' (default value)
+         * hasTitle: Boolean - Should be used whenever a title is required.
+         * noBottomBorder: Boolean - Removes the bottom border of the toolbar
+         * active: Boolean - Enables active and hover states
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                type: '@',
+                size: '@',
+                hasTitle: '<',
+                noBottomBorder: '<',
+                active: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-toolbar'];
+
+                    switch (scope.type) {
+                        case 'transparent':
+                            classList.push('fd-toolbar--transparent');
+                            break;
+                        case 'auto':
+                            classList.push('fd-toolbar--auto');
+                            break;
+                        case 'info':
+                            classList.push('fd-toolbar--info');
+                            break;
+                        case 'solid':
+                            classList.push('fd-toolbar--solid');
+                            break;
+                    }
+
+                    if (scope.hasTitle) {
+                        classList.push('fd-toolbar--title');
+                    }
+
+                    if (scope.noBottomBorder) {
+                        classList.push('fd-toolbar--clear');
+                    }
+
+                    if (scope.active) {
+                        classList.push('fd-toolbar--active');
+                    }
+
+                    if (scope.size === 'cozy') {
+                        classList.push('fd-toolbar--cozy');
+                    }
+
+                    return classList.join(' ');
+                };
+            },
+            template: '<div ng-class="getClasses()" ng-transclude></div>'
+        }
+    }]).directive('fdToolbarSpacer', [function () {
+        /**
+         * fixedWidth: Number|String - The fixed with of the spacer. Could be any valid css width value or number in pixels.  
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                fixedWidth: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-toolbar__spacer'];
+
+                    if (scope.fixedWidth !== undefined) {
+                        classList.push('fd-toolbar__spacer--fixed');
+                    }
+
+                    return classList.join(' ');
+                };
+
+                scope.getStyles = function () {
+                    if (scope.fixedWidth !== undefined) {
+                        let width = scope.fixedWidth;
+                        if (Number.isFinite(width)) {
+                            width = `${width}px`;
+                        }
+
+                        return { width };
+                    }
+                }
+            },
+            template: '<div ng-class="getClasses()" ng-style="getStyles()" ng-transclude></div>'
+        }
+    }]).directive('fdToolbarSeparator', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: '<span class="fd-toolbar__separator" ng-transclude></span>'
+        }
+    }]).directive('fdToolbarOverflow', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            template: `<fd-popover>
+				<fd-popover-control>
+					<fd-button compact="true" glyph="sap-icon--overflow" fd-type="transparent" aria-label="Toolbar overflow"></fd-button>
+				</fd-popover-control>
+				<fd-popover-body fd-align="right">
+					<div class="fd-toolbar__overflow" ng-transclude></div>
+				</fd-popover-body>
+			</fd-popover>`
+        }
+    }]).directive('fdToolbarOverflowButton', [function () {
+        /**
+         * fdLabel: String - Button text.
+         */
+        return {
+            restrict: 'EA',
+            transclude: false,
+            scope: {
+                fdLabel: '@'
+            },
+            template: '<fd-button fd-type="transparent" class="fd-toolbar__overflow-button" fd-label="{{fdLabel}}"></fd-button>'
+        }
+    }]).directive('fdToolbarOverflowLabel', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: '<label class="fd-label fd-toolbar__overflow-label" ng-transclude></label>'
         }
     }]);
