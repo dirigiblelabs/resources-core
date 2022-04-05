@@ -1426,9 +1426,10 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     }]).directive('fdList', [function () {
         /**
          * compact: Boolean - Display the list in compact size mode
-         * noBorder: Boolean - Removes the list outer border
+         * noBorder: Boolean - Removes the list borders
          * listType: String - One of 'selection', 'navigation' or 'navigation-indication'
          * fixedHeight: String|Number|Boolean - If true it expects the height to be specified explicitly (by css class or style). If number it will be treated as pixels otherwise it must be a valid css height value.
+         * byline: Boolean - Whether the list is byline or standard
          */
         return {
             restrict: 'EA',
@@ -1438,7 +1439,8 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 compact: '<',
                 noBorder: '<',
                 listType: '@',
-                fixedHeight: '@'
+                fixedHeight: '@',
+                byline: '<'
             },
             link: function (scope) {
                 scope.getClasses = function () {
@@ -1446,6 +1448,10 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
 
                     if (scope.compact) {
                         classList.push('fd-list--compact');
+                    }
+
+                    if (scope.byline) {
+                        classList.push('fd-list--byline');
                     }
 
                     if (scope.noBorder) {
@@ -1644,5 +1650,141 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 listItemCtrl.setRole('option');
             },
             template: '<div class="fd-form-item fd-list__form-item" ng-transclude></div>'
+        }
+    }]).directive('fdListContent', [function () {
+        /**
+         * itemTitle: String - list item title
+         * itemTitleId: String - list item title id
+         * contentWrap: String - Allows the byline text to wrap
+         * titleWrap: String - Allows the title text to wrap
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                itemTitle: '@',
+                itemTitleId: '@',
+                contentWrap: '<',
+                titleWrap: '<'
+            },
+            controller: ['$scope', '$element', function ($scope, $element) {
+                this.addClass = function (className) {
+                    $element.children().last().addClass(className);
+                }
+
+                $scope.getBylineClasses = function () {
+                    let classList = ['fd-list__byline'];
+                    if ($scope.contentWrap) {
+                        classList.push('fd-list__byline--wrap');
+                    }
+                    return classList.join(' ');
+                }
+
+                $scope.getTitleClasses = function () {
+                    let classList = ['fd-list__title'];
+                    if ($scope.titleWrap) {
+                        classList.push('fd-list__title--wrap');
+                    }
+                    return classList.join(' ');
+                }
+
+                if ($scope.itemTitleId) {
+                    $element.children().first().attr('id', $scope.itemTitleId);
+                }
+            }],
+            template: `<div class="fd-list__content">
+                <div ng-class="getTitleClasses()">{{itemTitle}}</div>
+                <div ng-class="getBylineClasses()" ng-transclude></div>
+            </div>`
+        }
+    }]).directive('fdListByline', [function () {
+        /**
+         * align: String - One of 'left' or 'right'
+         * contentWrap: String - Allows the byline text to wrap. Relevant to left aligned content only
+         * semanticStatus: String - One of 'neutral', 'positive', 'negative', 'critical' or 'informative'. Relevant to right aligned content only
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                align: '@',
+                contentWrap: '<',
+                semanticStatus: '@'
+            },
+            require: '^fdListContent',
+            link: function (scope, element, attrs, ctrl) {
+                ctrl.addClass('fd-list__byline--2-col');
+
+                const semanticStatuses = ['neutral', 'positive', 'negative', 'critical', 'informative'];
+
+                if (scope.semanticStatus && !semanticStatuses.includes(scope.semanticStatus)) {
+                    console.error(`fd-list-byline error: semantic-status must be one of: ${semanticStatuses.join(', ')}`);
+                }
+
+                if (scope.align !== 'left' && scope.align !== 'right') {
+                    console.error(`fd-list-byline error: 'align' must be 'left' or 'right' `);
+                }
+
+                scope.getClasses = function () {
+                    let classList = [];
+                    switch (scope.align) {
+                        case 'left':
+                            classList.push('fd-list__byline-left');
+                            if (scope.contentWrap) {
+                                classList.push('fd-list__byline-left--wrap');
+                            }
+                            break;
+                        case 'right':
+                            classList.push('fd-list__byline-right');
+                            if (semanticStatuses.includes(scope.semanticStatus)) {
+                                classList.push(`fd-list__byline-right--${scope.semanticStatus}`);
+                            }
+                            break;
+                    }
+
+                    return classList.join(' ');
+                }
+            },
+            template: `<div ng-class="getClasses()" ng-transclude></div>`
+        }
+    }]).directive('fdListThumbnail', [function () {
+        /**
+         * glyph: String - Icon class.
+         * imageUrl: String - Path to the thumbnail image
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: {
+                glyph: '@',
+                imageUrl: '@'
+            },
+            link: function (scope) {
+                if (!scope.glyph && !scope.imageUrl) {
+                    console.error('fd-list-thumbnail error: You should provide either glpyh icon or image');
+                }
+
+                scope.getClasses = function () {
+                    let classList = ['fd-list__thumbnail'];
+                    if (scope.imageUrl) {
+                        classList.push('fd-image--s');
+                    }
+                    return classList.join(' ');
+                }
+
+                scope.getStyles = function () {
+                    if (scope.imageUrl) {
+                        return {
+                            backgroundImage: `url('${scope.imageUrl}')`,
+                            backgroundSize: 'cover'
+                        }
+                    }
+                }
+            },
+            template: `<span ng-class="getClasses()" ng-style="getStyles()">
+                <i ng-if="glyph" role="presentation" ng-class="glyph"></i>
+            </span>`
         }
     }]);
