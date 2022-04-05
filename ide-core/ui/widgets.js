@@ -1362,7 +1362,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             transclude: true,
             replace: true,
             scope: {
-                fixedWidth: '<'
+                fixedWidth: '@'
             },
             link: function (scope) {
                 scope.getClasses = function () {
@@ -1378,11 +1378,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 scope.getStyles = function () {
                     if (scope.fixedWidth !== undefined) {
                         let width = scope.fixedWidth;
-                        if (Number.isFinite(width)) {
-                            width = `${width}px`;
-                        }
-
-                        return { width };
+                        return { width: Number.isFinite(width) ? `${width}px` : width };
                     }
                 }
             },
@@ -1426,5 +1422,227 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             transclude: true,
             replace: true,
             template: '<label class="fd-label fd-toolbar__overflow-label" ng-transclude></label>'
+        }
+    }]).directive('fdList', [function () {
+        /**
+         * compact: Boolean - Display the list in compact size mode
+         * noBorder: Boolean - Removes the list outer border
+         * listType: String - One of 'selection', 'navigation' or 'navigation-indication'
+         * fixedHeight: String|Number|Boolean - If true it expects the height to be specified explicitly (by css class or style). If number it will be treated as pixels otherwise it must be a valid css height value.
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                compact: '<',
+                noBorder: '<',
+                listType: '@',
+                fixedHeight: '@'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-list'];
+
+                    if (scope.compact) {
+                        classList.push('fd-list--compact');
+                    }
+
+                    if (scope.noBorder) {
+                        classList.push('fd-list--no-border');
+                    }
+
+                    switch (scope.listType) {
+                        case 'navigation-indication':
+                            classList.push('fd-list--navigation-indication');
+                        case 'navigation':
+                            classList.push('fd-list--navigation');
+                            break;
+                        case 'selection':
+                            classList.push('fd-list--selection');
+                            break;
+                    }
+
+                    if (parseHeight(scope.fixedHeight)) {
+                        classList.push('fd-list__infinite-scroll');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                scope.getStyles = function () {
+                    let height = parseHeight(scope.fixedHeight);
+                    if (height && typeof height === 'string') {
+                        return { height };
+                    }
+                }
+
+                scope.getRole = function () {
+                    return scope.listType === 'selection' ? 'listbox' : 'list';
+                }
+
+                const parseHeight = function (height) {
+                    if (Number.isFinite(height)) {
+                        return `${height}px`;
+                    }
+                    return height === 'true' ? true :
+                        height === 'false' ? false : height;
+                };
+            },
+            template: `<ul ng-class="getClasses()" ng-style="getStyles()" role="{{getRole()}}" ng-transclude>`
+        }
+    }]).directive('fdListItem', [function () {
+        /**
+         * groupHeader: Boolean - Displays the list item as a group header
+         * interactive: Boolean - Makes the list item look interactive (clickable)
+         * inactive: Boolean - Makes the list item look inactive (non-clickable)
+         * selected: Boolean - Selects the list item. Should be used with 'selection' lists
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                groupHeader: '<',
+                interactive: '<',
+                inactive: '<',
+                selected: '<'
+            },
+            controller: ['$scope', '$element', function ($scope, $element) {
+                $scope.role = "listitem";
+
+                this.addClass = function (className) {
+                    $element.addClass(className);
+                }
+
+                this.setRole = function (role) {
+                    $scope.role = role;
+                }
+
+                $scope.getClasses = function () {
+                    let classList = ['fd-list__item'];
+
+                    if ($scope.groupHeader) {
+                        classList.push('fd-list__group-header');
+                    }
+                    if ($scope.interactive) {
+                        classList.push('fd-list__item--interractive');
+                    }
+                    if ($scope.inactive) {
+                        classList.push('fd-list__item--inactive');
+                    }
+                    if ($scope.selected) {
+                        classList.push('is-selected');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                $scope.$watch('selected', function () {
+                    if ($scope.selected) {
+                        $element[0].setAttribute('aria-selected', 'true');
+                    } else {
+                        $element[0].removeAttribute('aria-selected');
+                    }
+                })
+            }],
+            template: `<li role="{{role}}" ng-class="getClasses()" ng-transclude></li>`
+        }
+    }]).directive('fdListTitle', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: '<span class="fd-list__title" ng-transclude></span>'
+        }
+    }]).directive('fdListButton', [function () {
+        return {
+            restrict: 'A',
+            link: function (scope, element) {
+                element.addClass('fd-list__button');
+            }
+        }
+    }]).directive('fdListLink', [function () {
+        /**
+         * navigationIndicator: Boolean - Displays an arrow to indicate that the item is navigable (Should be used with 'navigation-indication' lists)
+         * navigated: Boolean - Displays the list item as navigated
+         * selected: Boolean - Selects the list item. Should be used with 'navigation' and 'navigation-indication' lists
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            require: '^fdListItem',
+            scope: {
+                navigationIndicator: '<',
+                navigated: '<',
+                selected: '<'
+            },
+            link: function (scope, element, attrs, listItemCtrl) {
+                listItemCtrl.addClass('fd-list__item--link');
+
+                scope.getClasses = function () {
+                    let classList = ['fd-list__link'];
+
+                    if (scope.navigationIndicator) {
+                        classList.push('fd-list__link--navigation-indicator');
+                    }
+
+                    if (scope.navigated) {
+                        classList.push('is-navigated');
+                    }
+
+                    if (scope.selected) {
+                        classList.push('is-selected');
+                    }
+                    return classList;
+                }
+            },
+            template: '<a tabindex="0" ng-class="getClasses()" ng-transclude></a>'
+        }
+    }]).directive('fdListIcon', [function () {
+        /**
+         * glyph: String - Icon class.
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: {
+                glyph: '@'
+            },
+            link: function (scope) {
+                if (!scope.glyph) {
+                    console.error('fd-list-icon error: You should provide glpyh icon using the "glyph" attribute');
+                }
+
+                scope.getClasses = function () {
+                    let classList = ['fd-list__icon'];
+                    if (scope.glyph) {
+                        classList.push(scope.glyph);
+                    }
+                    return classList.join(' ');
+                }
+            },
+            template: '<i role="presentation" ng-class="getClasses()"></i>'
+        }
+    }]).directive('fdListActionItem', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<li role="listitem" class="fd-list__item fd-list__item--action">
+                <button class="fd-list__title" ng-transclude></button>
+            </li>`
+        }
+    }]).directive('fdListFormItem', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            require: '^fdListItem',
+            link: function (scope, element, attrs, listItemCtrl) {
+                listItemCtrl.setRole('option');
+            },
+            template: '<div class="fd-form-item fd-list__form-item" ng-transclude></div>'
         }
     }]);
