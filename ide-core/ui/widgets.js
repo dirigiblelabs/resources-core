@@ -494,6 +494,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
         /**
          * compact: Boolean - Checkbox label size.
          * fdRequired: Boolean - If the checkbox is required.
+         * empty: Boolean - If the label has text
          */
         return {
             restrict: 'E',
@@ -502,9 +503,10 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             scope: {
                 compact: '@',
                 fdRequired: '@',
+                empty: '@'
             },
             link: {
-                pre: function (scope, element) {
+                pre: function (scope) {
                     scope.getClasses = function () {
                         let classList = [];
                         if (scope.compact === 'true') classList.push('fd-checkbox__label--compact');
@@ -514,7 +516,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 },
             },
             template: `<label class="fd-checkbox__label" ng-class="getClasses()">
-                <div class="fd-checkbox__label-container"><span class="fd-checkbox__text" ng-transclude></span></div>
+                <div ng-if="empty!=='true'" class="fd-checkbox__label-container"><span class="fd-checkbox__text" ng-transclude></span></div>
             </label>`,
         }
     }]).directive('fdRadio', [function () {
@@ -909,5 +911,880 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             transclude: false,
             replace: true,
             template: '<span class="fd-menu__separator"></span>'
+        }
+    }]).directive('fdTable', [function () {
+        /**
+         * innerBorders: String - Table inner borders. One of 'horizontal', 'vertical', 'none' or 'all' (default value)
+         * outerBorders: String - Table outer borders. One of 'horizontal', 'vertical', 'none' or 'all (default value)
+         * displayMode: String - The size of the table. Could be one of 'compact', 'condensed' or 'standard' (default value)
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                innerBorders: '@',
+                outerBorders: '@',
+                displayMode: '@'
+            },
+            controller: ['$scope', '$element', function ($scope, $element) {
+
+                this.setAriaDescribedBy = function (id) {
+                    $element[0].setAttribute('aria-describedby', id);
+                };
+
+                $scope.getClasses = function () {
+                    let classList = ['fd-table'];
+                    if ($scope.innerBorders === 'horizontal' || $scope.innerBorders === 'none') {
+                        classList.push('fd-table--no-horizontal-borders');
+                    }
+                    if ($scope.innerBorders === 'vertical' || $scope.innerBorders === 'none') {
+                        classList.push('fd-table--no-vertical-borders');
+                    }
+                    if ($scope.displayMode === 'compact') {
+                        classList.push('fd-table--compact');
+                    } else if ($scope.displayMode === 'condensed') {
+                        classList.push('fd-table--condensed');
+                    }
+                    switch ($scope.outerBorders) {
+                        case 'vertical':
+                            classList.push('dg-table--no-outer-horizontal-borders');
+                            break;
+                        case 'horizontal':
+                            classList.push('dg-table--no-outer-vertical-borders');
+                            break;
+                        case 'none':
+                            classList.push('fd-table--no-outer-border');
+                            break;
+                    }
+                    return classList.join(' ');
+                };
+            }],
+            template: `<table ng-class="getClasses()" ng-transclude></table>`
+        }
+    }]).directive('fdTableCaption', ['uuid', function (uuid) {
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            require: '^fdTable',
+            link: function (scope, element, attrs, tableCtrl) {
+                let id = `fdt-${uuid.generate()}`
+                element[0].setAttribute('id', id);
+                tableCtrl.setAriaDescribedBy(id);
+            },
+            template: '<caption class="fd-table__caption" aria-live="polite" ng-transclude></caption>'
+        }
+    }]).directive('fdTableFixed', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-table--fixed" ng-transclude></div>`
+        }
+    }]).directive('fdTableHeader', [function () {
+        /**
+         * sticky: Boolean - Makes header sticky when scrolling the table
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                sticky: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-table__header'];
+                    if (scope.sticky) {
+                        classList.push('dg-table__header-sticky')
+                    }
+                    return classList.join(' ');
+                };
+            },
+            template: `<thead ng-class="getClasses()" ng-transclude></thead>`
+        }
+    }]).directive('fdTableBody', [function () {
+        /**
+         * innerBorders: String - Table inner borders. One of 'horizontal', 'vertical', 'none' or 'all' (default value)
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                innerBorders: '@'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-table__body'];
+                    if (scope.innerBorders === 'horizontal' || scope.innerBorders === 'none') {
+                        classList.push('fd-table__body--no-horizontal-borders');
+                    }
+                    if (scope.innerBorders === 'vertical' || scope.innerBorders === 'none') {
+                        classList.push('fd-table__body--no-vertical-borders');
+                    }
+                    return classList.join(' ');
+                };
+            },
+            template: `<tbody ng-class="getClasses()" ng-transclude></tbody>`
+        }
+    }]).directive('fdTableFooter', [function () {
+        /**
+         * sticky: Boolean - Makes footer sticky when scrolling the table
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                sticky: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-table__footer'];
+                    if (scope.sticky) {
+                        classList.push('dg-table__footer-sticky')
+                    }
+                    return classList.join(' ');
+                };
+            },
+            template: `<tfoot ng-class="getClasses()" ng-transclude></tfoot>`
+        }
+    }]).directive('fdTableRow', [function () {
+        /**
+         * selected: Boolean - Whether or not the table row is selected. Defaults to 'false'
+         * activable: Boolean - Displays the row as active when clicked. Defaults to 'false'
+         * hoverable: Boolean - Highlights the row on hover. Defaults to 'false'
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                selected: '<',
+                activable: '<',
+                hoverable: '<'
+            },
+            link: function (scope, element) {
+                scope.$watch('selected', function () {
+                    if (scope.selected) {
+                        element[0].setAttribute('aria-selected', 'true');
+                    } else {
+                        element[0].removeAttribute('aria-selected');
+                    }
+                })
+                scope.getClasses = function () {
+                    let classList = ['fd-table__row'];
+                    if (scope.activable) {
+                        classList.push('fd-table__cell--activable');
+                    }
+                    if (scope.hoverable) {
+                        classList.push('fd-table__cell--hoverable');
+                    }
+                    return classList.join(' ');
+                };
+            },
+            template: `<tr ng-class="getClasses()" ng-transclude></tr>`
+        }
+    }]).directive('fdTableHeaderCell', [function () {
+        /**
+         * contentType: String - The type of the inner element. Could be one of 'checkbox', 'statusIndicator' or 'any' (default value)
+         * fixed: Boolean|String - Renders the cell as fixed. Could be one of 'true', 'false' or 'last' (if that's the last fixed cell). Defaults to 'false'
+         * activable: Boolean - Displays the cell as active when clicked. Defaults to 'false'
+         * hoverable: Boolean - Highlights the cell on hover. Defaults to 'false'
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                contentType: '@',
+                fixed: '@',
+                activable: '<',
+                hoverable: '<',
+            },
+            link: {
+                post: function (scope, element) {
+                    scope.getClasses = function () {
+                        let classList = ['fd-table__cell'];
+                        switch (scope.contentType) {
+                            case 'checkbox':
+                                classList.push('fd-table__cell--checkbox');
+                                break;
+                            case 'statusIndicator':
+                                classList.push('fd-table__cell--status-indicator');
+                                break;
+
+                        }
+                        if (scope.fixed) {
+                            classList.push('fd-table__cell--fixed');
+                            if (scope.fixed === 'last') {
+                                classList.push('fd-table__cell--fixed-last');
+                            }
+                        }
+                        if (scope.activable) {
+                            classList.push('fd-table__cell--activable');
+                        }
+                        if (scope.hoverable) {
+                            classList.push('fd-table__cell--hoverable');
+                        }
+                        return classList.join(' ');
+                    };
+
+                    if (element.closest('tbody').length > 0) {
+                        element[0].setAttribute('scope', 'row');
+                    } else if (element.closest('thead').length > 0) {
+                        element[0].setAttribute('scope', 'col');
+                    }
+                }
+            },
+            template: `<th ng-class="getClasses()" ng-transclude></th>`
+        }
+    }]).directive('fdTableCell', [function () {
+        /**
+         * contentType: String - The type of the inner element. Could be one of 'checkbox', 'statusIndicator' or 'any' (default value)
+         * fitContent: Boolean - Sets width to fit the cell content
+         * activable: Boolean - Displays the cell as active when clicked. Defaults to 'false'
+         * hoverable: Boolean - Highlights the cell on hover. Defaults to 'false'
+         * navigated: Boolean - Displays the cell as navigated. Defaults to 'false'
+         * noData: Boolean - Displays empty row
+         * statusIndicator: String - the type of the status indicator. Could be one of 'valid', 'warning', 'error', 'information' or 'default' (default value)
+         * nestingLevel: Number - The row nesting level (starting from 1) for tables with row groups 
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                contentType: '@',
+                fitContent: '<',
+                activable: '<',
+                hoverable: '<',
+                navigated: '<',
+                noData: '<',
+                statusIndicator: '@',
+                nestingLevel: '<'
+            },
+            link: function (scope, element) {
+                scope.getClasses = function () {
+                    let classList = ['fd-table__cell'];
+                    if (scope.noData) {
+                        classList.push('fd-table__cell--no-data');
+                        element[0].setAttribute('colspan', '100%');
+                    }
+                    switch (scope.contentType) {
+                        case 'checkbox':
+                            classList.push('fd-table__cell--checkbox');
+                            break;
+                        case 'statusIndicator':
+                            classList.push('fd-table__cell--status-indicator');
+                            break;
+                    }
+                    if (scope.statusIndicator) {
+                        classList.push(`fd-table__cell--status-indicator--${scope.statusIndicator}`);
+                    }
+                    if (scope.fitContent) {
+                        classList.push('fd-table__cell--fit-content');
+                    }
+                    if (scope.activable) {
+                        classList.push('fd-table__cell--activable');
+                    }
+                    if (scope.hoverable) {
+                        classList.push('fd-table__cell--hoverable');
+                    }
+                    if (scope.navigated) {
+                        classList.push('fd-table__cell--navigated');
+                    }
+                    return classList.join(' ');
+                };
+
+                if (scope.nestingLevel) {
+                    element[0].setAttribute('data-nesting-level', scope.nestingLevel);
+                }
+            },
+            template: `<td ng-class="getClasses()" ng-transclude></td>`
+        }
+    }]).directive('fdTableGroup', [function () {
+        return {
+            restrict: 'A',
+            controller: ['$scope', '$element', function ($scope, $element) {
+                $element.addClass('fd-table--group');
+
+                let groupCells = [];
+                this.addGroupCell = function (element) {
+                    groupCells.push(element);
+                }
+
+                this.updateNestedRowsVisibility = function (element, expanded) {
+                    let rowExpanded = expanded;
+                    let nestingLevel = $(element).data('nesting-level');
+                    $(element).parent().nextAll('tr')
+                        .each(function () {
+                            const row = $(this);
+                            let cells = row.children('td[data-nesting-level]');
+                            if (cells.length === 0 || nestingLevel >= cells.first().data('nesting-level')) return false;
+
+                            if (expanded) {
+                                if (rowExpanded)
+                                    row.removeClass('dg-hidden');
+
+                                const currentRowExpanded = row.attr('aria-expanded');
+                                if (currentRowExpanded !== undefined)
+                                    rowExpanded = currentRowExpanded === 'true';
+                            } else {
+                                row.addClass('dg-hidden');
+                            }
+                        });
+                }
+
+                $element.ready(() => {
+                    groupCells.sort((a, b) => $(b).data('nesting-level') - $(a).data('nesting-level'));
+                    for (let element of groupCells) {
+                        this.updateNestedRowsVisibility(element, $(element).parent().attr('aria-expanded') === 'true');
+                    }
+                })
+            }]
+        };
+    }]).directive('fdTableGroupCell', [function () {
+        /**
+         * nestingLevel: Number - The row nesting level (starting from 1) for tables with row groups 
+         * expanded: Boolean - Whether the row group is expanded or not
+         */
+        return {
+            restrict: 'A',
+            transclude: true,
+            replace: true,
+            scope: {
+                nestingLevel: '<',
+                expanded: '<'
+            },
+            require: '^fdTableGroup',
+            link: function (scope, element, attrs, tableCtrl) {
+                tableCtrl.addGroupCell(element);
+
+                scope.getClasses = function () {
+                    let classList = ['fd-table__expand'];
+
+                    if (scope.expanded) {
+                        classList.push('fd-table__expand--open');
+                    }
+
+                    return classList.join(' ');
+                };
+
+                scope.toggleExpanded = function () {
+                    scope.expanded = !scope.expanded;
+                    updateAriaExpanded();
+                    tableCtrl.updateNestedRowsVisibility(element, scope.expanded);
+                };
+
+                const updateAriaExpanded = function () {
+                    $(element).parent().attr('aria-expanded', scope.expanded ? 'true' : 'false');
+                }
+
+                if (scope.nestingLevel) {
+                    element[0].setAttribute('data-nesting-level', scope.nestingLevel);
+                }
+
+                updateAriaExpanded();
+            },
+            template: `<td class="fd-table__cell fd-table__cell--group fd-table__cell--expand" colspan="100%" ng-click="toggleExpanded()">
+                <span ng-class="getClasses()"></span>
+                <span class="fd-table__text--no-wrap" ng-transclude></span>
+            </td>`
+        }
+    }]).directive('fdToolbar', [function () {
+        /**
+         * type: String - The type of the toolbar. One of 'transparent', 'auto', 'info' or 'solid' (default value)
+         * size: String - The size of the toolbar. One of 'cozy' or 'compact' (default value)
+         * hasTitle: Boolean - Should be used whenever a title is required.
+         * noBottomBorder: Boolean - Removes the bottom border of the toolbar
+         * active: Boolean - Enables active and hover states
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                type: '@',
+                size: '@',
+                hasTitle: '<',
+                noBottomBorder: '<',
+                active: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-toolbar'];
+
+                    switch (scope.type) {
+                        case 'transparent':
+                            classList.push('fd-toolbar--transparent');
+                            break;
+                        case 'auto':
+                            classList.push('fd-toolbar--auto');
+                            break;
+                        case 'info':
+                            classList.push('fd-toolbar--info');
+                            break;
+                        case 'solid':
+                            classList.push('fd-toolbar--solid');
+                            break;
+                    }
+
+                    if (scope.hasTitle) {
+                        classList.push('fd-toolbar--title');
+                    }
+
+                    if (scope.noBottomBorder) {
+                        classList.push('fd-toolbar--clear');
+                    }
+
+                    if (scope.active) {
+                        classList.push('fd-toolbar--active');
+                    }
+
+                    if (scope.size === 'cozy') {
+                        classList.push('fd-toolbar--cozy');
+                    }
+
+                    return classList.join(' ');
+                };
+            },
+            template: '<div ng-class="getClasses()" ng-transclude></div>'
+        }
+    }]).directive('fdToolbarSpacer', [function () {
+        /**
+         * fixedWidth: Number|String - The fixed with of the spacer. Could be any valid css width value or number in pixels.  
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                fixedWidth: '@'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-toolbar__spacer'];
+
+                    if (scope.fixedWidth !== undefined) {
+                        classList.push('fd-toolbar__spacer--fixed');
+                    }
+
+                    return classList.join(' ');
+                };
+
+                scope.getStyles = function () {
+                    if (scope.fixedWidth !== undefined) {
+                        let width = scope.fixedWidth;
+                        return { width: Number.isFinite(width) ? `${width}px` : width };
+                    }
+                }
+            },
+            template: '<div ng-class="getClasses()" ng-style="getStyles()" ng-transclude></div>'
+        }
+    }]).directive('fdToolbarSeparator', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: '<span class="fd-toolbar__separator" ng-transclude></span>'
+        }
+    }]).directive('fdToolbarOverflow', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            template: `<fd-popover>
+				<fd-popover-control>
+					<fd-button compact="true" glyph="sap-icon--overflow" fd-type="transparent" aria-label="Toolbar overflow"></fd-button>
+				</fd-popover-control>
+				<fd-popover-body fd-align="right">
+					<div class="fd-toolbar__overflow" ng-transclude></div>
+				</fd-popover-body>
+			</fd-popover>`
+        }
+    }]).directive('fdToolbarOverflowButton', [function () {
+        /**
+         * fdLabel: String - Button text.
+         */
+        return {
+            restrict: 'EA',
+            transclude: false,
+            scope: {
+                fdLabel: '@'
+            },
+            template: '<fd-button fd-type="transparent" class="fd-toolbar__overflow-button" fd-label="{{fdLabel}}"></fd-button>'
+        }
+    }]).directive('fdToolbarOverflowLabel', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: '<label class="fd-label fd-toolbar__overflow-label" ng-transclude></label>'
+        }
+    }]).directive('fdList', [function () {
+        /**
+         * compact: Boolean - Display the list in compact size mode
+         * noBorder: Boolean - Removes the list borders
+         * listType: String - One of 'selection', 'navigation' or 'navigation-indication'
+         * fixedHeight: String|Number|Boolean - If true it expects the height to be specified explicitly (by css class or style). If number it will be treated as pixels otherwise it must be a valid css height value.
+         * byline: Boolean - Whether the list is byline or standard
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                compact: '<',
+                noBorder: '<',
+                listType: '@',
+                fixedHeight: '@',
+                byline: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-list'];
+
+                    if (scope.compact) {
+                        classList.push('fd-list--compact');
+                    }
+
+                    if (scope.byline) {
+                        classList.push('fd-list--byline');
+                    }
+
+                    if (scope.noBorder) {
+                        classList.push('fd-list--no-border');
+                    }
+
+                    switch (scope.listType) {
+                        case 'navigation-indication':
+                            classList.push('fd-list--navigation-indication');
+                        case 'navigation':
+                            classList.push('fd-list--navigation');
+                            break;
+                        case 'selection':
+                            classList.push('fd-list--selection');
+                            break;
+                    }
+
+                    if (parseHeight(scope.fixedHeight)) {
+                        classList.push('fd-list__infinite-scroll');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                scope.getStyles = function () {
+                    let height = parseHeight(scope.fixedHeight);
+                    if (height && typeof height === 'string') {
+                        return { height };
+                    }
+                }
+
+                scope.getRole = function () {
+                    return scope.listType === 'selection' ? 'listbox' : 'list';
+                }
+
+                const parseHeight = function (height) {
+                    if (Number.isFinite(height)) {
+                        return `${height}px`;
+                    }
+                    return height === 'true' ? true :
+                        height === 'false' ? false : height;
+                };
+            },
+            template: `<ul ng-class="getClasses()" ng-style="getStyles()" role="{{getRole()}}" ng-transclude>`
+        }
+    }]).directive('fdListItem', [function () {
+        /**
+         * groupHeader: Boolean - Displays the list item as a group header
+         * interactive: Boolean - Makes the list item look interactive (clickable)
+         * inactive: Boolean - Makes the list item look inactive (non-clickable)
+         * selected: Boolean - Selects the list item. Should be used with 'selection' lists
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                groupHeader: '<',
+                interactive: '<',
+                inactive: '<',
+                selected: '<'
+            },
+            controller: ['$scope', '$element', function ($scope, $element) {
+                $scope.role = "listitem";
+
+                this.addClass = function (className) {
+                    $element.addClass(className);
+                }
+
+                this.setRole = function (role) {
+                    $scope.role = role;
+                }
+
+                $scope.getClasses = function () {
+                    let classList = ['fd-list__item'];
+
+                    if ($scope.groupHeader) {
+                        classList.push('fd-list__group-header');
+                    }
+                    if ($scope.interactive) {
+                        classList.push('fd-list__item--interractive');
+                    }
+                    if ($scope.inactive) {
+                        classList.push('fd-list__item--inactive');
+                    }
+                    if ($scope.selected) {
+                        classList.push('is-selected');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                $scope.$watch('selected', function () {
+                    if ($scope.selected) {
+                        $element[0].setAttribute('aria-selected', 'true');
+                    } else {
+                        $element[0].removeAttribute('aria-selected');
+                    }
+                })
+            }],
+            template: `<li role="{{role}}" ng-class="getClasses()" ng-transclude></li>`
+        }
+    }]).directive('fdListTitle', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: '<span class="fd-list__title" ng-transclude></span>'
+        }
+    }]).directive('fdListButton', [function () {
+        return {
+            restrict: 'A',
+            link: function (scope, element) {
+                element.addClass('fd-list__button');
+            }
+        }
+    }]).directive('fdListLink', [function () {
+        /**
+         * navigationIndicator: Boolean - Displays an arrow to indicate that the item is navigable (Should be used with 'navigation-indication' lists)
+         * navigated: Boolean - Displays the list item as navigated
+         * selected: Boolean - Selects the list item. Should be used with 'navigation' and 'navigation-indication' lists
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            require: '^fdListItem',
+            scope: {
+                navigationIndicator: '<',
+                navigated: '<',
+                selected: '<'
+            },
+            link: function (scope, element, attrs, listItemCtrl) {
+                listItemCtrl.addClass('fd-list__item--link');
+
+                scope.getClasses = function () {
+                    let classList = ['fd-list__link'];
+
+                    if (scope.navigationIndicator) {
+                        classList.push('fd-list__link--navigation-indicator');
+                    }
+
+                    if (scope.navigated) {
+                        classList.push('is-navigated');
+                    }
+
+                    if (scope.selected) {
+                        classList.push('is-selected');
+                    }
+                    return classList;
+                }
+            },
+            template: '<a tabindex="0" ng-class="getClasses()" ng-transclude></a>'
+        }
+    }]).directive('fdListIcon', [function () {
+        /**
+         * glyph: String - Icon class.
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: {
+                glyph: '@'
+            },
+            link: function (scope) {
+                if (!scope.glyph) {
+                    console.error('fd-list-icon error: You should provide glpyh icon using the "glyph" attribute');
+                }
+
+                scope.getClasses = function () {
+                    let classList = ['fd-list__icon'];
+                    if (scope.glyph) {
+                        classList.push(scope.glyph);
+                    }
+                    return classList.join(' ');
+                }
+            },
+            template: '<i role="presentation" ng-class="getClasses()"></i>'
+        }
+    }]).directive('fdListActionItem', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<li role="listitem" class="fd-list__item fd-list__item--action">
+                <button class="fd-list__title" ng-transclude></button>
+            </li>`
+        }
+    }]).directive('fdListFormItem', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            require: '^fdListItem',
+            link: function (scope, element, attrs, listItemCtrl) {
+                listItemCtrl.setRole('option');
+            },
+            template: '<div class="fd-form-item fd-list__form-item" ng-transclude></div>'
+        }
+    }]).directive('fdListContent', [function () {
+        /**
+         * itemTitle: String - list item title
+         * itemTitleId: String - list item title id
+         * contentWrap: String - Allows the byline text to wrap
+         * titleWrap: String - Allows the title text to wrap
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                itemTitle: '@',
+                itemTitleId: '@',
+                contentWrap: '<',
+                titleWrap: '<'
+            },
+            controller: ['$scope', '$element', function ($scope, $element) {
+                this.addClass = function (className) {
+                    $element.children().last().addClass(className);
+                }
+
+                $scope.getBylineClasses = function () {
+                    let classList = ['fd-list__byline'];
+                    if ($scope.contentWrap) {
+                        classList.push('fd-list__byline--wrap');
+                    }
+                    return classList.join(' ');
+                }
+
+                $scope.getTitleClasses = function () {
+                    let classList = ['fd-list__title'];
+                    if ($scope.titleWrap) {
+                        classList.push('fd-list__title--wrap');
+                    }
+                    return classList.join(' ');
+                }
+
+                if ($scope.itemTitleId) {
+                    $element.children().first().attr('id', $scope.itemTitleId);
+                }
+            }],
+            template: `<div class="fd-list__content">
+                <div ng-class="getTitleClasses()">{{itemTitle}}</div>
+                <div ng-class="getBylineClasses()" ng-transclude></div>
+            </div>`
+        }
+    }]).directive('fdListByline', [function () {
+        /**
+         * align: String - One of 'left' or 'right'
+         * contentWrap: String - Allows the byline text to wrap. Relevant to left aligned content only
+         * semanticStatus: String - One of 'neutral', 'positive', 'negative', 'critical' or 'informative'. Relevant to right aligned content only
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                align: '@',
+                contentWrap: '<',
+                semanticStatus: '@'
+            },
+            require: '^fdListContent',
+            link: function (scope, element, attrs, ctrl) {
+                ctrl.addClass('fd-list__byline--2-col');
+
+                const semanticStatuses = ['neutral', 'positive', 'negative', 'critical', 'informative'];
+
+                if (scope.semanticStatus && !semanticStatuses.includes(scope.semanticStatus)) {
+                    console.error(`fd-list-byline error: semantic-status must be one of: ${semanticStatuses.join(', ')}`);
+                }
+
+                if (scope.align !== 'left' && scope.align !== 'right') {
+                    console.error(`fd-list-byline error: 'align' must be 'left' or 'right' `);
+                }
+
+                scope.getClasses = function () {
+                    let classList = [];
+                    switch (scope.align) {
+                        case 'left':
+                            classList.push('fd-list__byline-left');
+                            if (scope.contentWrap) {
+                                classList.push('fd-list__byline-left--wrap');
+                            }
+                            break;
+                        case 'right':
+                            classList.push('fd-list__byline-right');
+                            if (semanticStatuses.includes(scope.semanticStatus)) {
+                                classList.push(`fd-list__byline-right--${scope.semanticStatus}`);
+                            }
+                            break;
+                    }
+
+                    return classList.join(' ');
+                }
+            },
+            template: `<div ng-class="getClasses()" ng-transclude></div>`
+        }
+    }]).directive('fdListThumbnail', [function () {
+        /**
+         * glyph: String - Icon class.
+         * imageUrl: String - Path to the thumbnail image
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: {
+                glyph: '@',
+                imageUrl: '@'
+            },
+            link: function (scope) {
+                if (!scope.glyph && !scope.imageUrl) {
+                    console.error('fd-list-thumbnail error: You should provide either glpyh icon or image');
+                }
+
+                scope.getClasses = function () {
+                    let classList = ['fd-list__thumbnail'];
+                    if (scope.imageUrl) {
+                        classList.push('fd-image--s');
+                    }
+                    return classList.join(' ');
+                }
+
+                scope.getStyles = function () {
+                    if (scope.imageUrl) {
+                        return {
+                            backgroundImage: `url('${scope.imageUrl}')`,
+                            backgroundSize: 'cover'
+                        }
+                    }
+                }
+            },
+            template: `<span ng-class="getClasses()" ng-style="getStyles()">
+                <i ng-if="glyph" role="presentation" ng-class="glyph"></i>
+            </span>`
         }
     }]);
