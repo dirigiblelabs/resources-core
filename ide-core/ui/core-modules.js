@@ -798,7 +798,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 scope.isScrollable = function (menuItems) {
                     for (let i = 0; i < menuItems.length; i++)
                         if (menuItems[i].items) return '';
-                    return 'fd-menu--overflow dg-headermenu--overflow';
+                    return 'fd-menu--overflow fd-scrollbar dg-headermenu--overflow';
                 }
 
                 scope.menuHovered = function () {
@@ -907,7 +907,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 scope.isScrollable = function (menuItems) {
                     for (let i = 0; i < menuItems.length; i++)
                         if (menuItems[i].items) return "";
-                    return "dg-menu__sublist--overflow";
+                    return "fd-scrollbar dg-menu__sublist--overflow";
                 }
 
                 scope.menuHovered = function () {
@@ -1011,11 +1011,13 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 let dialogWindows = DialogWindows.query();
                 let messageBox = element[0].querySelector("#dgIdeAlert");
                 let ideDialog = element[0].querySelector("#dgIdeDialog");
+                let ideFormDialog = element[0].querySelector("#dgIdeFormDialog");
                 let ideSelectDialog = element[0].querySelector("#dgIdeSelectDialog");
                 let ideDialogWindow = element[0].querySelector("#dgIdeDialogWindow");
                 let alerts = [];
                 let windows = [];
                 let dialogs = [];
+                let formDialogs = [];
                 let selectDialogs = [];
                 scope.searchInput = { value: "" }; // AngularJS - "If you use ng-model, you have to use an object property, not just a variable"
                 scope.alert = {
@@ -1032,6 +1034,15 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     loader: false,
                     buttons: [],
                     callbackTopic: null
+                };
+                scope.formDialog = {
+                    header: "",
+                    subheader: "",
+                    title: "",
+                    footer: "",
+                    buttons: [],
+                    callbackTopic: null,
+                    items: []
                 };
                 scope.selectDialog = {
                     title: "",
@@ -1074,6 +1085,21 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     if (buttonId && scope.dialog.callbackTopic) messageHub.postMessage(scope.dialog.callbackTopic, buttonId, true);
                     ideDialog.classList.remove("fd-dialog--active");
                     dialogs.shift();
+                    checkForDialogs();
+                };
+
+                scope.showFormDialog = function () {
+                    if (element[0].classList.contains("dg-hidden"))
+                        element[0].classList.remove("dg-hidden");
+                    scope.formDialog = formDialogs[0];
+                    ideFormDialog.classList.add("fd-dialog--active");
+                };
+
+                scope.hideFormDialog = function (buttonId) {
+                    if (buttonId && scope.formDialog.callbackTopic)
+                        messageHub.postMessage(scope.formDialog.callbackTopic, scope.formDialog.items, true);
+                    ideFormDialog.classList.remove("fd-dialog--active");
+                    formDialogs.shift();
                     checkForDialogs();
                 };
 
@@ -1173,6 +1199,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
 
                 function checkForDialogs() {
                     if (selectDialogs.length > 0) scope.showSelectDialog();
+                    else if (formDialogs.length > 0) scope.showFormDialog();
                     else if (dialogs.length > 0) scope.showDialog();
                     else if (alerts.length > 0) scope.showAlert();
                     else if (windows.length > 0) scope.showWindow();
@@ -1229,6 +1256,25 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                                 callbackTopic: data.callbackTopic
                             });
                             scope.showDialog();
+                        });
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    "ide.formDialog",
+                    function (data) {
+                        scope.$apply(function () {
+                            formDialogs.push({
+                                header: data.header,
+                                subheader: data.subheader,
+                                title: data.title,
+                                items: data.items,
+                                footer: data.footer,
+                                buttons: data.buttons,
+                                callbackTopic: data.callbackTopic
+                            });
+                            scope.showFormDialog();
                         });
                     },
                     true

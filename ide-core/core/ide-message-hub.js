@@ -83,7 +83,31 @@ angular.module('ideMessageHub', [])
                     callbackTopic: callbackTopic
                 }, 'ide.dialog');
             };
-
+            let showFormDialog = function (
+                title = "",
+                items = [],
+                buttons = [{
+                    id: "b1",
+                    type: "normal", // normal, emphasized, transparent
+                    label: "Ok",
+                }],
+                callbackTopic = null,
+                header = "",
+                subheader = "",
+                footer = ""
+            ) {
+                if (buttons.length === 0)
+                    throw Error("Dialog: There must be at least one button");
+                messageHub.post({
+                    header: header,
+                    subheader: subheader,
+                    title: title,
+                    items: items,
+                    footer: footer,
+                    buttons: buttons,
+                    callbackTopic: callbackTopic
+                }, 'ide.formDialog');
+            };
             let showDialogAsync = function (
                 title = "",
                 body = "",
@@ -168,6 +192,7 @@ angular.module('ideMessageHub', [])
                 announceAlertError: announceAlertError,
                 showDialog: showDialog,
                 showDialogAsync: showDialogAsync,
+                showFormDialog: showFormDialog,
                 showSelectDialog: showSelectDialog,
                 showDialogWindow: showDialogWindow,
                 triggerEvent: trigger,

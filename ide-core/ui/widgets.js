@@ -57,12 +57,24 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             replace: false,
             scope: {
                 callback: '&dgContextmenu',
-                excludedElements: '='
+                includedElements: '=',
+                excludedElements: '=',
             },
             link: function (scope, element) {
                 scope.callback = scope.callback();
                 element.on('contextmenu', function (event) {
-                    if (scope.excludedElements) {
+                    if (scope.includedElements) {
+                        let isIncluded = false;
+                        if (scope.includedElements.ids && scope.includedElements.ids.includes(event.target.id)) isIncluded = true;
+                        if (!isIncluded && scope.includedElements.classes) {
+                            for (let i = 0; i < scope.includedElements.classes.length; i++) {
+                                if (event.target.classList.contains(scope.includedElements.classes[i]))
+                                    isIncluded = true;
+                            }
+                        }
+                        if (!isIncluded && scope.includedElements.types && scope.includedElements.types.includes(event.target.tagName)) isIncluded = true;
+                        if (!isIncluded) return;
+                    } else if (scope.excludedElements) {
                         if (scope.excludedElements.ids && scope.excludedElements.ids.includes(event.target.id)) return;
                         if (scope.excludedElements.classes) {
                             for (let i = 0; i < scope.excludedElements.classes.length; i++) {
@@ -98,6 +110,13 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 });
             }
         };
+    }]).directive('fdScrollbar', [function () {
+        return {
+            restrict: 'AE',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-scrollbar" ng-transclude><div>`,
+        }
     }]).directive('fdAvatar', [function () {
         /**
          * fdText: String - One or two letters representing a username or something similiar.
@@ -862,7 +881,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 },
             },
             template: `<div id="{{ popoverId }}" class="fd-popover__body" ng-class="getClasses()" aria-hidden="true">
-                <div class="fd-popover__wrapper" style="max-height:{{ maxHeight || 250 }}px;" ng-transclude>
+                <div class="fd-popover__wrapper fd-scrollbar" style="max-height:{{ maxHeight || 250 }}px;" ng-transclude>
                 </div>
             </div>`,
         }

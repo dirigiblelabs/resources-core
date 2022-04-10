@@ -44,7 +44,7 @@
                     <div class="fd-bar__element">{{ dialog.subheader }}</div>
                 </div>
             </div>
-            <div class="fd-dialog__body">
+            <div class="fd-dialog__body fd-scrollbar">
                 {{ dialog.body }}
                 <div class="fd-dialog__loader fd-busy-indicator--m" ng-class="{'dg-hidden' : dialog.loader === false}"
                     aria-hidden="{{ dialog.loader }}" aria-label="loading">
@@ -61,6 +61,92 @@
                         <button class="fd-dialog__decisive-button fd-button fd-button--compact"
                             ng-class="{'normal':'', 'emphasized':'fd-button--emphasized', 'transparent':'fd-button--transparent'}[btn.type]"
                             ng-click="hideDialog(btn.id)">{{ btn.label }}</button>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </section>
+    <!-- Form Dialog -->
+    <section class="fd-dialog" id="dgIdeFormDialog">
+        <div role="dialog" aria-modal="true" aria-label="System Dialog"
+            class="fd-dialog__content fd-dialog__content--s">
+            <header class="fd-dialog__header fd-bar"
+                ng-class="{'fd-bar--header-with-subheader' : formDialog.subheader !== ''}">
+                <div class="fd-bar__left">
+                    <div class="fd-bar__element" ng-class="{'dg-hidden' : formDialog.header === ''}">
+                        {{ formDialog.header }}
+                    </div>
+                    <div class="fd-bar__element">
+                        <h2 class="fd-title fd-title--h5">{{ formDialog.title }}</h2>
+                    </div>
+                </div>
+            </header>
+            <div class="fd-dialog__subheader fd-bar fd-bar--subheader"
+                ng-class="{'dg-hidden' : formDialog.subheader === ''}">
+                <div class="fd-bar__left">
+                    <div class="fd-bar__element">{{ formDialog.subheader }}</div>
+                </div>
+            </div>
+            <div class="fd-dialog__body fd-scrollbar">
+                <fieldset class="fd-fieldset" ng-form="fromFieldset">
+                    <div class="fd-form-group">
+                        <div ng-repeat="item in formDialog.items">
+                            <div ng-if="item.type === 'input' " class="fd-form-item">
+                                <label class="fd-form-label fd-form-label--colon" aria-required="{{ item.required }}"
+                                    for="{{ item.id }}">{{ item.label }}</label>
+                                <input class="fd-input" type="text" id="{{ item.id }}"
+                                    placeholder="{{ item.placeholder}}" ng-required="item.required"
+                                    ng-model="item.value">
+                            </div>
+                            <div ng-if="item.type === 'checkbox'" class="fd-form-item">
+                                <input type="checkbox" class="fd-checkbox fd-checkbox--compact" id="{{ item.id }}"
+                                    ng-model="item.value">
+                                <label class="fd-checkbox__label fd-checkbox__label--compact" for="{{ item.id }}">
+                                    <div class="fd-checkbox__label-container">
+                                        <span class="fd-checkbox__text">{{ item.label }}</span>
+                                    </div>
+                                </label>
+                            </div>
+                            <div ng-if="item.type === 'radio'" class="fd-form-item">
+                                <div class="fd-form-group__item fd-form-item" ng-repeat="radio in item.items">
+                                    <input type="radio" class="fd-radio fd-radio--compact" id="{{ radio.id }}"
+                                        ng-model="item.value" ng-required="item.required" ng-value="radio.value">
+                                    <label class="fd-radio__label" aria-required="{{ item.required }}"
+                                        for="{{ radio.id }}">
+                                        {{ radio.label }}
+                                    </label>
+                                </div>
+                            </div>
+                            <div ng-if="item.type === 'dropdown'" class="fd-form-item">
+                                <fd-popover>
+                                    <fd-popover-control>
+                                        <fd-button fd-label="{{ item.label }}">
+                                        </fd-button>
+                                    </fd-popover-control>
+                                    <fd-popover-body no-arrow="true">
+                                        <fd-menu>
+                                            <fd-menu-item ng-repeat="menuItem in item.items"
+                                                title="{{ menuItem.label }}"
+                                                ng-click="item.value = menuItem.value; item.label = menuItem.label">
+                                            </fd-menu-item>
+                                        </fd-menu>
+                                    </fd-popover-body>
+                                </fd-popover>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+            <footer ng-if="formDialog.buttons.length > 0" class="fd-dialog__footer fd-bar fd-bar--footer">
+                <div class="fd-bar__right">
+                    <div class="fd-bar__element" ng-class="{'dg-hidden' : formDialog.footer === ''}">
+                        {{ formDialog.footer }}
+                    </div>
+                    <div class="fd-bar__element" ng-repeat="btn in formDialog.buttons">
+                        <fd-button class="fd-dialog__decisive-button" compact="true" fd-label="{{ btn.label }}"
+                            fd-type="{{ btn.type }}"
+                            state="{{ btn.whenValid && !fromFieldset.$valid ? 'disabled' : ''  }}"
+                            ng-click="hideFormDialog(btn.id)"></fd-button>
                     </div>
                 </div>
             </footer>
@@ -100,7 +186,7 @@
                     </div>
                 </div>
             </div>
-            <div class="fd-dialog__body fd-dialog__body--no-vertical-padding">
+            <div class="fd-dialog__body fd-scrollbar fd-dialog__body--no-vertical-padding">
                 <fieldset class="fd-fieldset" ng-if="selectDialog.isSingleChoice">
                     <ul class="fd-list fd-list--selection fd-list--compact fd-list--no-border"
                         aria-label="selection list" role="listbox">
