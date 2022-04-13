@@ -1806,4 +1806,97 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 <i ng-if="glyph" role="presentation" ng-class="glyph"></i>
             </span>`
         }
+    }]).directive('fdObjectStatus', [function () {
+        /**
+         * status: String - One of 'negative', 'critical', 'positive' or 'informative'
+         * glyph: String - Icon class.
+         * text: String - Object status text.
+         * clickable: Boolean - For SPAN elements only
+         * inverted: Boolean - Inverts the background color
+         * indication: Boolean - Applies generic indication color. Must be a number between 1 and 8 inclusive
+         * large: Boolean - Increases the size
+         */
+        return {
+            restrict: 'A',
+            replace: false,
+            scope: {
+                status: '@',
+                glyph: '@',
+                text: '@',
+                clickable: '<',
+                inverted: '<',
+                indication: '<',
+                large: '<'
+            },
+            link: function (scope, element) {
+                const statuses = ['negative', 'critical', 'positive', 'informative'];
+
+                scope.getIconClasses = function () {
+                    let classList = ['fd-object-status__icon'];
+                    if (scope.glyph) {
+                        classList.push(scope.glyph);
+                    }
+                    return classList.join(' ');
+                }
+
+                element.addClass('fd-object-status');
+
+                scope.$watch('status', function (newStatus, oldStatus) {
+                    if (newStatus && !statuses.includes(newStatus)) {
+                        console.error(`fd-object-status error: 'status' must be one of: ${statuses.join(', ')}`);
+                    }
+
+                    if (oldStatus) {
+                        element.removeClass(`fd-object-status--${oldStatus}`);
+                    }
+
+                    if (statuses.includes(newStatus)) {
+                        element.addClass(`fd-object-status--${newStatus}`);
+                    }
+                });
+
+                scope.$watch('clickable', function () {
+                    const isLink = element[0].tagName === 'A';
+                    if (scope.clickable || isLink) {
+                        element.addClass(`fd-object-status--link`);
+                        if (!isLink)
+                            element[0].setAttribute('role', 'button');
+                    } else {
+                        element.removeClass(`fd-object-status--link`);
+                        element[0].removeAttribute('role');
+                    }
+                });
+
+                scope.$watch('inverted', function () {
+                    if (scope.inverted) {
+                        element.addClass('fd-object-status--inverted');
+                    } else {
+                        element.removeClass('fd-object-status--inverted');
+                    }
+                });
+
+                scope.$watch('large', function () {
+                    if (scope.large) {
+                        element.addClass('fd-object-status--large');
+                    } else {
+                        element.removeClass('fd-object-status--large');
+                    }
+                });
+
+                scope.$watch('indication', function (indication, oldIndication) {
+                    if (oldIndication) {
+                        element.removeClass(`fd-object-status--indication-${oldIndication}`);
+                    }
+
+                    if (indication && (indication < 1 || indication > 8)) {
+                        console.error(`fd-object-status error: 'indication' must be a number between 1 and 8 inclusive`);
+                        return;
+                    }
+
+                    element.addClass(`fd-object-status--indication-${indication}`);
+                });
+            },
+            template: `<i ng-if="glyph" ng-class="getIconClasses()" role="presentation"></i>
+                       <span ng-if="text" class="fd-object-status__text">{{text}}</span>`
+        }
     }]);
