@@ -1,7 +1,7 @@
 <div class="dg-overlay dg-hidden">
     <!-- Alert -->
     <div id="dgIdeAlert" class="fd-message-box fd-message-box--{{ alert.type }}">
-        <section class="fd-message-box__content">
+        <section ng-if="activeDialog === 'alert'" class="fd-message-box__content">
             <header class="fd-bar fd-bar--header fd-message-box__header">
                 <div class="fd-bar__left">
                     <div class="fd-bar__element">
@@ -26,7 +26,7 @@
     </div>
     <!-- Dialog -->
     <section class="fd-dialog" id="dgIdeDialog">
-        <div role="dialog" aria-modal="true" aria-label="System Dialog"
+        <div ng-if="activeDialog === 'dialog'" role="dialog" aria-modal="true" aria-label="System Dialog"
             class="fd-dialog__content fd-dialog__content--s">
             <header class="fd-dialog__header fd-bar"
                 ng-class="{'fd-bar--header-with-subheader' : dialog.subheader !== ''}">
@@ -46,7 +46,10 @@
             </div>
             <div class="fd-dialog__body fd-scrollbar">
                 {{ dialog.body }}
-                <div class="fd-dialog__loader fd-busy-indicator--m" ng-class="{'dg-hidden' : dialog.loader === false}"
+                <div ng-show="dialog.loader && dialog.status">
+                    <strong>Status: </strong>{{ dialog.status }}
+                </div>
+                <div class="fd-dialog__loader fd-busy-indicator--l" ng-class="{'dg-hidden' : dialog.loader === false}"
                     aria-hidden="{{ dialog.loader }}" aria-label="loading">
                     <div class="fd-busy-indicator--circle-0"></div>
                     <div class="fd-busy-indicator--circle-1"></div>
@@ -68,10 +71,10 @@
     </section>
     <!-- Form Dialog -->
     <section class="fd-dialog" id="dgIdeFormDialog">
-        <div role="dialog" aria-modal="true" aria-label="System Dialog"
+        <div ng-if="activeDialog === 'form'" role="dialog" aria-modal="true" aria-label="System Dialog"
             class="fd-dialog__content fd-dialog__content--s">
             <header class="fd-dialog__header fd-bar"
-                ng-class="{'fd-bar--header-with-subheader' : formDialog.subheader !== ''}">
+                ng-class="{'fd-bar--header-with-subheader' : formDialog.subheader !== '' && !formDialog.loader }">
                 <div class="fd-bar__left">
                     <div class="fd-bar__element" ng-class="{'dg-hidden' : formDialog.header === ''}">
                         {{ formDialog.header }}
@@ -81,26 +84,34 @@
                     </div>
                 </div>
             </header>
-            <div class="fd-dialog__subheader fd-bar fd-bar--subheader"
+            <div ng-hide="formDialog.loader" class="fd-dialog__subheader fd-bar fd-bar--subheader"
                 ng-class="{'dg-hidden' : formDialog.subheader === ''}">
                 <div class="fd-bar__left">
                     <div class="fd-bar__element">{{ formDialog.subheader }}</div>
                 </div>
             </div>
             <div class="fd-dialog__body fd-scrollbar">
-                <fieldset class="fd-fieldset" ng-form="fromFieldset">
+                <fieldset ng-hide="formDialog.loader" class="fd-fieldset" ng-form="fromFieldset">
                     <div class="fd-form-group">
                         <div ng-repeat="item in formDialog.items">
                             <div ng-if="item.type === 'input' " class="fd-form-item">
-                                <label class="fd-form-label fd-form-label--colon" aria-required="{{ item.required }}"
-                                    for="{{ item.id }}">{{ item.label }}</label>
-                                <input class="fd-input" type="text" id="{{ item.id }}"
-                                    placeholder="{{ item.placeholder}}" ng-required="item.required"
-                                    ng-model="item.value">
+                                <fd-form-label fd-colon="true" fd-required="{{ item.required }}" for="{{ item.id }}">
+                                    {{ item.label }}
+                                </fd-form-label>
+                                <fd-form-input-message-group fd-inactive="{{ item.error ? false : true }}">
+                                    <fd-input id="{{ item.id }}" type="text" placeholder="{{ item.placeholder}}"
+                                        state="{{ item.error ? 'error' : '' }}" name="{{ 'i' + item.id }}"
+                                        fd-required="{{ item.required }}" ng-model="item.value" ng-trim="false"
+                                        ng-minlength="item.minlength || 0" ng-maxlength="item.maxlength || -1"
+                                        ng-pattern="item.pattern || ''"
+                                        ng-change="inputValidation(fromFieldset['i' + item.id].$valid, item)">
+                                    </fd-input>
+                                    <fd-form-message fd-type="error">{{ item.errorMsg }}</fd-form-message>
+                                </fd-form-input-message-group>
                             </div>
                             <div ng-if="item.type === 'checkbox'" class="fd-form-item">
-                                <input type="checkbox" class="fd-checkbox fd-checkbox--compact" id="{{ item.id }}"
-                                    ng-model="item.value">
+                                <input type="checkbox" class="fd-checkbox fd-checkbox--compact"
+                                    ng-class="{'is-error' : item.error }" id="{{ item.id }}" ng-model="item.value">
                                 <label class="fd-checkbox__label fd-checkbox__label--compact" for="{{ item.id }}">
                                     <div class="fd-checkbox__label-container">
                                         <span class="fd-checkbox__text">{{ item.label }}</span>
@@ -109,8 +120,9 @@
                             </div>
                             <div ng-if="item.type === 'radio'" class="fd-form-item">
                                 <div class="fd-form-group__item fd-form-item" ng-repeat="radio in item.items">
-                                    <input type="radio" class="fd-radio fd-radio--compact" id="{{ radio.id }}"
-                                        ng-model="item.value" ng-required="item.required" ng-value="radio.value">
+                                    <input type="radio" class="fd-radio fd-radio--compact"
+                                        ng-class="{'is-error' : radio.error }" id="{{ radio.id }}" ng-model="item.value"
+                                        ng-required="item.required" ng-value="radio.value">
                                     <label class="fd-radio__label" aria-required="{{ item.required }}"
                                         for="{{ radio.id }}">
                                         {{ radio.label }}
@@ -136,8 +148,17 @@
                         </div>
                     </div>
                 </fieldset>
+                <div ng-show="formDialog.loader && formDialog.loadingMessage">
+                    <strong>Status: </strong>{{ formDialog.loadingMessage }}
+                </div>
+                <div class="fd-dialog__loader fd-busy-indicator--l" ng-show="formDialog.loader" aria-label="loading">
+                    <div class="fd-busy-indicator--circle-0"></div>
+                    <div class="fd-busy-indicator--circle-1"></div>
+                    <div class="fd-busy-indicator--circle-2"></div>
+                </div>
             </div>
-            <footer ng-if="formDialog.buttons.length > 0" class="fd-dialog__footer fd-bar fd-bar--footer">
+            <footer ng-hide="formDialog.loader" ng-if="formDialog.buttons.length > 0"
+                class="fd-dialog__footer fd-bar fd-bar--footer">
                 <div class="fd-bar__right">
                     <div class="fd-bar__element" ng-class="{'dg-hidden' : formDialog.footer === ''}">
                         {{ formDialog.footer }}
@@ -146,7 +167,7 @@
                         <fd-button class="fd-dialog__decisive-button" compact="true" fd-label="{{ btn.label }}"
                             fd-type="{{ btn.type }}"
                             state="{{ btn.whenValid && !fromFieldset.$valid ? 'disabled' : ''  }}"
-                            ng-click="hideFormDialog(btn.id)"></fd-button>
+                            ng-click="formDialogAction(btn.id)"></fd-button>
                     </div>
                 </div>
             </footer>
@@ -154,7 +175,7 @@
     </section>
     <!-- Selectable dialog -->
     <section class="fd-dialog" id="dgIdeSelectDialog">
-        <div class="fd-dialog__content" role="dialog" aria-modal="true">
+        <div ng-if="activeDialog === 'select'" class="fd-dialog__content" role="dialog" aria-modal="true">
             <header class="fd-dialog__header fd-bar"
                 ng-class="{'fd-bar--header-with-subheader' : selectDialog.hasSearch}">
                 <div class="fd-bar__left">
@@ -239,7 +260,8 @@
     </section>
     <!-- Window -->
     <section class="fd-dialog" id="dgIdeDialogWindow">
-        <div role="dialog" aria-modal="true" aria-label="System Window" class="fd-dialog__content dg-window__content">
+        <div ng-if="activeDialog === 'window'" role="dialog" aria-modal="true" aria-label="System Window"
+            class="fd-dialog__content dg-window__content">
             <header class="fd-dialog__header fd-bar">
                 <div class="fd-bar__left">
                     <div class="fd-bar__element">

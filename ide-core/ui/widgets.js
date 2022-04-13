@@ -425,11 +425,17 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             template: `<span class="fd-input-group__addon" ng-class="getClasses()" ng-transclude></span>`,
         }
     }]).directive('fdFormInputMessageGroup', ['uuid', function (uuid) {
+        /**
+         * fdInactive: Boolean - If the message popover should not be shown.
+         */
         return {
             restrict: 'E',
             transclude: {
                 'control': 'fdInput',
                 'message': 'fdFormMessage',
+            },
+            scope: {
+                fdInactive: '@',
             },
             replace: true,
             link: {
@@ -438,20 +444,33 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 },
                 post: function (scope, element) {
                     element.on('focusout', function () {
-                        scope.$apply(scope.togglePopover());
+                        if (scope.fdInactive !== "true")
+                            scope.$apply(scope.togglePopover());
                     });
-                    scope.togglePopover = function () {
-                        if (!scope.popoverControl) {
-                            scope.popoverControl = element[0].querySelector(`[aria-controls="${scope.popoverId}"]`);
-                            scope.popoverBody = element[0].querySelector(`#${scope.popoverId}`);
-                        }
-                        if (scope.popoverBody.getAttribute('aria-hidden') === 'true') {
-                            scope.popoverControl.setAttribute('aria-expanded', 'true');
-                            scope.popoverBody.setAttribute('aria-hidden', 'false');
-                        } else {
+                    scope.$watch('fdInactive', function () {
+                        if (scope.fdInactive === "true") {
+                            if (!scope.popoverControl) {
+                                scope.popoverControl = element[0].querySelector(`[aria-controls="${scope.popoverId}"]`);
+                                scope.popoverBody = element[0].querySelector(`#${scope.popoverId}`);
+                            }
                             scope.popoverControl.setAttribute('aria-expanded', 'false');
                             scope.popoverBody.setAttribute('aria-hidden', 'true');
-                        };
+                        }
+                    });
+                    scope.togglePopover = function () {
+                        if (scope.fdInactive !== "true") {
+                            if (!scope.popoverControl) {
+                                scope.popoverControl = element[0].querySelector(`[aria-controls="${scope.popoverId}"]`);
+                                scope.popoverBody = element[0].querySelector(`#${scope.popoverId}`);
+                            }
+                            if (scope.popoverBody.getAttribute('aria-hidden') === 'true') {
+                                scope.popoverControl.setAttribute('aria-expanded', 'true');
+                                scope.popoverBody.setAttribute('aria-hidden', 'false');
+                            } else {
+                                scope.popoverControl.setAttribute('aria-expanded', 'false');
+                                scope.popoverBody.setAttribute('aria-hidden', 'true');
+                            };
+                        }
                     };
                 },
             },
