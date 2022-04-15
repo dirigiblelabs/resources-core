@@ -1518,7 +1518,6 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
         }
     }]).directive('fdListItem', [function () {
         /**
-         * groupHeader: Boolean - Displays the list item as a group header
          * interactive: Boolean - Makes the list item look interactive (clickable)
          * inactive: Boolean - Makes the list item look inactive (non-clickable)
          * selected: Boolean - Selects the list item. Should be used with 'selection' lists
@@ -1528,7 +1527,6 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             transclude: true,
             replace: true,
             scope: {
-                groupHeader: '<',
                 interactive: '<',
                 inactive: '<',
                 selected: '<'
@@ -1547,9 +1545,6 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 $scope.getClasses = function () {
                     let classList = ['fd-list__item'];
 
-                    if ($scope.groupHeader) {
-                        classList.push('fd-list__group-header');
-                    }
                     if ($scope.interactive) {
                         classList.push('fd-list__item--interractive');
                     }
@@ -1716,6 +1711,13 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 <div ng-class="getTitleClasses()">{{itemTitle}}</div>
                 <div ng-class="getBylineClasses()" ng-transclude></div>
             </div>`
+        }
+    }]).directive('fdListGroupHeader', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<li role="listitem" class="fd-list__group-header" ng-transclude></li>`
         }
     }]).directive('fdListByline', [function () {
         /**
@@ -1898,5 +1900,255 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             },
             template: `<i ng-if="glyph" ng-class="getIconClasses()" role="presentation"></i>
                        <span ng-if="text" class="fd-object-status__text">{{text}}</span>`
+        }
+    }]).directive('fdSelect', ['uuid', function (uuid) {
+        /**
+         * size: String - The size of the select. One of 'compact' or 'large'. 
+         * disabled: Boolean - Disable the select
+         * selectedValue: String - The value of the currently selected item
+         * state: String - Optional semantic state. Could be one of 'success', 'error', 'warning' or 'information'
+         * message: String - Optional text displayed within the dropdown list.
+         * placeholder: String - Short hint displayed when no item is selected yet.
+         * dropdownFill: Boolean - Adjusts the popover body that wraps the dropdown to match the text length
+         * labelId: String - The id of the label element if present (Necessary for aria-labelledby)
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            scope: {
+                size: '@',
+                disabled: '<',
+                selectedValue: '=?',
+                state: '@',
+                message: '@',
+                placeholder: '@',
+                dropdownFill: '<',
+                labelId: '@'
+            },
+            controller: ['$scope', '$element', function ($scope, $element) {
+                $scope.items = [];
+                $scope.bodyExpanded = false;
+                $scope.buttonId = `select-btn-${uuid.generate()}`;
+                $scope.textId = `select-text-${uuid.generate()}`;
+                $scope.bodyId = `select-body-${uuid.generate()}`;
+
+                const states = ['success', 'error', 'warning', 'information'];
+                if ($scope.state && !states.includes($scope.state)) {
+                    console.error(`fd-select error: 'state' must be one of: ${states.join(', ')}`);
+                }
+
+                $scope.getClasses = function () {
+                    let classList = ['fd-select'];
+
+                    if ($scope.size === 'compact') {
+                        classList.push('fd-select--compact');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                $scope.getControlClasses = function () {
+                    let classList = ['fd-select__control'];
+
+                    if ($scope.state) classList.push(`is-${$scope.state}`);
+
+                    return classList.join(' ');
+                }
+
+                $scope.getPopoverBodyClasses = function () {
+                    let classList = ['fd-popover__body', 'fd-popover__body--no-arrow', 'fd-popover__body--dropdown'];
+
+                    if ($scope.dropdownFill) {
+                        classList.push('fd-popover__body--dropdown-fill');
+                    }
+
+                    return classList.join(' ');
+                }
+
+
+                $scope.getListClasses = function () {
+                    let classList = ['fd-list', 'fd-list--dropdown'];
+
+                    if ($scope.message) {
+                        classList.push('fd-list--has-message');
+                    }
+
+                    switch ($scope.size) {
+                        case 'compact':
+                            classList.push('fd-list--compact');
+                            break;
+                        case 'large':
+                            classList.push('fd-list--large-dropdown');
+                            break;
+                    }
+
+                    return classList.join(' ');
+                }
+
+                $scope.getListMessageClasses = function () {
+                    let classList = ['fd-list__message'];
+
+                    if ($scope.state) {
+                        classList.push(`fd-list__message--${$scope.state}`);
+                    }
+
+                    return classList.join(' ');
+                }
+
+                $scope.getFormMessageClasses = function () {
+                    let classList = ['fd-form-message', 'fd-form-message--static'];
+
+                    if ($scope.state) {
+                        classList.push(`fd-form-message--${$scope.state}`);
+                    }
+
+                    return classList.join(' ');
+                }
+
+                $scope.onControllClick = function ($event) {
+                    $scope.bodyExpanded = !$scope.bodyExpanded;
+                    $event.currentTarget.focus();
+                }
+
+                $scope.closeDropdown = function () {
+                    $scope.bodyExpanded = false;
+                }
+
+                $scope.getSelectedItem = function () {
+                    if (!$scope.selectedValue)
+                        return null;
+
+                    let index = $scope.items.findIndex(x => x.value === $scope.selectedValue);
+                    return index >= 0 ? $scope.items[index] : null;
+                }
+
+                $scope.getSelectedItemText = function () {
+                    const selectedItem = $scope.getSelectedItem();
+                    return selectedItem ? selectedItem.text : $scope.placeholder || '';
+                }
+
+                $scope.getSelectedItemId = function () {
+                    const selectedItem = $scope.getSelectedItem();
+                    return selectedItem ? selectedItem.optionId : '';
+                }
+
+                this.addItem = function (item) {
+                    $scope.items.push(item);
+                }
+
+                this.removeItem = function (item) {
+                    let index = $scope.items.findIndex(x => x.optionId === item.optionId);
+                    if (index >= 0)
+                        $scope.items.splice(index, 1);
+                }
+
+                this.getSelectedValue = function () {
+                    return $scope.selectedValue;
+                }
+
+                this.selectItem = function (item) {
+                    $scope.selectedValue = item.value;
+                    $scope.closeDropdown();
+                }
+
+                $element.on('focusout', function (e) {
+                    if (!e.relatedTarget || !$element[0].contains(e.relatedTarget)) {
+                        $scope.$apply($scope.closeDropdown);
+                    }
+                });
+            }],
+            template: `<div class="fd-popover">
+                <div class="fd-popover__control" aria-disabled="{{ !!disabled }}">
+                    <div ng-class="getClasses()">
+                        <button id="{{ buttonId }}" ng-class="getControlClasses()" ng-click="onControllClick($event)" aria-labelledby="{{ [labelId, textId].join(' ') }}" aria-expanded="{{ bodyExpanded }}" aria-haspopup="listbox" aria-disabled="{{ !!disabled }}">
+                            <span id="{{ textId }}" class="fd-select__text-content">{{ getSelectedItemText() }}</span>
+                            <span class="fd-button fd-button--transparent fd-select__button">
+                                <i class="sap-icon--slim-arrow-down"></i>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+                <div id="{{ bodyId }}" aria-hidden="{{ !bodyExpanded }}" ng-class="getPopoverBodyClasses()">
+                    <div ng-if="message" aria-live="assertive" ng-class="getListMessageClasses()" role="alert">{{ message }}</div>
+                    <ul ng-class="getListClasses()" aria-activedescendant="{{ getSelectedItemId() }}" aria-labelledby="{{ labelId }}" role="listbox" ng-transclude></ul>
+                </div>
+                <div ng-if="message" class="fd-popover__body fd-popover__body--no-arrow" aria-hidden="{{ bodyExpanded }}">
+                    <span ng-class="getFormMessageClasses()">{{ message }}</span>
+                </div>
+            </div>`
+        }
+    }]).directive('fdOption', ['uuid', function (uuid) {
+        /**
+         * text: String - Primary text of the select option
+         * secondaryText: String - Right alligned secondary text
+         * value: String - Option value
+         * glyph: String - Option icon class
+         * noWrap: String - Prevents primary text wrapping
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            scope: {
+                text: '@',
+                secondaryText: '@',
+                value: '@',
+                glyph: '@',
+                noWrap: '<'
+            },
+            require: '^fdSelect',
+            link: function (scope, element, attrs, selectCtrl) {
+                scope.optionId = `select-option-${uuid.generate()}`;
+
+                scope.isSelected = function () {
+                    return selectCtrl.getSelectedValue() === scope.value;
+                }
+
+                scope.selectItem = function () {
+                    selectCtrl.selectItem(scope);
+                }
+
+                scope.getClasses = function () {
+                    let classList = ['fd-list__item'];
+
+                    if (scope.isSelected()) {
+                        classList.push('is-selected');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                scope.getTitleClasses = function () {
+                    let classList = ['fd-list__title'];
+
+                    if (scope.noWrap) {
+                        classList.push('fd-list__title--no-wrap');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                scope.getIconClasses = function () {
+                    let classList = ['fd-list__icon'];
+
+                    if (scope.glyph) {
+                        classList.push(scope.glyph);
+                    }
+
+                    return classList.join(' ');
+                }
+
+                selectCtrl.addItem(scope);
+
+                scope.$on('$destroy', function () {
+                    selectCtrl.removeItem(scope);
+                });
+            },
+            template: `<li id="{{ optionId }}" ng-class="getClasses()" role="option" aria-selected="{{ isSelected() }}" ng-click="selectItem()">
+                <i ng-if="glyph" role="presentation" ng-class="getIconClasses()"></i>
+                <span ng-class="getTitleClasses()">{{ text }}</span>
+                <span ng-if="secondaryText" class="fd-list__secondary">{{ secondaryText }}</span>
+            </li>`
         }
     }]);
