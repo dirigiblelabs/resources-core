@@ -14,6 +14,7 @@
 let defaultEditorId = "monaco";
 let brandingInfo;
 angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
+    .value('perspective', { id: '' })
     .factory('Theming', ['$resource', 'messageHub', function ($resource, messageHub) {
         let theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme'));
         // legacySwitcher is deprecated. Remove once all views have been migrated.
@@ -137,79 +138,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             };
         }];
     })
-    /**
-     * Creates a map object associating a view factory function with a name (id)
-     */
-    .provider('ViewFactories', function () {
-        let self = this;
-        this.factories = {
-            "frame": function (container, componentState) {
-                container.setTitle(componentState.label || 'View');
-                $('<iframe>').attr('src', componentState.path).appendTo(container.getElement().empty());
-            },
-            "editor": function (container, componentState) {
-                /* Improvement hint: Instead of hardcoding ?file=.. use URL template for the editor provider values
-                 * and then replace the placeholders in the template with matching properties from the componentState.
-                 * This will make it easy to replace the query string property if needed or provide additional
-                 * (editor-specific) parameters easily.
-                 */
-                (function (componentState) {
-                    let src, editorPath;
-                    if (!componentState.editorId || Object.keys(self.editors.editorProviders).indexOf(componentState.editorId) < 0) {
-                        if (Object.keys(self.editors.editorsForContentType).indexOf(componentState.contentType) < 0) {
-                            editorPath = self.editors.editorProviders[self.editors.defaultEditorId];
-                        } else {
-                            if (self.editors.editorsForContentType[componentState.contentType].length > 1) {
-                                let formEditors = self.editors.editorsForContentType[componentState.contentType].filter(function (e) {
-                                    switch (e.id) {
-                                        case "orion":
-                                        case "monaco":
-                                        case "ace":
-                                            return false;
-                                        default:
-                                            return true;
-                                    }
-                                });
-                                if (formEditors.length > 0) {
-                                    componentState.editorId = formEditors[0].id;
-                                } else {
-                                    componentState.editorId = self.editors.editorsForContentType[componentState.contentType][0].id;
-                                }
-                            } else {
-                                componentState.editorId = self.editors.editorsForContentType[componentState.contentType][0].id;
-                            }
-                            editorPath = self.editors.editorProviders[componentState.editorId];
-                        }
-                    }
-                    else
-                        editorPath = self.editors.editorProviders[componentState.editorId];
-                    if (componentState.path) {
-                        if (componentState.editorId === 'flowable')
-                            src = editorPath + componentState.path;
-                        else
-                            src = editorPath + '?file=' + componentState.path;
-                        if (componentState.contentType && componentState.editorId !== 'flowable')
-                            src += "&contentType=" + componentState.contentType;
-                        if (componentState.extraArgs) {
-                            const extraArgs = Object.keys(componentState.extraArgs);
-                            for (let i = 0; i < extraArgs.length; i++) {
-                                src += `&${extraArgs[i]}=${encodeURIComponent(componentState.extraArgs[extraArgs[i]])}`;
-                            }
-                        }
-                    } else {
-                        container.setTitle("Welcome");
-                        let brandingInfo = getBrandingInfo();
-                        src = brandingInfo.branding.welcomePage;
-                    }
-                    $('<iframe>').attr('src', src).appendTo(container.getElement().empty());
-                })(componentState, this);
-            }.bind(self)
-        };
-        this.$get = ['Editors', function viewFactoriesFactory(Editors) {
-            this.editors = Editors;
-            return this.factories;
-        }];
-    })
     // Do we really need this here?
     .factory('Layouts', [function () {
         return {
@@ -233,7 +161,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             link: function (scope) {
                 scope.branding = getBrandingInfo();
             },
-            templateUrl: '/services/v4/web/ide-core/ui/templates/brandTitle.html'
+            template: '<title>{{perspectiveName}} | {{branding.name}}</title>'
         };
     }])
     .directive('brandicon', [function () {
@@ -244,7 +172,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             link: function (scope) {
                 scope.branding = getBrandingInfo();
             },
-            templateUrl: '/services/v4/web/ide-core/ui/templates/brandIcon.html'
+            template: '<link rel="icon" type="image/png" sizes="16x16" ng-href="{{branding.icon}}" />'
         };
     }])
     .directive('ideContextmenu', ['messageHub', function (messageHub) {
@@ -970,7 +898,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             templateUrl: "/services/v4/web/ide-core/ui/templates/headerSubmenu.html",
         };
     })
-    .directive('ideContainer', function () {
+    .directive('ideContainer', ['perspective', function (perspective) {
         return {
             restrict: 'E',
             transclude: true,
@@ -979,10 +907,16 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 activeId: '@'
             },
             link: function (scope) {
+                if (!scope.activeId)
+                    console.error('<ide-container> requires "active-id" attribute');
+                else perspective.id = scope.activeId;
             },
-            templateUrl: '/services/v4/web/ide-core/ui/templates/ideContainer.html'
+            template: `<div class="dg-main-container">
+                <ide-sidebar active-id="{{ activeId }}"></ide-sidebar>
+                <ng-transclude ng-if="activeId" class="dg-perspective-container"></ng-transclude>
+            </div>`
         }
-    })
+    }])
     .directive('ideSidebar', ['Perspectives', function (Perspectives) {
         return {
             restrict: 'E',
@@ -1003,7 +937,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
     /**
      * Used for Dialogs and Window Dialogs
      */
-    .directive('ideDialogs', ['messageHub', 'DialogWindows', function (messageHub, DialogWindows) {
+    .directive('ideDialogs', ['messageHub', 'DialogWindows', 'perspective', function (messageHub, DialogWindows, perspective) {
         return {
             restrict: 'E',
             replace: true,
@@ -1459,13 +1393,22 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                             let found = false;
                             for (let i = 0; i < dialogWindows.length; i++) {
                                 if (dialogWindows[i].id === data.dialogWindowId) {
+                                    if (data.parameters) {
+                                        data.parameters['container'] = 'dialog';
+                                        data.parameters['perspectiveId'] = perspective.id;
+                                    } else {
+                                        data.parameters = {
+                                            container: 'layout',
+                                            perspectiveId: perspective.id,
+                                        };
+                                    }
                                     found = true;
                                     windows.push({
                                         title: dialogWindows[i].title,
                                         dialogWindowId: dialogWindows[i].id,
                                         callbackTopic: data.callbackTopic,
                                         link: dialogWindows[i].link,
-                                        parameters: data.parameters || ""
+                                        parameters: data.parameters,
                                     });
                                     break;
                                 }

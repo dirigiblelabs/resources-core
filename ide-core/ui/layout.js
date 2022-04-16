@@ -13,7 +13,8 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
         EXPANDED: 0,
         COLLAPSED: 1
     })
-    .factory('Views', ['$resource', function ($resource) {
+    .value('perspective', { id: '' })
+    .factory('Views', ['$resource', 'perspective', function ($resource, perspective) {
         let get = function () {
             return $resource('/services/v4/js/ide-core/services/views.js').query().$promise
                 .then(function (data) {
@@ -22,7 +23,9 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                         v.label = v.label || v.name;
                         v.factory = v.factory || 'frame';
                         v.settings = {
-                            "path": v.link
+                            container: 'layout',
+                            perspectiveId: perspective.id,
+                            path: v.link
                         }
                         v.region = v.region || 'left-top';
                         return v;
@@ -44,7 +47,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
             get: get
         };
     }])
-    .directive('view', ['Views', function (Views) {
+    .directive('view', ['Views', 'perspective', function (Views, perspective) {
         return {
             restrict: 'E',
             replace: true,
@@ -52,17 +55,32 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 name: '@',
                 settings: '=',
             },
-            link: function (scope, element, attrs) {
+            link: function (scope) {
                 Views.get().then(function (views) {
                     const view = views.find(v => v.id === scope.name);
-                    if (view)
+                    if (view) {
                         scope.path = view.settings.path;
+                        if (!view.params) {
+                            scope.params = {
+                                container: 'layout',
+                                perspectiveId: perspective.id,
+                            };
+                        } else {
+                            scope.params = view.params;
+                            scope.params['container'] = 'layout';
+                            scope.params['perspectiveId'] = perspective.id;
+                        }
+                    }
                 });
+
+                scope.getParams = function () {
+                    return JSON.stringify(scope.params);
+                }
             },
-            templateUrl: '/services/v4/web/ide-core/ui/templates/view.html'
+            template: '<iframe src="{{path}}" data-parameters="{{getParams()}}"></iframe>'
         }
     }])
-    .directive('ideLayout', ['Views', 'Layouts', 'Editors', 'SplitPaneState', 'messageHub', '$timeout', function (Views, Layouts, Editors, SplitPaneState, messageHub, $timeout) {
+    .directive('ideLayout', ['Views', 'Layouts', 'Editors', 'SplitPaneState', 'messageHub', 'perspective', function (Views, Layouts, Editors, SplitPaneState, messageHub, perspective) {
         return {
             restrict: 'E',
             replace: true,
@@ -74,6 +92,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
             controller: ['$scope', function ($scope) {
                 if (!$scope.id)
                     console.error('<ide-layout> requires "id" attribute');
+                else perspective.id = $scope.id;
 
                 if (!$scope.name)
                     console.error('<ide-layout> requires "name" attribute');
@@ -310,7 +329,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                         center: saveCenterSplittedTabViews($scope.centerSplittedTabViews)
                     };
 
-                    console.debug('Saving DIRIGIBLE.IDE.LAYOUT state');
+                    // console.debug('Saving DIRIGIBLE.IDE.LAYOUT state');
 
                     localStorage.setItem('DIRIGIBLE.IDE.LAYOUT.state.' + $scope.id, JSON.stringify(state));
                 }
@@ -1163,10 +1182,10 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     angular.element($window).off('resize');
                 });
             },
-            templateUrl: '/services/v4/web/ide-core/ui/templates/accordion.html'
+            template: '<div class="dg-accordion" ng-transclude></div>'
         };
     }])
-    .directive('accordionPane', ['$timeout', function ($timeout) {
+    .directive('accordionPane', ['$timeout', 'perspective', function ($timeout, perspective) {
         return {
             restrict: 'E',
             replace: true,
@@ -1187,6 +1206,19 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             view.expanded = false;
                         }, 200);
                     }
+                }
+
+                scope.getParams = function () {
+                    if (!scope.view.params) {
+                        scope.view.params = {
+                            container: 'layout',
+                            perspectiveId: perspective.id,
+                        };
+                    } else {
+                        scope.view.params['container'] = 'layout';
+                        scope.view.params['perspectiveId'] = perspective.id;
+                    }
+                    return JSON.stringify(scope.view.params);
                 }
 
                 scope.$watch(scope.view, function () {
@@ -1384,7 +1416,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
             templateUrl: '/services/v4/web/ide-core/ui/templates/tabs.html'
         };
     })
-    .directive('tabPane', function () {
+    .directive('tabPane', ['perspective', function (perspective) {
         return {
             restrict: 'E',
             transclude: true,
@@ -1401,16 +1433,27 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 }
 
                 scope.getParams = function () {
-                    return scope.tab.params ? JSON.stringify(scope.tab.params) : '';
+                    if (!scope.tab.params) {
+                        scope.tab.params = {
+                            container: 'layout',
+                            perspectiveId: perspective.id,
+                        };
+                    } else {
+                        scope.tab.params['container'] = 'layout';
+                        scope.tab.params['perspectiveId'] = perspective.id;
+                    }
+                    return JSON.stringify(scope.tab.params);
                 }
 
                 scope.$on('$destroy', function () {
                     tabsCtrl.removePane(scope.tab);
                 });
             },
-            templateUrl: '/services/v4/web/ide-core/ui/templates/tabPane.html'
+            template: `<div aria-expanded="{{isPaneSelected()}}" class="fd-tabs__panel" role="tabpanel" ng-transclude>
+                <iframe ng-src="{{tab.path}}" data-parameters="{{getParams()}}"></iframe>
+            </div>`
         };
-    })
+    }])
     .directive('splittedTabs', function () {
         return {
             restrict: 'E',
@@ -1424,7 +1467,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 moveTab: '&',
                 splitTabs: '&'
             },
-            link: function (scope, element, attrs, tabsCtrl) {
+            link: function (scope) {
                 scope.onRemoveTab = function (pane) {
                     scope.removeTab({ pane: pane });
                 };
