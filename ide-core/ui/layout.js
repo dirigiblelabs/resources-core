@@ -30,15 +30,6 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                         v.region = v.region || 'left-top';
                         return v;
                     });
-                    //no extension point. provisioned "manually"
-                    //data.push({ "id": "editor", "factory": "editor", "region": "center-middle", "label": "Editor", "settings": {} });
-                    let brandingInfo = getBrandingInfo();
-                    data.push({ "id": "welcome", "factory": "frame", "region": "center-middle", "label": "Welcome", "settings": { "path": brandingInfo.welcomePage } });
-                    //no extension point yet
-                    data.push({ "id": "result", "factory": "frame", "region": "center-bottom", "label": "Result", "settings": { "path": "../ide-database/sql/result.html" } });
-                    data.push({ "id": "properties", "factory": "frame", "region": "center-bottom", "label": "Properties", "settings": { "path": "../ide/properties.html" } });
-                    data.push({ "id": "sql", "factory": "frame", "region": "center-middle", "label": "SQL", "settings": { "path": "../ide-database/sql/editor.html" } });
-
                     return data;
                 });
         };
