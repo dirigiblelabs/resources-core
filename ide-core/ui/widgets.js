@@ -1892,7 +1892,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
         /**
          * size: String - The size of the select. One of 'compact' or 'large'. 
          * disabled: Boolean - Disable the select
-         * selectedValue: String - The value of the currently selected item
+         * selectedValue: Any - The value of the currently selected item
          * state: String - Optional semantic state. Could be one of 'success', 'error', 'warning' or 'information'
          * message: String - Optional text displayed within the dropdown list.
          * placeholder: String - Short hint displayed when no item is selected yet.
@@ -2069,7 +2069,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
         /**
          * text: String - Primary text of the select option
          * secondaryText: String - Right alligned secondary text
-         * value: String - Option value
+         * value: Any - Option value
          * glyph: String - Option icon class
          * noWrap: String - Prevents primary text wrapping
          */
@@ -2080,7 +2080,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
             scope: {
                 text: '@',
                 secondaryText: '@',
-                value: '@',
+                value: '<',
                 glyph: '@',
                 noWrap: '<'
             },
@@ -2137,5 +2137,238 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 <span ng-class="getTitleClasses()">{{ text }}</span>
                 <span ng-if="secondaryText" class="fd-list__secondary">{{ secondaryText }}</span>
             </li>`
+        }
+    }]).directive('fdPagination', ['uuid', function (uuid) {
+        /**
+         * totalItems: Number - The total number of the items
+         * itemsPerPage: Number - The number of the items per page
+         * currentPage: Number - The number of the current page (starting from 1).
+         * compact: Boolean - Pagination buttons size
+         * displayTotalItems: Boolean - Whether to display the total number of items
+         * itemsPerPageOptions: Array<Number> - The options for items per page dropdown. If not specified the dropdown will not be displayed
+         * pageChage: Function - Callback called when the page has changed. Args: (pageNumber : Number)
+         * itemsPerPageChange: Function - Callback called when the 'itemsPerPage' dropdown selection has changed: Args: (itemsPerPage : Number)
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: {
+                totalItems: '<',
+                itemsPerPage: '=?',
+                currentPage: '=?',
+                compact: '<',
+                displayTotalItems: '<',
+                itemsPerPageOptions: '<',
+                pageChage: '&',
+                itemsPerPageChange: '&'
+            },
+            link: function (scope) {
+                const maxButtonsInShortMode = 9; // must be an odd number (min 5)
+                const maxInnerButtonsInShortMode = maxButtonsInShortMode - 4; //excluding left and right arrow buttons and first and last number buttons
+
+                scope.totalItems = scope.totalItems || 0;
+                scope.itemsPerPage = scope.itemsPerPage || 20;
+                scope.currentPage = scope.currentPage || 1;
+                scope.currentPageInput = scope.currentPage;
+
+                scope.itemsPerPageLabelId = `pag-perpage-label-${uuid.generate()}`;
+                scope.currentPageLabelId = `pag-page-label-${uuid.generate()}`;
+                scope.currentPageOfLabelId = `pag-of-label-${uuid.generate()}`;
+
+                scope.isShortMode = function () {
+                    return scope.getPageCount() <= maxButtonsInShortMode;
+                }
+
+                scope.isCurrentPageValid = function (pageNumber) {
+                    return pageNumber >= 1 && pageNumber <= scope.getPageCount();
+                }
+
+                scope.changePage = function () {
+                    scope.gotoPage(scope.currentPageInput);
+                }
+
+                scope.onCurrentPageInputChange = function () {
+                    scope.currentPageInputState = scope.isCurrentPageValid(scope.currentPageInput) ? null : 'error';
+                }
+
+                scope.onCurrentPageInputBlur = function () {
+                    if (scope.currentPageInput != scope.currentPage) {
+                        scope.currentPageInput = scope.currentPage;
+                        scope.currentPageInputState = null;
+                    }
+                }
+
+                scope.gotoPage = function (pageNumber) {
+                    if (scope.isCurrentPageValid(pageNumber)) {
+                        scope.currentPage = pageNumber;
+                        scope.currentPageInput = pageNumber;
+
+                        scope.pageChange && scope.pageChange(pageNumber);
+                    }
+                }
+
+                scope.gotoFirstPage = function () {
+                    scope.gotoPage(1);
+                }
+
+                scope.gotoLastPage = function () {
+                    scope.gotoPage(scope.getPageCount());
+                }
+
+                scope.gotoPrevPage = function () {
+                    scope.gotoPage(scope.currentPage - 1);
+                }
+
+                scope.gotoNextPage = function () {
+                    scope.gotoPage(scope.currentPage + 1);
+                }
+
+                scope.getPageCount = function () {
+                    return Math.ceil(scope.totalItems / scope.itemsPerPage);
+                }
+
+                scope.isPrevButtonEnabled = function () {
+                    return scope.currentPage > 1;
+                }
+
+                scope.isNextButtonEnabled = function () {
+                    return scope.currentPage < scope.getPageCount();
+                }
+
+                scope.hasStartEllipsys = function () {
+                    return scope.getPageCount() > maxButtonsInShortMode && scope.currentPage > Math.ceil(maxButtonsInShortMode / 2);
+                }
+
+                scope.hasEndEllipsys = function () {
+                    return scope.getPageCount() > maxButtonsInShortMode && scope.currentPage <= scope.getPageCount() - Math.ceil(maxButtonsInShortMode / 2);
+                }
+
+                scope.showEllipsys = function (index, length) {
+                    return (index === 0 && scope.hasStartEllipsys()) || (index === length - 2 && scope.hasEndEllipsys());
+                }
+
+                scope.getPageNumbers = function () {
+                    let count = scope.getPageCount();
+                    const numbers = [1];
+                    if (count > 2) {
+                        const hasStartEllipsys = scope.hasStartEllipsys();
+                        const hasEndEllipsys = scope.hasEndEllipsys();
+                        let startNumber, endNumber;
+
+                        if (hasStartEllipsys && hasEndEllipsys) {
+                            const offset = Math.ceil(maxInnerButtonsInShortMode / 2) - 1;
+                            startNumber = scope.currentPage - offset;
+                            endNumber = scope.currentPage + offset;
+
+                        } else if (hasStartEllipsys && !hasEndEllipsys) {
+                            endNumber = count - 1;
+                            startNumber = endNumber - maxInnerButtonsInShortMode;
+
+                        } else if (!hasStartEllipsys && hasEndEllipsys) {
+                            startNumber = 2;
+                            endNumber = startNumber + maxInnerButtonsInShortMode;
+
+                        } else {
+                            startNumber = 2;
+                            endNumber = count - 1
+                        }
+
+                        for (let i = startNumber; i <= endNumber; i++) {
+                            numbers.push(i);
+                        }
+                    }
+                    if (count > 1) numbers.push(count);
+
+                    return numbers;
+                }
+
+                scope.getClasses = function () {
+                    let classList = ['fd-pagination'];
+
+                    if (scope.isShortMode()) {
+                        classList.push('fd-pagination--short');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                scope.getNumberButtonClasses = function (pageNumber) {
+                    let classList = ['fd-button', 'fd-button--transparent', 'fd-pagination__link'];
+
+                    if (pageNumber === scope.currentPage) {
+                        classList.push('is-active');
+                    }
+
+                    if (scope.compact) {
+                        classList.push('fd-button--compact');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                scope.getArrowButtonClassess = function () {
+                    let classList = ['fd-button', 'fd-button--transparent', 'fd-pagination__button'];
+
+                    if (scope.compact) {
+                        classList.push('fd-button--compact');
+                    }
+
+                    return classList.join(' ');
+                }
+
+                scope.getNumberButtonAriaLabel = function (pageNumber) {
+                    return pageNumber === scope.currentPage ? `Current Page, Page ${pageNumber}` : `Goto page ${pageNumber}`;
+                }
+
+                scope.getCurrentPageInputAriaLabelledBy = function () {
+                    return [scope.currentPageLabelId, scope.currentPageOfLabelId].join(' ');
+                }
+
+                scope.getTotal = function () {
+                    return `${scope.totalItems} Results`;
+                }
+
+                scope.$watch('itemsPerPage', function () {
+                    if (scope.itemsPerPageChange)
+                        scope.itemsPerPageChange(scope.itemsPerPage);
+
+                    const pageCount = scope.getPageCount();
+                    if (scope.currentPage > pageCount) {
+                        scope.gotoPage(pageCount);
+                    }
+                });
+            },
+            template: `<div ng-class="getClasses()">
+                <div ng-if="itemsPerPageOptions" class="fd-pagination__per-page">
+                    <label class="fd-form-label fd-pagination__per-page-label" id="{{ itemsPerPageLabelId }}">Results per page: </label>
+                    <fd-select selected-value="$parent.itemsPerPage" size="{{ compact ? 'compact' : null }}" label-id="{{ itemsPerPageLabelId }}">
+                        <fd-option ng-repeat="option in itemsPerPageOptions" text="{{ option }}" value="option"></fd-option>
+                    </fd-select>
+                </div>
+                <nav class="fd-pagination__nav" role="navigation">
+                    <a href="javascript:void(0)" ng-class="getArrowButtonClassess()" class="fd-pagination__button--mobile" aria-label="First page" aria-disabled="{{ !isPrevButtonEnabled() }}" ng-click="gotoFirstPage()">
+                        <i class="sap-icon sap-icon--media-rewind"></i>
+                    </a>
+                    <a href="javascript:void(0)" ng-class="getArrowButtonClassess()" aria-label="Previous page" aria-disabled="{{ !isPrevButtonEnabled() }}" ng-click="gotoPrevPage()">
+                        <i class="sap-icon sap-icon--navigation-left-arrow"></i>
+                    </a>
+
+                    <a ng-if="pageNumber !== currentPage || isShortMode()" ng-repeat-start="pageNumber in pageNumbers = getPageNumbers()" href="javascript:void(0)" ng-class="getNumberButtonClasses(pageNumber)" aria-label="{{ getNumberButtonAriaLabel(pageNumber) }}" aria-current="{{ currentPage === pageNumber }}" ng-click="gotoPage(pageNumber)">{{ pageNumber }}</a>
+                    <label ng-if="pageNumber === currentPage" id="{{ currentPageLabelId }}" class="fd-form-label fd-pagination__label" aria-label="Page input, Current page, Page {currentPage}">Page:</label>
+                    <fd-input ng-if="pageNumber === currentPage" aria-labelledby="{{ getCurrentPageInputAriaLabelledBy() }}" class="fd-pagination__input" type="number" min="1" max="{{ getPageCount() }}" compact="{{ compact }}" fd-required="true" state="{{ currentPageInputState }}" ng-model="$parent.$parent.currentPageInput" ng-keydown="$event.keyCode === 13 && changePage()" ng-blur="onCurrentPageInputBlur()" ng-change="onCurrentPageInputChange()"></fd-input>
+                    <label ng-if="pageNumber === currentPage" id="{{ currentPageOfLabelId }}" class="fd-form-label fd-pagination__label">of {{ getPageCount() }}</label>
+                    <span ng-if="showEllipsys($index, pageNumbers.length)" ng-repeat-end class="fd-pagination__more" role="presentation"></span>
+
+                    <a href="javascript:void(0)" ng-class="getArrowButtonClassess()" aria-label="Next page" aria-disabled="{{ !isNextButtonEnabled() }}" ng-click="gotoNextPage()">
+                        <i class="sap-icon sap-icon--navigation-right-arrow"></i>
+                    </a>
+                    <a href="javascript:void(0)" ng-class="getArrowButtonClassess()" class="fd-pagination__button--mobile" aria-label="Last page" aria-disabled="{{ !isNextButtonEnabled() }}" ng-click="gotoLastPage()">
+                        <i class="sap-icon sap-icon--media-forward"></i>
+                    </a>
+                </nav>
+                <div ng-if="displayTotalItems" class="fd-pagination__total">
+                    <span class="fd-form-label fd-pagination__total-label">{{ getTotal() }}</span>
+                </div>
+            </div>`
         }
     }]);
