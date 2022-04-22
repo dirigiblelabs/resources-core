@@ -2371,4 +2371,116 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 </div>
             </div>`
         }
+    }]).directive('fdBar', [function () {
+        /**
+         * barDesign: String - Whether the Bar component is used as a header, subheader, header-with-subheader, footer or floating-footer. Types available: 'header','subheader','header-with-subheader','footer','floating-footer'
+         * cozy: Boolean - Whether to apply cozy mode to the Bar.
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            scope: {
+                barDesign: '@',
+                cozy: '<',
+            },
+            link: function (scope) {
+                const barDesigns = ['header', 'subheader', 'header-with-subheader', 'footer', 'floating-footer'];
+                if (scope.barDesign && !barDesigns.includes(scope.barDesign)) {
+                    console.error(`fd-bar error: 'bar-design' must be one of: ${barDesigns.join(', ')}`);
+                }
+
+                scope.getClasses = function () {
+                    let classList = ['fd-bar'];
+
+                    if (scope.barDesign && barDesigns.includes(scope.barDesign)) {
+                        classList.push(`fd-bar--${scope.barDesign}`);
+                    }
+
+                    if (scope.cozy) {
+                        classList.push('fd-bar--cozy');
+                    }
+
+                    return classList.join(' ');
+                }
+            },
+            template: `<div ng-class="getClasses()" ng-transclude></div>`
+        }
+    }]).directive('fdBarLeft', [function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            template: `<div class="fd-bar__left" ng-transclude></div>`
+        }
+    }]).directive('fdBarMiddle', [function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            template: `<div class="fd-bar__middle" ng-transclude></div>`
+        }
+    }]).directive('fdBarRight', [function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            template: `<div class="fd-bar__right" ng-transclude></div>`
+        }
+    }]).directive('fdBarElement', [function () {
+        /**
+         * fullWidth: Boolean - Whether the element should take the whole width of the container.
+         * isTitle: Boolean - Whether the element is title.
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            transclude: true,
+            scope: {
+                fullWidth: '<',
+                isTitle: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = function () {
+                    let classList = ['fd-bar__element'];
+
+                    if (scope.isTitle) {
+                        classList.push('fd-bar__element--title');
+                    }
+
+                    if (scope.fullWidth) {
+                        classList.push('fd-bar__element--full-width');
+                    }
+
+                    return classList.join(' ');
+                }
+            },
+            template: `<div ng-class="getClasses()" ng-transclude></div>`
+        }
+    }]).directive('fdTitle', [function () {
+        /**
+         * headerSize: Boolean - If specified overrides the size of the heading element. Must be a number between 1 and 6 inclusive
+         * wrap: Boolean - Whether or not the title should wrap
+         */
+        return {
+            restrict: 'A',
+            scope: {
+                headerSize: '<',
+                wrap: '<'
+            },
+            link: function (scope, element) {
+                element.addClass('fd-title');
+
+                if (scope.headerSize) {
+                    if (scope.headerSize >= 1 && scope.headerSize <= 6)
+                        element.addClass(`fd-title--h${scope.headerSize}`);
+                    else
+                        console.error(`fd-title error: 'header-size' must be a number between 1 and 6 inclusive`);
+                }
+
+                if (scope.wrap) {
+                    element.addClass(`fd-title--wrap`);
+                }
+            }
+        }
     }]);
