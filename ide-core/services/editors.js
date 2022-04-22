@@ -34,5 +34,5 @@ editors = editors.sort(function (a, b) {
 	}
 	return 0;
 });
-
+response.setContentType("application/json");
 response.println(JSON.stringify(editors));

@@ -8,7 +8,7 @@
  * Contributors:
  *   SAP - initial API and implementation
  */
-angular.module('ideUI', ['ngAria', 'ideMessageHub'])
+angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
     .factory('uuid', function () {
         return {
             generate: function () {
@@ -19,39 +19,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 return _p8() + _p8(true) + _p8(true) + _p8();
             }
         };
-    }).factory('Theme', [function () {
-        let theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme'));
-        return {
-            reload: function () {
-                theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme'));
-            },
-            getLinks: function () {
-                return theme.links;
-            },
-            getType: function () {
-                return theme.type;
-            }
-        }
-    }]).directive('theme', ['Theme', 'messageHub', function (Theme, messageHub) {
-        return {
-            restrict: 'E',
-            replace: true,
-            link: function (scope) {
-                scope.links = Theme.getLinks();
-                messageHub.onDidReceiveMessage(
-                    'ide.themeChange',
-                    function () {
-                        scope.$apply(function () {
-                            Theme.reload();
-                            scope.links = Theme.getLinks();
-                        });
-                    },
-                    true
-                );
-            },
-            template: '<link type="text/css" rel="stylesheet" ng-repeat="link in links" ng-href="{{ link }}">'
-        };
-    }]).directive('dgContextmenu', ['messageHub', '$window', function (messageHub, $window) {
+    }).directive('dgContextmenu', ['messageHub', '$window', function (messageHub, $window) {
         return {
             restrict: 'A',
             replace: false,

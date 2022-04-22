@@ -18,6 +18,7 @@ rs.service()
 	.get(function (ctx, request, response) {
 		let templates = getTemplates();
 		templates = sortTemplates(templates);
+		response.setContentType("application/json");
 		response.println(JSON.stringify(templates));
 	})
 	.resource("extensions")
@@ -25,6 +26,7 @@ rs.service()
 		let templates = getTemplates();
 		let fileExtensions = [];
 		templates.forEach(template => { if (template.extension) fileExtensions.push(template.extension); });
+		response.setContentType("application/json");
 		response.println(JSON.stringify(fileExtensions));
 	})
 	.execute();

@@ -2,7 +2,7 @@
     <split direction="horizontal" ng-transclude>
         <split-pane ng-if="explorerTabs.length > 0" size="20" min-size="0" snap-offset="100" class="pane-left"
             ng-transclude>
-            <explorer-toolbar name="{{ name }}" items="explorerTabs"></explorer-toolbar>
+            <explorer-toolbar items="explorerTabs"></explorer-toolbar>
             <accordion>
                 <accordion-pane ng-repeat="view in explorerTabs | filter:{hidden:'!true'}" view="view"></accordion-pane>
             </accordion>

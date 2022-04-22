@@ -29,5 +29,5 @@ for (let i = 0; i < dialogWindowExtensions.length; i++) {
 dialogWindows.sort(function (p, n) {
     return (parseInt(p.order) - parseInt(n.order));
 });
-
+response.setContentType("application/json");
 response.println(JSON.stringify(dialogWindows));

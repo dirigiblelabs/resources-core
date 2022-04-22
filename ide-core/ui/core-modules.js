@@ -11,75 +11,10 @@
 /*
  * Provides key microservices for constructing and managing the IDE UI
  */
-let defaultEditorId = "monaco";
-let brandingInfo;
-angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
-    .value('perspective', { id: '' })
-    .factory('Theming', ['$resource', 'messageHub', function ($resource, messageHub) {
-        let theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme'));
-        // legacySwitcher is deprecated. Remove once all views have been migrated.
-        let legacySwitcher = $resource('/services/v4/js/theme/resources.js?name=:themeId', { themeId: 'default' });
-        let themes = [];
-        let xhr = new XMLHttpRequest();
-        xhr.open('GET', '/services/v4/js/theme/resources.js/themes?legacy=false', false);
-        xhr.send();
-        if (xhr.status === 200) themes = JSON.parse(xhr.responseText);
-        else console.error("Theming error", xhr.response);
-
-        function setTheme(themeId, sendEvent = true) {
-            for (let i = 0; i < themes.length; i++) {
-                if (themes[i].id === themeId) {
-                    setThemeObject(themes[i], sendEvent);
-                }
-            }
-        }
-
-        function setThemeObject(themeObj, sendEvent = true) {
-            localStorage.setItem(
-                'DIRIGIBLE.theme',
-                JSON.stringify(themeObj),
-            )
-            theme = themeObj;
-            // legacySwitcher is deprecated. Remove once all views have been migrated.
-            if (themeObj.oldThemeId) legacySwitcher.get({ 'themeId': themeObj.oldThemeId });
-            if (sendEvent) messageHub.triggerEvent("ide.themeChange", true);
-        }
-
-        if (!theme) setTheme("quartz-light");
-        else {
-            for (let i = 0; i < themes.length; i++) {
-                if (themes[i].id === theme.id) {
-                    if (themes[i].version !== theme.version) {
-                        setThemeObject(themes[i]);
-                    }
-                }
-            }
-        }
-
-        return {
-            setTheme: setTheme,
-            getThemes: function () {
-                return themes.map(
-                    function (item) {
-                        return {
-                            "id": item["id"],
-                            "name": item["name"]
-                        };
-                    }
-                );
-            },
-            getCurrentTheme: function () {
-                return {
-                    "id": theme["id"],
-                    "name": theme["name"]
-                };
-            },
-            reset: function () {
-                // setting sendEvent to false because of the reload caused by Golden Layout
-                setTheme("quartz-light", false);
-            }
-        }
-    }])
+const defaultEditorId = "monaco"; // This has to go
+angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
+    .constant('branding', brandingInfo)
+    .constant('perspective', perspectiveData)
     .service('Perspectives', ['$resource', function ($resource) {
         return $resource('/services/v4/js/ide-core/services/perspectives.js');
     }])
@@ -103,34 +38,33 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
     .service('DialogWindows', ['$resource', function ($resource) {
         return $resource('/services/v4/js/ide-core/services/dialog-windows.js');
     }])
-    .provider('Editors', function () {
-        function getEditors() {
-            let xhr = new XMLHttpRequest();
-            xhr.open('GET', '/services/v4/js/ide-core/services/editors.js', false);
-            xhr.send();
-            if (xhr.status === 200) return JSON.parse(xhr.responseText);
-        }
-        let editorProviders = {};
-        let editorsForContentType = {};
-        let editorsList = getEditors();
-        editorsList.forEach(function (editor) {
-            editorProviders[editor.id] = editor.link;
-            editor.contentTypes.forEach(function (contentType) {
-                if (!editorsForContentType[contentType]) {
-                    editorsForContentType[contentType] = [{
-                        'id': editor.id,
-                        'label': editor.label
-                    }];
-                } else {
-                    editorsForContentType[contentType].push({
-                        'id': editor.id,
-                        'label': editor.label
-                    });
-                }
-            });
-        });
+    .provider('Editors', function editorProvider() {
+        this.$get = ['$http', function editorsFactory($http) {
+            let editorProviders = {};
+            let editorsForContentType = {};
 
-        this.$get = [function editorsFactory() {
+            $http.get('/services/v4/js/ide-core/services/editors.js')
+                .then(function (response) {
+                    for (let i = 0; i < response.data.length; i++) {
+                        editorProviders[response.data[i].id] = response.data[i].link;
+                        for (let j = 0; j < response.data[i].contentTypes.length; j++) {
+                            if (!editorsForContentType[response.data[i].contentTypes[j]]) {
+                                editorsForContentType[response.data[i].contentTypes[j]] = [{
+                                    'id': response.data[i].id,
+                                    'label': response.data[i].label
+                                }];
+                            } else {
+                                editorsForContentType[response.data[i].contentTypes[j]].push({
+                                    'id': response.data[i].id,
+                                    'label': response.data[i].label
+                                });
+                            }
+                        }
+                    }
+                }, function (response) {
+                    console.error("ide-core: could not get editors", response);
+                });
+
             return {
                 defaultEditorId: defaultEditorId,
                 editorProviders: editorProviders,
@@ -138,41 +72,33 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             };
         }];
     })
-    // Do we really need this here?
-    .factory('Layouts', [function () {
-        return {
-            manager: undefined
-        };
-    }])
     .filter('removeSpaces', [function () {
         return function (string) {
             if (!angular.isString(string)) return string;
             return string.replace(/[\s]/g, '');
         };
     }])
-    .directive('brandtitle', [function () {
+    .directive('dgBrandTitle', ['perspective', 'branding', function (perspective, branding) {
         return {
-            restrict: 'AE',
-            transclude: true,
+            restrict: 'A',
+            transclude: false,
             replace: true,
-            scope: {
-                perspectiveName: '@perspectiveName'
-            },
             link: function (scope) {
-                scope.branding = getBrandingInfo();
+                scope.name = branding.name;
+                scope.perspective = perspective;
             },
-            template: '<title>{{perspectiveName}} | {{branding.name}}</title>'
+            template: '<title>{{perspective.name || "Loading..."}} | {{name}}</title>'
         };
     }])
-    .directive('brandicon', [function () {
+    .directive('dgBrandIcon', ['branding', function (branding) {
         return {
-            restrict: 'AE',
-            transclude: true,
+            restrict: 'A',
+            transclude: false,
             replace: true,
             link: function (scope) {
-                scope.branding = getBrandingInfo();
+                scope.icon = branding.icons.faviconIco;
             },
-            template: '<link rel="icon" type="image/png" sizes="16x16" ng-href="{{branding.icon}}" />'
+            template: `<link rel="icon" type="image/x-icon" ng-href="{{icon}}">`
         };
     }])
     .directive('ideContextmenu', ['messageHub', function (messageHub) {
@@ -256,7 +182,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 messageHub.onDidReceiveMessage(
                     'ide-contextmenu.open',
                     function (msg) {
-                        // console.log(msg.data);
                         scope.$apply(function () {
                             scope.menuItems = msg.data.items;
                             scope.callbackTopic = msg.data.callbackTopic;
@@ -326,7 +251,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             templateUrl: '/services/v4/web/ide-core/ui/templates/contextmenuSubmenu.html'
         };
     })
-    .directive('ideHeader', ['$window', '$resource', 'Theming', 'User', 'Layouts', 'messageHub', function ($window, $resource, Theming, User, Layouts, messageHub) {
+    .directive('ideHeader', ['$window', '$resource', 'branding', 'theming', 'User', 'messageHub', function ($window, $resource, branding, theming, User, messageHub) {
         return {
             restrict: 'E',
             replace: true,
@@ -336,8 +261,8 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             },
             link: function (scope, element) {
                 let isMenuOpen = false;
-                scope.themes = Theming.getThemes();
-                scope.currentTheme = Theming.getCurrentTheme();
+                scope.themes = [];
+                scope.currentTheme = theming.getCurrentTheme();
                 scope.user = User.get();
                 let menuBackdrop = element[0].querySelector(".dg-menu__backdrop");
                 let themePopover = element[0].querySelector("#themePopover");
@@ -390,7 +315,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     scope.menu = $resource(scope.url).query();
                 }
 
-                scope.branding = getBrandingInfo();
+                scope.branding = branding;
 
                 scope.showBackdrop = function () {
                     menuBackdrop.classList.remove("dg-hidden");
@@ -438,95 +363,9 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 );
 
                 messageHub.onDidReceiveMessage(
-                    'ide-core.openEditor',
-                    function (msg) {
-                        Layouts.manager.openEditor(
-                            msg.data.file.path,
-                            msg.data.file.label,
-                            msg.data.file.contentType,
-                            msg.data.editor || defaultEditorId,
-                            msg.data.extraArgs
-                        );
-                    },
-                    true
-                );
-
-                messageHub.onDidReceiveMessage(
-                    'ide-core.closeEditor',
-                    function (msg) {
-                        Layouts.manager.closeEditor(msg.fileName);
-                    },
-                    true
-                );
-
-                messageHub.onDidReceiveMessage(
-                    'ide-core.closeOtherEditors',
-                    function (msg) {
-                        Layouts.manager.closeOtherEditors(msg.fileName);
-                    },
-                    true
-                );
-
-                messageHub.onDidReceiveMessage(
-                    'ide-core.closeAllEditors',
+                    'ide.themesLoaded',
                     function () {
-                        Layouts.manager.closeAllEditors();
-                    },
-                    true
-                );
-
-                messageHub.onDidReceiveMessage(
-                    'ide-core.openView',
-                    function (msg) {
-                        Layouts.manager.openView(msg.viewId);
-                    },
-                    true
-                );
-
-                messageHub.onDidReceiveMessage(
-                    'ide-core.openPerspective',
-                    function (msg) {
-                        let url = msg.data.link;
-                        if ('parameters' in msg.data) {
-                            let urlParams = '';
-                            for (const property in msg.data.parameters) {
-                                urlParams += `${property}=${encodeURIComponent(msg.data.parameters[property])}&`
-                            }
-                            url += `?${urlParams.slice(0, -1)}`;
-                        }
-                        window.location.href = url;
-                    },
-                    true
-                );
-
-                messageHub.onDidReceiveMessage(
-                    'workspace.set',
-                    function (msg) {
-                        localStorage.setItem('DIRIGIBLE.workspace', JSON.stringify({ "name": msg.data.workspace }));
-                    },
-                    true
-                );
-
-                messageHub.onDidReceiveMessage(
-                    'workspace.file.deleted',
-                    function (msg) {
-                        Layouts.manager.closeEditor(msg.data.path);
-                    },
-                    true
-                );
-
-                messageHub.onDidReceiveMessage(
-                    'workspace.file.renamed',
-                    function (msg) {
-                        Layouts.manager.closeEditor(msg.data.file.path);
-                    },
-                    true
-                );
-
-                messageHub.onDidReceiveMessage(
-                    'workspace.file.moved',
-                    function (msg) {
-                        Layouts.manager.closeEditor("/" + msg.data.workspace + msg.data.sourcepath + "/" + msg.data.file);
+                        scope.themes = theming.getThemes();
                     },
                     true
                 );
@@ -534,30 +373,17 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 if (!scope.menu && scope.url)
                     loadMenu.call(scope);
 
-                scope.menuClick = function (item, subItem) {
-                    if (item.name === 'Show View') {
-                        // open view
-                        Layouts.manager.openView(subItem.name.toLowerCase());
-                    } else if (item.name === 'Open Perspective') {
-                        // open perspective`
-                        window.open(subItem.onClick.substring(subItem.onClick.indexOf('(') + 2, subItem.onClick.indexOf(',') - 1));//TODO: change the menu service ot provide paths instead
-                    } else if (item.event === 'openView') {
-                        // open view
-                        Layouts.manager.openView(item.name.toLowerCase());
-                    } else if (item.event === 'openDialogWindow') {
+                scope.menuClick = function (item) {
+                    if (item.action === 'openView') {
+                        messageHub.openView(item.id, { "test": "somedata" });
+                    } else if (item.action === 'openPerspective') {
+                        messageHub.openPerspective(item.link);
+                    } else if (item.action === 'openDialogWindow') {
                         messageHub.showDialogWindow(item.dialogId);
-                    } else if (item.name === 'Reset') {
-                        scope.resetViews();
-                    } else {
-                        if (item.event === 'open') {
-                            window.open(item.data, '_blank');
-                        } else {
-                            if (subItem) {
-                                messageHub.postMessage(subItem.event, subItem.data, true);
-                            } else {
-                                messageHub.postMessage(item.event, item.data, true);
-                            }
-                        }
+                    } else if (item.action === 'open') {
+                        window.open(item.data, '_blank');
+                    } else if (item.event) {
+                        messageHub.postMessage(item.event, item.data, true);
                     }
                 };
 
@@ -594,7 +420,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 scope.setTheme = function (themeId, name) {
                     scope.currentTheme.id = themeId;
                     scope.currentTheme.name = name;
-                    Theming.setTheme(themeId);
+                    theming.setTheme(themeId);
                     toggleThemePopover(true);
                 };
 
@@ -604,8 +430,8 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
 
                 scope.resetViews = function () {
                     localStorage.clear();
-                    Theming.reset();
-                    location.reload(); // Because of Golden Layout
+                    theming.reset();
+                    location.reload();
                 };
             },
             templateUrl: '/services/v4/web/ide-core/ui/templates/ideHeader.html'
@@ -903,33 +729,34 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             restrict: 'E',
             transclude: true,
             replace: true,
-            scope: {
-                activeId: '@'
-            },
-            link: function (scope) {
-                if (!scope.activeId)
-                    console.error('<ide-container> requires "active-id" attribute');
-                else perspective.id = scope.activeId;
+            link: {
+                pre: function (scope) {
+                    scope.shouldLoad = true;
+                    if (!perspective.id || !perspective.name) {
+                        console.error('<ide-container> requires perspective service data');
+                        scope.shouldLoad = false;
+                    }
+                },
             },
             template: `<div class="dg-main-container">
-                <ide-sidebar active-id="{{ activeId }}"></ide-sidebar>
-                <ng-transclude ng-if="activeId" class="dg-perspective-container"></ng-transclude>
+                <ide-sidebar></ide-sidebar>
+                <ng-transclude ng-if="shouldLoad" class="dg-perspective-container"></ng-transclude>
             </div>`
         }
     }])
-    .directive('ideSidebar', ['Perspectives', function (Perspectives) {
+    .directive('ideSidebar', ['Perspectives', 'perspective', function (Perspectives, perspective) {
         return {
             restrict: 'E',
             replace: true,
-            scope: {
-                activeId: '@'
-            },
-            link: function (scope) {
-                scope.perspectives = Perspectives.query();
-                scope.getIcon = function (icon) {
-                    if (icon) return icon;
-                    return "/services/v4/web/resources/images/unknown.svg";
-                }
+            link: {
+                pre: function (scope) {
+                    scope.activeId = perspective.id;
+                    scope.perspectives = Perspectives.query();
+                    scope.getIcon = function (icon) {
+                        if (icon) return icon;
+                        return "/services/v4/web/resources/images/unknown.svg";
+                    }
+                },
             },
             templateUrl: '/services/v4/web/ide-core/ui/templates/ideSidebar.html'
         }
@@ -1393,9 +1220,9 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                             let found = false;
                             for (let i = 0; i < dialogWindows.length; i++) {
                                 if (dialogWindows[i].id === data.dialogWindowId) {
-                                    if (data.parameters) {
-                                        data.parameters['container'] = 'dialog';
-                                        data.parameters['perspectiveId'] = perspective.id;
+                                    if (data.params) {
+                                        data.params['container'] = 'dialog';
+                                        data.params['perspectiveId'] = perspective.id;
                                     } else {
                                         data.parameters = {
                                             container: 'layout',
@@ -1408,7 +1235,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                                         dialogWindowId: dialogWindows[i].id,
                                         callbackTopic: data.callbackTopic,
                                         link: dialogWindows[i].link,
-                                        parameters: data.parameters,
+                                        params: JSON.stringify(data.params),
                                     });
                                     break;
                                 }
@@ -1472,16 +1299,3 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             templateUrl: '/services/v4/web/ide-core/ui/templates/ideStatusBar.html'
         }
     }]);
-
-function getBrandingInfo() {
-    if (brandingInfo === undefined) {
-        let xhr = new XMLHttpRequest();
-        xhr.open('GET', '/services/v4/js/ide-branding/api/branding.js', false);
-        xhr.send();
-        if (xhr.status === 200) {
-            brandingInfo = JSON.parse(xhr.responseText);
-            localStorage.setItem('DIRIGIBLE.branding', xhr.responseText);
-        } else console.error("Branding error", xhr.response);
-    }
-    return brandingInfo;
-}

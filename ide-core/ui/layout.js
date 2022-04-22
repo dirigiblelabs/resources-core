@@ -8,25 +8,33 @@
  * Contributors:
  *   SAP - initial API and implementation
  */
-angular.module('layout', ['idePerspective', 'ideMessageHub'])
+angular.module('ideLayout', ['idePerspective', 'ideMessageHub'])
     .constant('SplitPaneState', {
         EXPANDED: 0,
         COLLAPSED: 1
     })
-    .value('perspective', { id: '' })
-    .factory('Views', ['$resource', 'perspective', function ($resource, perspective) {
+    .constant('perspective', perspectiveData)
+    .factory('Views', ['$resource', function ($resource) {
         let get = function () {
             return $resource('/services/v4/js/ide-core/services/views.js').query().$promise
                 .then(function (data) {
                     data = data.map(function (v) {
-                        v.id = v.id || v.name.toLowerCase();
-                        v.label = v.label || v.name;
+                        if (!v.id) {
+                            console.error(`Views: view '${v.label || 'undefined'}' does not have an id`);
+                            return;
+                        }
+                        if (!v.label) {
+                            console.error(`Views: view '${v.id}' does not have a label`);
+                            return;
+                        }
+                        if (!v.link) {
+                            console.error(`Views: view '${v.id}' does not have a link`);
+                            return;
+                        }
                         v.factory = v.factory || 'frame';
                         v.settings = {
-                            container: 'layout',
-                            perspectiveId: perspective.id,
                             path: v.link
-                        }
+                        };
                         v.region = v.region || 'left-top';
                         return v;
                     });
@@ -43,7 +51,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
             restrict: 'E',
             replace: true,
             scope: {
-                name: '@',
+                name: '@', // Shouldn't this be id?
                 settings: '=',
             },
             link: function (scope) {
@@ -68,25 +76,19 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     return JSON.stringify(scope.params);
                 }
             },
-            template: '<iframe src="{{path}}" data-parameters="{{getParams()}}"></iframe>'
+            template: '<iframe loading="lazy" src="{{path}}" data-parameters="{{getParams()}}"></iframe>'
         }
     }])
-    .directive('ideLayout', ['Views', 'Layouts', 'Editors', 'SplitPaneState', 'messageHub', 'perspective', function (Views, Layouts, Editors, SplitPaneState, messageHub, perspective) {
+    .directive('ideLayout', ['Views', 'Editors', 'SplitPaneState', 'messageHub', 'perspective', function (Views, Editors, SplitPaneState, messageHub, perspective) {
         return {
             restrict: 'E',
             replace: true,
             scope: {
-                id: '@',
-                name: '@',
                 viewsLayoutModel: '='
             },
-            controller: ['$scope', function ($scope) {
-                if (!$scope.id)
-                    console.error('<ide-layout> requires "id" attribute');
-                else perspective.id = $scope.id;
-
-                if (!$scope.name)
-                    console.error('<ide-layout> requires "name" attribute');
+            controller: ['$scope', '$element', function ($scope) {
+                if (!perspective.id || !perspective.name)
+                    console.error('<ide-layout> requires perspective service data');
 
                 const VIEW = 'view';
                 const EDITOR = 'editor';
@@ -118,17 +120,17 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 let closingFileArgs;
                 let reloadingFileArgs;
                 let eventHandlers = $scope.viewsLayoutModel.events;
-                //let viewSettings = $scope.viewsLayoutModel.viewSettings;
+                // let viewSettings = $scope.viewsLayoutModel.viewSettings;
 
-                if ($scope.id && $scope.name) {
+                if (perspective.id && perspective.name) {
                     Views.get().then(function (views) {
                         $scope.views = views;
 
                         const viewExists = (v) => views.some(x => x.id === v.id);
                         const viewById = (viewId) => $scope.views.find(v => v.id === viewId);
                         const byLeftRegion = view => view.region.startsWith('left')
-                        const byBottomRegion = view => view.region === 'center-bottom';
-                        const byCenterRegion = view => view.region === 'center-top' || view.region === 'center-middle';
+                        const byBottomRegion = view => view.region === 'center-bottom' || view.region === 'bottom';
+                        const byCenterRegion = view => view.region === 'center-top' || view.region === 'center-middle' || view.region === 'center';
 
                         const savedState = loadLayoutState();
                         if (savedState) {
@@ -172,8 +174,9 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             if ($scope.bottomTabs.some(x => x.id === savedState.bottom.selected))
                                 $scope.selection.selectedBottomTab = savedState.bottom.selected;
 
-                            if (initialOpenViewsChanged)
+                            if (initialOpenViewsChanged) {
                                 saveLayoutState();
+                            }
 
                             shortenCenterTabsLabels();
 
@@ -278,7 +281,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 }
 
                 function loadLayoutState() {
-                    let savedState = localStorage.getItem('DIRIGIBLE.IDE.LAYOUT.state.' + $scope.id);
+                    let savedState = localStorage.getItem(`DIRIGIBLE.IDE.LAYOUT.state.${perspective.id}`);
                     if (savedState !== null) {
                         return JSON.parse(savedState);
                     }
@@ -311,18 +314,18 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     let state = {
                         initialOpenViews: $scope.initialOpenViews,
                         explorer: {
-                            tabs: $scope.explorerTabs.map(({ id, type, label, path, hidden }) => ({ id, type, label, path, hidden }))
+                            tabs: $scope.explorerTabs.map(({ id, type, label, path, hidden, params }) => ({ id, type, label, path, hidden, params }))
                         },
                         bottom: {
-                            tabs: $scope.bottomTabs.map(({ id, type, label, path }) => ({ id, type, label, path })),
+                            tabs: $scope.bottomTabs.map(({ id, type, label, path, params }) => ({ id, type, label, path, params })),
                             selected: $scope.selection.selectedBottomTab
                         },
                         center: saveCenterSplittedTabViews($scope.centerSplittedTabViews)
                     };
 
-                    // console.debug('Saving DIRIGIBLE.IDE.LAYOUT state');
+                    // console.debug(`Saving DIRIGIBLE.IDE.LAYOUT state`);
 
-                    localStorage.setItem('DIRIGIBLE.IDE.LAYOUT.state.' + $scope.id, JSON.stringify(state));
+                    localStorage.setItem(`DIRIGIBLE.IDE.LAYOUT.state.${perspective.id}`, JSON.stringify(state));
                 }
 
                 function updateSplitPanesState(args) {
@@ -336,12 +339,13 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     return views.find(v => v.id === view.id);
                 }
 
-                function mapViewToTab(view) {
+                function mapViewToTab(view, params = {}) {
                     return {
                         id: view.id,
                         type: VIEW,
                         label: view.label,
                         path: view.settings.path,
+                        params: params,
                     };
                 }
 
@@ -619,6 +623,79 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     }
                 }
 
+                messageHub.onDidReceiveMessage(
+                    'ide-core.openEditor',
+                    function (data) {
+                        $scope.$apply(
+                            $scope.openEditor(
+                                data.resourcePath,
+                                data.resourceLabel,
+                                data.contentType,
+                                data.editorId || Editors.defaultEditorId,
+                                data.extraArgs
+                            )
+                        );
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    'ide-core.setEditorDirty',
+                    function (data) {
+                        $scope.$apply($scope.setEditorDirty(data.resourcePath, data.isDirty));
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    'ide-core.closeEditor',
+                    function (data) {
+                        $scope.$apply($scope.closeEditor(data.resourcePath));
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    'ide-core.closeOtherEditors',
+                    function (data) {
+                        $scope.$apply($scope.closeOtherEditors(data.resourcePath));
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    'ide-core.closeAllEditors',
+                    function () {
+                        $scope.$apply($scope.closeAllEditors());
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    'ide-core.openView',
+                    function (data) {
+                        $scope.$apply($scope.openView(data.viewId, data.params));
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    'ide-core.openPerspective',
+                    function (data) {
+                        let url = data.link;
+                        if (data.params) {
+                            let urlParams = '';
+                            for (const property in data.params) {
+                                urlParams += `${property} = ${encodeURIComponent(data.params[property])
+                                    }& `
+                            }
+                            url += `? ${urlParams.slice(0, -1)} `;
+                        }
+                        window.location.href = url;
+                    },
+                    true
+                );
+
                 messageHub.onDidReceiveMessage('editor.file.saved', function (msg) {
                     if (closingFileArgs) {
                         let fileName = msg.data;
@@ -626,10 +703,11 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             closeCenterTab(fileName);
 
                             let rest = closingFileArgs.tabs.filter(x => x.id !== closingFileArgs.file);
-                            if (rest.length > 0)
+                            if (rest.length > 0) {
                                 if (tryCloseCenterTabs(rest)) {
                                     $scope.$digest();
                                 }
+                            }
 
                             closingFileArgs = null;
                         }
@@ -645,13 +723,13 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                             reloadingFileArgs = null;
                         }
                     }
-                });
+                }, true);
 
                 messageHub.onDidReceiveMessage('editor.focus.gained', function (msg) {
                     const file = msg.data.file;
                     $scope.focusedTabView = findCenterSplittedTabView(file).tabsView;
                     $scope.$digest();
-                });
+                }, true);
 
                 function shortenCenterTabsLabels() {
 
@@ -749,146 +827,136 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                     return shortenedPaths;
                 }
 
-                Layouts.manager = {
-                    openEditor: function (resourcePath, resourceLabel, contentType, editorId = "editor", extraArgs = null) {
-                        if (resourcePath) {
-                            let editorPath = Editors.editorProviders[editorId];
-                            if (!editorPath) {
-                                let editors = Editors.editorsForContentType[contentType];
-                                if (editors && editors.length > 0) {
-                                    if (editors.length == 1) {
-                                        editorId = editors[0].id;
-                                    } else {
-                                        let formEditors = editors.filter(function (e) {
-                                            switch (e.id) {
-                                                case "orion":
-                                                case "monaco":
-                                                case "ace":
-                                                    return false;
-                                                default:
-                                                    return true;
-                                            }
-                                        });
-                                        editorId = formEditors.length > 0 ? formEditors[0].id : editors[0].id;
-                                    }
+                $scope.openEditor = function (resourcePath, resourceLabel, contentType, editorId = "editor", extraArgs = null) {
+                    if (resourcePath) {
+                        let editorPath = Editors.editorProviders[editorId];
+                        if (!editorPath) {
+                            let editors = Editors.editorsForContentType[contentType];
+                            if (editors && editors.length > 0) {
+                                if (editors.length == 1) {
+                                    editorId = editors[0].id;
                                 } else {
-                                    editorId = Editors.defaultEditorId;
-                                }
-
-                                editorPath = Editors.editorProviders[editorId];
-                            }
-
-                            let params = Object.assign({
-                                file: resourcePath,
-                                contentType: contentType
-                            }, extraArgs || {});
-
-                            if (editorId === 'flowable')
-                                editorPath += resourcePath;
-
-                            let result = findCenterSplittedTabView(resourcePath);
-                            let currentTabsView = result ? result.tabsView : getCurrentCenterSplittedTabViewPane();
-                            if (result) {
-                                currentTabsView.selectedTab = resourcePath;
-                                let fileTab = currentTabsView.tabs[result.index];
-                                if (fileTab.path !== editorPath) {
-                                    tryReloadCenterTab(fileTab, editorPath, params);
+                                    let formEditors = editors.filter(function (e) {
+                                        switch (e.id) {
+                                            case "orion":
+                                            case "monaco":
+                                            case "ace":
+                                                return false;
+                                            default:
+                                                return true;
+                                        }
+                                    });
+                                    editorId = formEditors.length > 0 ? formEditors[0].id : editors[0].id;
                                 }
                             } else {
-                                let fileTab = {
-                                    id: resourcePath,
-                                    type: EDITOR,
-                                    label: resourceLabel,
-                                    path: editorPath,
-                                    params: params
-                                };
-
-                                currentTabsView.selectedTab = resourcePath;
-                                currentTabsView.tabs.push(fileTab);
+                                editorId = Editors.defaultEditorId;
                             }
 
-                            shortenCenterTabsLabels();
+                            editorPath = Editors.editorProviders[editorId];
+                        }
 
+                        let params = Object.assign({
+                            file: resourcePath,
+                            contentType: contentType
+                        }, extraArgs || {});
+
+                        if (editorId === 'flowable')
+                            editorPath += resourcePath;
+
+                        let result = findCenterSplittedTabView(resourcePath);
+                        let currentTabsView = result ? result.tabsView : getCurrentCenterSplittedTabViewPane();
+                        if (result) {
+                            currentTabsView.selectedTab = resourcePath;
+                            let fileTab = currentTabsView.tabs[result.index];
+                            if (fileTab.path !== editorPath) {
+                                tryReloadCenterTab(fileTab, editorPath, params);
+                            }
+                        } else {
+                            let fileTab = {
+                                id: resourcePath,
+                                type: EDITOR,
+                                label: resourceLabel,
+                                path: editorPath,
+                                params: params
+                            };
+
+                            currentTabsView.selectedTab = resourcePath;
+                            currentTabsView.tabs.push(fileTab);
+                        }
+
+                        shortenCenterTabsLabels();
+
+                        $scope.$digest();
+                    }
+                };
+                $scope.closeEditor = function (resourcePath) {
+                    let result = findCenterSplittedTabView(resourcePath);
+                    if (result) {
+                        let tab = result.tabsView.tabs[result.index];
+                        if (tryCloseCenterTabs([tab])) {
                             $scope.$digest();
                         }
-                    },
-                    closeEditor: function (resourcePath) {
-                        let result = findCenterSplittedTabView(resourcePath);
-                        if (result) {
-                            let tab = result.tabsView.tabs[result.index];
-                            if (tryCloseCenterTabs([tab])) {
+                    }
+                };
+                $scope.closeOtherEditors = function (resourcePath) {
+                    let result = findCenterSplittedTabView(resourcePath);
+                    if (result) {
+                        let rest = result.tabsView.tabs.filter(x => x.id !== resourcePath);
+                        if (rest.length > 0) {
+                            if (tryCloseCenterTabs(rest)) {
                                 $scope.$digest();
-                            }
-                        }
-                    },
-                    closeOtherEditors: function (resourcePath) {
-                        let result = findCenterSplittedTabView(resourcePath);
-                        if (result) {
-                            let rest = result.tabsView.tabs.filter(x => x.id !== resourcePath);
-                            if (rest.length > 0) {
-                                if (tryCloseCenterTabs(rest)) {
-                                    $scope.$digest();
-                                }
-                            }
-                        }
-                    },
-                    closeAllEditors: function () {
-                        forEachCenterSplittedTabView(pane => {
-                            if (tryCloseCenterTabs(pane.tabs.slice())) {
-                                $scope.$digest();
-                            }
-                        }, $scope.centerSplittedTabViews);
-                    },
-                    setEditorDirty: function (resourcePath, dirty) {
-                        let result = findCenterSplittedTabView(resourcePath);
-                        if (result) {
-                            let fileTab = result.tabsView.tabs[result.index];
-                            fileTab.dirty = dirty;
-                            $scope.$digest();
-                        }
-                    },
-                    openView: function (viewId) {
-                        let view = $scope.views.find(v => v.id === viewId);
-                        if (view) {
-                            if (view.region.startsWith('left')) {
-                                let explorerViewTab = findView($scope.explorerTabs, view);
-                                if (explorerViewTab) {
-                                    explorerViewTab.hidden = false;
-                                    explorerViewTab.expanded = true;
-                                } else {
-                                    explorerViewTab = mapViewToTab(view);
-                                    explorerViewTab.expanded = true;
-                                    $scope.explorerTabs.push(explorerViewTab);
-                                }
-
-                            } else if (view.region === 'center-middle' || view.region === 'center-top') {
-                                let result = findCenterSplittedTabView(view.id);
-                                let currentTabsView = result ? result.tabsView : getCurrentCenterSplittedTabViewPane();
-                                if (result) {
-                                    currentTabsView.selectedTab = view.id;
-                                } else {
-                                    let centerViewTab = mapViewToTab(view);
-                                    currentTabsView.selectedTab = view.id;
-                                    currentTabsView.tabs.push(centerViewTab);
-                                }
-
-                            } else {
-                                let bottomViewTab = findView($scope.bottomTabs, view);
-                                if (bottomViewTab) {
-                                    $scope.selection.selectedBottomTab = bottomViewTab.id;
-                                } else {
-                                    bottomViewTab = mapViewToTab(view);
-                                    $scope.selection.selectedBottomTab = bottomViewTab.id;
-                                    $scope.bottomTabs.push(bottomViewTab);
-                                }
-
-                                if ($scope.isBottomPaneCollapsed())
-                                    $scope.expandBottomPane();
                             }
                         }
                     }
                 };
-                Layouts.manager.open = Layouts.manager.openView;
+                $scope.closeAllEditors = function () {
+                    forEachCenterSplittedTabView(pane => {
+                        if (tryCloseCenterTabs(pane.tabs.slice())) {
+                            $scope.$digest();
+                        }
+                    }, $scope.centerSplittedTabViews);
+                };
+                $scope.openView = function (viewId, params = {}) {
+                    let view = $scope.views.find(v => v.id === viewId);
+                    if (view) {
+                        if (view.region.startsWith('left')) {
+                            let explorerViewTab = findView($scope.explorerTabs, view);
+                            if (explorerViewTab) {
+                                explorerViewTab.hidden = false;
+                                explorerViewTab.expanded = true;
+                            } else {
+                                explorerViewTab = mapViewToTab(view, params);
+                                explorerViewTab.expanded = true;
+                                $scope.explorerTabs.push(explorerViewTab);
+                            }
+
+                        } else if (view.region === 'center-middle' || view.region === 'center-top' || view.region === 'center') {
+                            let result = findCenterSplittedTabView(view.id);
+                            let currentTabsView = result ? result.tabsView : getCurrentCenterSplittedTabViewPane();
+                            if (result) {
+                                currentTabsView.selectedTab = view.id;
+                            } else {
+                                let centerViewTab = mapViewToTab(view, params);
+                                centerViewTab["params"] = params;
+                                console.log(centerViewTab);
+                                currentTabsView.selectedTab = view.id;
+                                currentTabsView.tabs.push(centerViewTab);
+                            }
+                        } else {
+                            let bottomViewTab = findView($scope.bottomTabs, view);
+                            if (bottomViewTab) {
+                                $scope.selection.selectedBottomTab = bottomViewTab.id;
+                            } else {
+                                bottomViewTab = mapViewToTab(view, params);
+                                $scope.selection.selectedBottomTab = bottomViewTab.id;
+                                $scope.bottomTabs.push(bottomViewTab);
+                            }
+
+                            if ($scope.isBottomPaneCollapsed())
+                                $scope.expandBottomPane();
+                        }
+                    }
+                };
             }],
             templateUrl: '/services/v4/web/ide-core/ui/templates/layout.html'
         };
@@ -1060,16 +1128,16 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
             }
         }
     })
-    .directive('explorerToolbar', function () {
+    .directive('explorerToolbar', ['perspective', function (perspective) {
         return {
             restrict: 'E',
             replace: true,
             scope: {
-                name: '@',
                 items: '='
             },
-            link: function (scope, element, attrs) {
+            link: function (scope) {
                 scope.hidden = true;
+                scope.name = perspective.name;
 
                 scope.toggle = function () {
                     scope.hidden = !scope.hidden;
@@ -1088,12 +1156,12 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 };
 
                 scope.toggleVisibility = function (item) {
-
-                }
+                    // TODO
+                };
             },
             templateUrl: '/services/v4/web/ide-core/ui/templates/toolbar.html',
         };
-    })
+    }])
     .directive('accordion', ['$window', function ($window) {
         return {
             restrict: 'E',
@@ -1441,7 +1509,7 @@ angular.module('layout', ['idePerspective', 'ideMessageHub'])
                 });
             },
             template: `<div aria-expanded="{{isPaneSelected()}}" class="fd-tabs__panel" role="tabpanel" ng-transclude>
-                <iframe ng-src="{{tab.path}}" data-parameters="{{getParams()}}"></iframe>
+                <iframe loading="lazy" ng-src="{{tab.path}}" data-parameters="{{getParams()}}"></iframe>
             </div>`
         };
     }])

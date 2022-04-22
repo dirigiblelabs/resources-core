@@ -1,13 +1,13 @@
 angular.module('ideMessageHub', [])
     .provider('messageHub', function MessageHubProvider() {
-        this.eventIdPrefix = "";
+        this.eventIdPrefix = '';
         this.eventIdDelimiter = '.';
         this.$get = [function messageHubFactory() {
             let messageHub = new FramesMessageHub();
             let trigger = function (eventId, absolute = false) {
                 if (!eventId)
                     throw Error('eventId argument must be a valid string, identifying an existing event');
-                if (!absolute && this.eventIdPrefix !== "") eventId = this.eventIdPrefix + this.eventIdDelimiter + eventId;
+                if (!absolute && this.eventIdPrefix !== '') eventId = this.eventIdPrefix + this.eventIdDelimiter + eventId;
                 messageHub.post({}, eventId);
             }.bind(this);
             let post = function (eventId, data, absolute = false) {
@@ -233,14 +233,85 @@ angular.module('ideMessageHub', [])
             };
             let showDialogWindow = function (
                 dialogWindowId = "",
-                parameters = "",
+                params,
                 callbackTopic = null
             ) {
+                if (params !== undefined && !(typeof params === 'object' && !Array.isArray(params) && params !== null))
+                    throw Error("showDialogWindow: params must be an object");
                 messageHub.post({
                     dialogWindowId: dialogWindowId,
-                    parameters: parameters,
+                    params: params,
                     callbackTopic: callbackTopic
                 }, 'ide.dialogWindow');
+            };
+            let openView = function (viewId, params) {
+                if (viewId === undefined)
+                    throw Error("openView: viewId must be specified");
+                if (params !== undefined && !(typeof params === 'object' && !Array.isArray(params) && params !== null))
+                    throw Error("openView: params must be an object");
+                messageHub.post({
+                    viewId: viewId,
+                    params: params,
+                }, 'ide-core.openView');
+            };
+            let openPerspective = function (link, params) {
+                if (link === undefined)
+                    throw Error("openPerspective: link must be specified");
+                messageHub.post({
+                    link: link,
+                    params: params,
+                }, 'ide-core.openPerspective');
+            };
+            let openEditor = function (
+                resourcePath,
+                resourceLabel,
+                contentType,
+                editorId,
+                extraArgs
+            ) {
+                if (resourcePath === undefined)
+                    throw Error("openEditor: resourcePath must be specified");
+                messageHub.post({
+                    resourcePath: resourcePath,
+                    resourceLabel: resourceLabel,
+                    contentType: contentType,
+                    editorId: editorId,
+                    extraArgs: extraArgs,
+                }, 'ide-core.openEditor');
+            };
+            let setEditorDirty = function (
+                resourcePath,
+                isDirty,
+            ) {
+                if (resourcePath === undefined)
+                    throw Error("openEditor: resourcePath must be specified");
+                if (isDirty === undefined)
+                    throw Error("openEditor: isDirty must be specified");
+                messageHub.post({
+                    resourcePath: resourcePath,
+                    isDirty: isDirty,
+                }, 'ide-core.setEditorDirty');
+            };
+            let closeEditor = function (
+                resourcePath,
+            ) {
+                if (resourcePath === undefined)
+                    throw Error("closeEditor: resourcePath must be specified");
+                messageHub.post({
+                    resourcePath: resourcePath,
+                }, 'ide-core.closeEditor');
+            };
+            let closeOtherEditors = function (
+                resourcePath,
+            ) {
+                if (resourcePath === undefined)
+                    throw Error("closeEditor: resourcePath must be specified");
+                messageHub.post({
+                    resourcePath: resourcePath,
+                }, 'ide-core.closeOtherEditors');
+            };
+            let closeAllEditors = function () {
+                messageHub.post({}, 'ide-core.closeAllEditors');
             };
             let unsubscribe = function (handler) {
                 messageHub.unsubscribe(handler);
@@ -263,6 +334,13 @@ angular.module('ideMessageHub', [])
                 hideLoadingDialog: hideLoadingDialog,
                 showSelectDialog: showSelectDialog,
                 showDialogWindow: showDialogWindow,
+                openView: openView,
+                openPerspective: openPerspective,
+                openEditor: openEditor,
+                setEditorDirty: setEditorDirty,
+                closeEditor: closeEditor,
+                closeOtherEditors: closeOtherEditors,
+                closeAllEditors: closeAllEditors,
                 triggerEvent: trigger,
                 'postMessage': post,
                 onDidReceiveMessage: onMessage,
