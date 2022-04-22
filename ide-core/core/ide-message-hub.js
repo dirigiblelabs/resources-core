@@ -84,6 +84,7 @@ angular.module('ideMessageHub', [])
                 }, 'ide.dialog');
             };
             let showFormDialog = function (
+                id,
                 title = "",
                 items = [],
                 buttons = [{
@@ -92,21 +93,83 @@ angular.module('ideMessageHub', [])
                     label: "Ok",
                 }],
                 callbackTopic = null,
+                loadingMessage = "",
                 header = "",
                 subheader = "",
                 footer = ""
             ) {
+                if (!id)
+                    throw Error("Form Dialog: You must specify a dialog id");
+                if (items.length === 0)
+                    throw Error("Form Dialog: There must be at least one form item");
                 if (buttons.length === 0)
-                    throw Error("Dialog: There must be at least one button");
+                    throw Error("Form Dialog: There must be at least one button");
+                if (!callbackTopic)
+                    throw Error("Form Dialog: There must be a callback topic");
                 messageHub.post({
+                    id: id,
                     header: header,
                     subheader: subheader,
                     title: title,
                     items: items,
+                    loadingMessage: loadingMessage,
                     footer: footer,
                     buttons: buttons,
                     callbackTopic: callbackTopic
-                }, 'ide.formDialog');
+                }, 'ide.formDialog.show');
+            };
+            let updateFormDialog = function (
+                id,
+                items = [],
+                loadingMessage,
+                subheader = "",
+                footer,
+            ) {
+                if (!id)
+                    throw Error("Form Dialog: You must specify a dialog id");
+                if (items.length === 0)
+                    throw Error("Form Dialog: There must be at least one form item");
+                messageHub.post({
+                    id: id,
+                    subheader: subheader,
+                    footer: footer,
+                    items: items,
+                    loadingMessage: loadingMessage,
+                }, 'ide.formDialog.update');
+            };
+            let hideFormDialog = function (id) {
+                if (!id)
+                    throw Error("Form Dialog: You must specify a dialog id");
+                messageHub.post({ id: id }, 'ide.formDialog.hide');
+            };
+            let showLoadingDialog = function (
+                id,
+                title = "",
+                status = ""
+            ) {
+                if (!id)
+                    throw Error("Loading Dialog: You must specify a dialog id");
+                messageHub.post({
+                    id: id,
+                    title: title,
+                    status: status
+                }, 'ide.loadingDialog.show');
+            };
+            let updateLoadingDialog = function (
+                id,
+                status = "",
+            ) {
+                if (!id)
+                    throw Error("Loading Dialog: You must specify a dialog id");
+                messageHub.post({
+                    id: id,
+                    status: status,
+                }, 'ide.loadingDialog.update');
+            };
+            let hideLoadingDialog = function (id) {
+                if (!id)
+                    throw Error("Loading Dialog: You must specify a dialog id");
+                messageHub.post({ id: id }, 'ide.loadingDialog.hide');
             };
             let showDialogAsync = function (
                 title = "",
@@ -193,6 +256,11 @@ angular.module('ideMessageHub', [])
                 showDialog: showDialog,
                 showDialogAsync: showDialogAsync,
                 showFormDialog: showFormDialog,
+                updateFormDialog: updateFormDialog,
+                hideFormDialog: hideFormDialog,
+                showLoadingDialog: showLoadingDialog,
+                updateLoadingDialog: updateLoadingDialog,
+                hideLoadingDialog: hideLoadingDialog,
                 showSelectDialog: showSelectDialog,
                 showDialogWindow: showDialogWindow,
                 triggerEvent: trigger,

@@ -14,6 +14,7 @@
 let defaultEditorId = "monaco";
 let brandingInfo;
 angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
+    .value('perspective', { id: '' })
     .factory('Theming', ['$resource', 'messageHub', function ($resource, messageHub) {
         let theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme'));
         // legacySwitcher is deprecated. Remove once all views have been migrated.
@@ -137,79 +138,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             };
         }];
     })
-    /**
-     * Creates a map object associating a view factory function with a name (id)
-     */
-    .provider('ViewFactories', function () {
-        let self = this;
-        this.factories = {
-            "frame": function (container, componentState) {
-                container.setTitle(componentState.label || 'View');
-                $('<iframe>').attr('src', componentState.path).appendTo(container.getElement().empty());
-            },
-            "editor": function (container, componentState) {
-                /* Improvement hint: Instead of hardcoding ?file=.. use URL template for the editor provider values
-                 * and then replace the placeholders in the template with matching properties from the componentState.
-                 * This will make it easy to replace the query string property if needed or provide additional
-                 * (editor-specific) parameters easily.
-                 */
-                (function (componentState) {
-                    let src, editorPath;
-                    if (!componentState.editorId || Object.keys(self.editors.editorProviders).indexOf(componentState.editorId) < 0) {
-                        if (Object.keys(self.editors.editorsForContentType).indexOf(componentState.contentType) < 0) {
-                            editorPath = self.editors.editorProviders[self.editors.defaultEditorId];
-                        } else {
-                            if (self.editors.editorsForContentType[componentState.contentType].length > 1) {
-                                let formEditors = self.editors.editorsForContentType[componentState.contentType].filter(function (e) {
-                                    switch (e.id) {
-                                        case "orion":
-                                        case "monaco":
-                                        case "ace":
-                                            return false;
-                                        default:
-                                            return true;
-                                    }
-                                });
-                                if (formEditors.length > 0) {
-                                    componentState.editorId = formEditors[0].id;
-                                } else {
-                                    componentState.editorId = self.editors.editorsForContentType[componentState.contentType][0].id;
-                                }
-                            } else {
-                                componentState.editorId = self.editors.editorsForContentType[componentState.contentType][0].id;
-                            }
-                            editorPath = self.editors.editorProviders[componentState.editorId];
-                        }
-                    }
-                    else
-                        editorPath = self.editors.editorProviders[componentState.editorId];
-                    if (componentState.path) {
-                        if (componentState.editorId === 'flowable')
-                            src = editorPath + componentState.path;
-                        else
-                            src = editorPath + '?file=' + componentState.path;
-                        if (componentState.contentType && componentState.editorId !== 'flowable')
-                            src += "&contentType=" + componentState.contentType;
-                        if (componentState.extraArgs) {
-                            const extraArgs = Object.keys(componentState.extraArgs);
-                            for (let i = 0; i < extraArgs.length; i++) {
-                                src += `&${extraArgs[i]}=${encodeURIComponent(componentState.extraArgs[extraArgs[i]])}`;
-                            }
-                        }
-                    } else {
-                        container.setTitle("Welcome");
-                        let brandingInfo = getBrandingInfo();
-                        src = brandingInfo.branding.welcomePage;
-                    }
-                    $('<iframe>').attr('src', src).appendTo(container.getElement().empty());
-                })(componentState, this);
-            }.bind(self)
-        };
-        this.$get = ['Editors', function viewFactoriesFactory(Editors) {
-            this.editors = Editors;
-            return this.factories;
-        }];
-    })
     // Do we really need this here?
     .factory('Layouts', [function () {
         return {
@@ -233,7 +161,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             link: function (scope) {
                 scope.branding = getBrandingInfo();
             },
-            templateUrl: '/services/v4/web/ide-core/ui/templates/brandTitle.html'
+            template: '<title>{{perspectiveName}} | {{branding.name}}</title>'
         };
     }])
     .directive('brandicon', [function () {
@@ -244,7 +172,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             link: function (scope) {
                 scope.branding = getBrandingInfo();
             },
-            templateUrl: '/services/v4/web/ide-core/ui/templates/brandIcon.html'
+            template: '<link rel="icon" type="image/png" sizes="16x16" ng-href="{{branding.icon}}" />'
         };
     }])
     .directive('ideContextmenu', ['messageHub', function (messageHub) {
@@ -970,7 +898,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
             templateUrl: "/services/v4/web/ide-core/ui/templates/headerSubmenu.html",
         };
     })
-    .directive('ideContainer', function () {
+    .directive('ideContainer', ['perspective', function (perspective) {
         return {
             restrict: 'E',
             transclude: true,
@@ -979,10 +907,16 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 activeId: '@'
             },
             link: function (scope) {
+                if (!scope.activeId)
+                    console.error('<ide-container> requires "active-id" attribute');
+                else perspective.id = scope.activeId;
             },
-            templateUrl: '/services/v4/web/ide-core/ui/templates/ideContainer.html'
+            template: `<div class="dg-main-container">
+                <ide-sidebar active-id="{{ activeId }}"></ide-sidebar>
+                <ng-transclude ng-if="activeId" class="dg-perspective-container"></ng-transclude>
+            </div>`
         }
-    })
+    }])
     .directive('ideSidebar', ['Perspectives', function (Perspectives) {
         return {
             restrict: 'E',
@@ -1003,7 +937,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
     /**
      * Used for Dialogs and Window Dialogs
      */
-    .directive('ideDialogs', ['messageHub', 'DialogWindows', function (messageHub, DialogWindows) {
+    .directive('ideDialogs', ['messageHub', 'DialogWindows', 'perspective', function (messageHub, DialogWindows, perspective) {
         return {
             restrict: 'E',
             replace: true,
@@ -1017,30 +951,36 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 let alerts = [];
                 let windows = [];
                 let dialogs = [];
+                let loadingDialogs = [];
                 let formDialogs = [];
                 let selectDialogs = [];
                 scope.searchInput = { value: "" }; // AngularJS - "If you use ng-model, you have to use an object property, not just a variable"
+                scope.activeDialog = null;
                 scope.alert = {
                     title: "",
                     message: "",
                     type: "information", // information, error, success, warning
                 };
                 scope.dialog = {
+                    id: null,
                     header: "",
                     subheader: "",
                     title: "",
                     body: "",
                     footer: "",
-                    loader: false,
                     buttons: [],
-                    callbackTopic: null
+                    callbackTopic: null,
+                    loader: false,
                 };
                 scope.formDialog = {
+                    id: null,
                     header: "",
                     subheader: "",
                     title: "",
                     footer: "",
                     buttons: [],
+                    loadingMessage: "",
+                    loader: false,
                     callbackTopic: null,
                     items: []
                 };
@@ -1066,6 +1006,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         element[0].classList.remove("dg-hidden");
                     scope.alert = alerts[0];
                     messageBox.classList.add("fd-message-box--active");
+                    scope.activeDialog = 'alert';
                 };
 
                 scope.hideAlert = function () {
@@ -1079,6 +1020,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         element[0].classList.remove("dg-hidden");
                     scope.dialog = dialogs[0];
                     ideDialog.classList.add("fd-dialog--active");
+                    scope.activeDialog = 'dialog';
                 };
 
                 scope.hideDialog = function (buttonId) {
@@ -1093,13 +1035,31 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         element[0].classList.remove("dg-hidden");
                     scope.formDialog = formDialogs[0];
                     ideFormDialog.classList.add("fd-dialog--active");
+                    scope.activeDialog = 'form';
                 };
 
-                scope.hideFormDialog = function (buttonId) {
-                    if (buttonId && scope.formDialog.callbackTopic)
-                        messageHub.postMessage(scope.formDialog.callbackTopic, scope.formDialog.items, true);
+                scope.formDialogAction = function (buttonId) {
+                    scope.formDialog.loader = true;
+                    messageHub.postMessage(scope.formDialog.callbackTopic, { buttonId: buttonId, formData: scope.formDialog.items }, true);
+                };
+
+                scope.hideFormDialog = function () {
                     ideFormDialog.classList.remove("fd-dialog--active");
                     formDialogs.shift();
+                    checkForDialogs();
+                };
+
+                scope.showLoadingDialog = function () {
+                    if (element[0].classList.contains("dg-hidden"))
+                        element[0].classList.remove("dg-hidden");
+                    scope.dialog = loadingDialogs[0];
+                    ideDialog.classList.add("fd-dialog--active");
+                    scope.activeDialog = 'dialog';
+                };
+
+                scope.hideLoadingDialog = function () {
+                    ideDialog.classList.remove("fd-dialog--active");
+                    loadingDialogs.shift();
                     checkForDialogs();
                 };
 
@@ -1134,6 +1094,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                         element[0].classList.remove("dg-hidden");
                     scope.selectDialog = selectDialogs[0];
                     ideSelectDialog.classList.add("fd-dialog--active");
+                    scope.activeDialog = 'select';
                 };
 
                 scope.hideSelectDialog = function (action) {
@@ -1175,7 +1136,6 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 scope.showWindow = function () {
                     scope.window = windows[0];
                     if (scope.window.link === "") {
-                        console.log(scope.window);
                         console.error(
                             "Dialog Window Error: The link property is missing."
                         );
@@ -1186,6 +1146,7 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     if (element[0].classList.contains("dg-hidden"))
                         element[0].classList.remove("dg-hidden");
                     ideDialogWindow.classList.add("fd-message-box--active");
+                    scope.activeDialog = 'window';
                 };
 
                 scope.hideWindow = function () {
@@ -1198,10 +1159,12 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 };
 
                 function checkForDialogs() {
+                    scope.activeDialog = null;
                     if (selectDialogs.length > 0) scope.showSelectDialog();
                     else if (formDialogs.length > 0) scope.showFormDialog();
                     else if (dialogs.length > 0) scope.showDialog();
                     else if (alerts.length > 0) scope.showAlert();
+                    else if (loadingDialogs.length > 0) scope.showLoadingDialog();
                     else if (windows.length > 0) scope.showWindow();
                     else element[0].classList.add("dg-hidden");
                 }
@@ -1262,14 +1225,17 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                 );
 
                 messageHub.onDidReceiveMessage(
-                    "ide.formDialog",
+                    "ide.formDialog.show",
                     function (data) {
                         scope.$apply(function () {
                             formDialogs.push({
+                                id: data.id,
                                 header: data.header,
                                 subheader: data.subheader,
                                 title: data.title,
                                 items: data.items,
+                                loadingMessage: data.loadingMessage,
+                                loader: false,
                                 footer: data.footer,
                                 buttons: data.buttons,
                                 callbackTopic: data.callbackTopic
@@ -1279,6 +1245,105 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                     },
                     true
                 );
+
+                messageHub.onDidReceiveMessage(
+                    "ide.formDialog.update",
+                    function (data) {
+                        scope.$apply(function () {
+                            if (scope.formDialog && data.id === scope.formDialog.id) {
+                                scope.formDialog.items = data.items;
+                                if (data.subheader)
+                                    scope.formDialog.subheader = data.subheader;
+                                if (data.footer)
+                                    scope.formDialog.footer = data.footer;
+                                if (data.loadingMessage)
+                                    scope.formDialog.loadingMessage = data.loadingMessage;
+                                scope.formDialog.loader = false;
+                            } else {
+                                for (let i = 0; i < formDialogs.length; i++) {
+                                    if (formDialogs[i].id === data.id) {
+                                        formDialogs[i].items = data.items;
+                                        if (data.subheader)
+                                            formDialogs[i].subheader = data.subheader;
+                                        if (data.footer)
+                                            formDialogs[i].footer = data.footer;
+                                        if (data.loadingMessage)
+                                            formDialogs[i].loadingMessage = data.loadingMessage;
+                                        formDialogs[i].loader = false;
+                                        break;
+                                    }
+                                }
+                            }
+                        });
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    "ide.formDialog.hide",
+                    function () {
+                        scope.$apply(function () {
+                            scope.hideFormDialog();
+                        });
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    "ide.loadingDialog.show",
+                    function (data) {
+                        scope.$apply(function () {
+                            loadingDialogs.push({
+                                id: data.id,
+                                title: data.title,
+                                header: '',
+                                subheader: '',
+                                footer: '',
+                                status: data.status,
+                                loader: true,
+                            });
+                            scope.showLoadingDialog();
+                        });
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    "ide.loadingDialog.update",
+                    function (data) {
+                        scope.$apply(function () {
+                            if (scope.dialog && data.id === scope.dialog.id) {
+                                scope.dialog.status = data.status;
+                            } else {
+                                for (let i = 0; i < loadingDialogs.length; i++) {
+                                    if (loadingDialogs[i].id === data.id) {
+                                        loadingDialogs[i].status = data.status;
+                                        break;
+                                    }
+                                }
+                            }
+                        });
+                    },
+                    true
+                );
+
+                messageHub.onDidReceiveMessage(
+                    "ide.loadingDialog.hide",
+                    function () {
+                        scope.$apply(function () {
+                            scope.hideLoadingDialog();
+                        });
+                    },
+                    true
+                );
+
+                scope.inputValidation = function (isValid, item) {
+                    if (isValid) {
+                        item.error = false;
+                    } else {
+                        item.error = true;
+                    }
+                };
 
                 function getSelectedItems() {
                     let selected = [];
@@ -1328,13 +1393,22 @@ angular.module('idePerspective', ['ngResource', 'ideMessageHub'])
                             let found = false;
                             for (let i = 0; i < dialogWindows.length; i++) {
                                 if (dialogWindows[i].id === data.dialogWindowId) {
+                                    if (data.parameters) {
+                                        data.parameters['container'] = 'dialog';
+                                        data.parameters['perspectiveId'] = perspective.id;
+                                    } else {
+                                        data.parameters = {
+                                            container: 'layout',
+                                            perspectiveId: perspective.id,
+                                        };
+                                    }
                                     found = true;
                                     windows.push({
                                         title: dialogWindows[i].title,
                                         dialogWindowId: dialogWindows[i].id,
                                         callbackTopic: data.callbackTopic,
                                         link: dialogWindows[i].link,
-                                        parameters: data.parameters || ""
+                                        parameters: data.parameters,
                                     });
                                     break;
                                 }
