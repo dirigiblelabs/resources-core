@@ -521,10 +521,10 @@ angular.module('ideLayout', ['idePerspective', 'ideMessageHub'])
                             const { id, file } = data;
                             switch (id) {
                                 case 'save':
-                                    messageHub.postMessage('workbench.editor.save', { file }, true);
+                                    messageHub.postMessage('editor.file.save', { file }, true);
                                     break;
                                 case 'ignore':
-                                    messageHub.postMessage('editor.file.dirty', { file, isDirty: false }, true);
+                                    $scope.setEditorDirty(file, false);
                                     break;
                             }
                             resolve(data);
@@ -915,6 +915,14 @@ angular.module('ideLayout', ['idePerspective', 'ideMessageHub'])
                             $scope.$digest();
                         }
                     }, $scope.centerSplittedTabViews);
+                };
+                $scope.setEditorDirty = function (resourcePath, dirty) {
+                    let result = findCenterSplittedTabView(resourcePath);
+                    if (result) {
+                        let fileTab = result.tabsView.tabs[result.index];
+                        fileTab.dirty = dirty;
+                        $scope.$digest();
+                    }
                 };
                 $scope.openView = function (viewId, params = {}) {
                     let view = $scope.views.find(v => v.id === viewId);
