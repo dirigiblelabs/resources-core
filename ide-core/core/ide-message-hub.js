@@ -25,17 +25,17 @@ angular.module('ideMessageHub', [])
             let setStatusMessage = function (message) {
                 messageHub.post({
                     message: message,
-                }, 'ide.statusMessage');
+                }, 'ide.status.message');
             };
             let setStatusError = function (message) {
                 messageHub.post({
                     message: message,
-                }, 'ide.statusError');
+                }, 'ide.status.error');
             };
             let setStatusCaret = function (text) {
                 messageHub.post({
                     text: text,
-                }, 'ide.statusCaret');
+                }, 'ide.status.caret');
             };
             let announceAlert = function (title, message, type) {
                 messageHub.post({

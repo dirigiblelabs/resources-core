@@ -1256,14 +1256,12 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
         return {
             restrict: 'E',
             replace: true,
-            scope: {
-                message: '@',
-                caret: '@',
-                error: '@'
-            },
             link: function (scope) {
+                scope.message = '';
+                scope.caret = '';
+                scope.error = '';
                 messageHub.onDidReceiveMessage(
-                    'ide.statusMessage',
+                    'ide.status.message',
                     function (data) {
                         scope.$apply(function () {
                             scope.message = data.message;
@@ -1272,7 +1270,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     true
                 );
                 messageHub.onDidReceiveMessage(
-                    'ide.statusError',
+                    'ide.status.error',
                     function (data) {
                         scope.$apply(function () {
                             scope.error = data.message;
@@ -1281,7 +1279,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     true
                 );
                 messageHub.onDidReceiveMessage(
-                    'ide.statusCaret',
+                    'ide.status.caret',
                     function (data) {
                         scope.$apply(function () {
                             scope.caret = data.text;

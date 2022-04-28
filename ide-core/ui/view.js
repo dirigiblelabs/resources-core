@@ -1,5 +1,5 @@
 angular.module('ideView', ['ngResource'])
-    .constant('view', viewData)
+    .constant('view', viewData || editorData)
     .directive('dgViewTitle', ['view', function (view) {
         return {
             restrict: 'A',
