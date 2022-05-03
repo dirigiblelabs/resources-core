@@ -347,4 +347,4 @@ angular.module('ideMessageHub', [])
                 unsubscribe: unsubscribe
             };
         }];
-    })
+    });

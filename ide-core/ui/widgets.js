@@ -597,7 +597,8 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
          * state: String - Possible options are 'selected', 'disabled' and 'disabled-focusable' (must be used with fdAriaDesc). If not specified, normal state is assumed.
          * fdType: String - 'emphasized', 'transparent', 'ghost', 'positive', 'negative' and 'attention'. If not specified, normal state is assumed.
          * fdAriaDesc: String - Short description of the button. If the button is disabled, it should contain the reason and what needs to be done to enable it.
-         * isMenu: String - Accepts two values - "true" and "false".
+         * isMenu: Boolean - Adds an arrow to the button.
+         * isOverflow: Boolean - Used when the button is in a toolbar overflow popover.
          * isSplit: Boolean - (Internal use) If the button is part of a split button.
          * inGroup: Boolean - If the button is inside an fd-input-group-addon element.
          */
@@ -614,6 +615,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 fdType: '@',
                 fdAriaDesc: '@',
                 isMenu: '@',
+                isOverflow: '@',
                 isSplit: '@',
                 inGroup: '@',
             },
@@ -637,6 +639,9 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                             }
                             scope.badge = '';
                             classList.push('fd-button--menu');
+                            if (scope.isOverflow === "true") classList.push('fd-toolbar-overflow-button-menu');
+                        } else if (scope.isOverflow === "true") {
+                            classList.push('fd-toolbar__overflow-button');
                         }
                         if (scope.fdType) classList.push(`fd-button--${scope.fdType}`);
                         if (scope.compact === "true") classList.push('fd-button--compact');
@@ -894,8 +899,8 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
             link: function (scope) {
                 scope.getClasses = function () {
                     let classList = [];
-                    if (scope.isActive) classList.push('is-active');
-                    if (scope.isSelected) classList.push('is-selected');
+                    if (scope.isActive === 'true') classList.push('is-active');
+                    if (scope.isSelected === 'true') classList.push('is-selected');
                     return classList.join(' ');
                 };
             },
@@ -1302,8 +1307,8 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
         }
     }]).directive('fdToolbar', [function () {
         /**
-         * type: String - The type of the toolbar. One of 'transparent', 'auto', 'info' or 'solid' (default value)
-         * size: String - The size of the toolbar. One of 'cozy' or 'compact' (default value)
+         * fdType: String - The type of the toolbar. One of 'transparent', 'auto', 'info' or 'solid' (default value)
+         * fdSize: String - The size of the toolbar. One of 'cozy' or 'compact' (default value)
          * hasTitle: Boolean - Should be used whenever a title is required.
          * noBottomBorder: Boolean - Removes the bottom border of the toolbar
          * active: Boolean - Enables active and hover states
@@ -1313,8 +1318,8 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
             transclude: true,
             replace: true,
             scope: {
-                type: '@',
-                size: '@',
+                fdType: '@',
+                fdSize: '@',
                 hasTitle: '<',
                 noBottomBorder: '<',
                 active: '<'
@@ -1323,7 +1328,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 scope.getClasses = function () {
                     let classList = ['fd-toolbar'];
 
-                    switch (scope.type) {
+                    switch (scope.fdType) {
                         case 'transparent':
                             classList.push('fd-toolbar--transparent');
                             break;
@@ -1350,7 +1355,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                         classList.push('fd-toolbar--active');
                     }
 
-                    if (scope.size === 'cozy') {
+                    if (scope.fdSize === 'cozy') {
                         classList.push('fd-toolbar--cozy');
                     }
 
@@ -1409,18 +1414,6 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
 					<div class="fd-toolbar__overflow" ng-transclude></div>
 				</fd-popover-body>
 			</fd-popover>`
-        }
-    }]).directive('fdToolbarOverflowButton', [function () {
-        /**
-         * fdLabel: String - Button text.
-         */
-        return {
-            restrict: 'EA',
-            transclude: false,
-            scope: {
-                fdLabel: '@'
-            },
-            template: '<fd-button fd-type="transparent" class="fd-toolbar__overflow-button" fd-label="{{fdLabel}}"></fd-button>'
         }
     }]).directive('fdToolbarOverflowLabel', [function () {
         return {
