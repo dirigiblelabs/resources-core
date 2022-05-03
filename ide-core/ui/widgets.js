@@ -594,7 +594,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
          * compact: Boolean - Button size.
          * badge: String/Number - Used for showing a badge inside the button.
          * glyph: String - Icon class/classes.
-         * state: String - Possible options are 'selected', 'disabled' and 'disabled-focusable' (must be used with fdAriaDesc). If not specified, normal state is assumed.
+         * state: String - Possible options are 'selected', 'expanded', 'disabled' and 'disabled-focusable' (must be used with fdAriaDesc). If not specified, normal state is assumed.
          * fdType: String - 'emphasized', 'transparent', 'ghost', 'positive', 'negative' and 'attention'. If not specified, normal state is assumed.
          * fdAriaDesc: String - Short description of the button. If the button is disabled, it should contain the reason and what needs to be done to enable it.
          * isMenu: Boolean - Adds an arrow to the button.
@@ -650,6 +650,9 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                             element[0].removeAttribute('aria-disabled');
                             classList.push('is-selected');
                         }
+                        else if (scope.state === 'expanded') {
+                            classList.push('is-expanded');
+                        }
                         else if (scope.state === "disabled") {
                             element[0].removeAttribute('aria-disabled');
                             classList.push('is-disabled');
@@ -680,7 +683,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 }
             },
             template: `<button class="fd-button" ng-class="getClasses()" ng-disabled="{'disabled':true}[state]"
-                aria-selected="{{ state === 'selected' ? true : false }}">
+                aria-selected="{{ state === 'selected' ? true : false }}" ng-attr-aria-expanded="{{ state === 'expanded' ? true : undefined }}">
                 <i ng-if="glyph" ng-class="glyph" role="presentation" aria-hidden="true"></i>
                 <span ng-if="fdLabel" ng-class="getTextClasses()">{{ fdLabel }}</span>
                 <span ng-if="badge" class="fd-button__badge">{{ badge }}</span>
@@ -1439,7 +1442,9 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 noBorder: '<',
                 listType: '@',
                 fixedHeight: '@',
-                byline: '<'
+                byline: '<',
+                hasMessage: '<',
+                dropdownMode: '<'
             },
             link: function (scope) {
                 scope.getClasses = function () {
@@ -1455,6 +1460,14 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
 
                     if (scope.noBorder) {
                         classList.push('fd-list--no-border');
+                    }
+
+                    if (scope.hasMessage) {
+                        classList.push('fd-list--has-message');
+                    }
+
+                    if (scope.dropdownMode) {
+                        classList.push('fd-list--dropdown');
                     }
 
                     switch (scope.listType) {
@@ -1511,16 +1524,18 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 inactive: '<',
                 selected: '<'
             },
-            controller: ['$scope', '$element', function ($scope, $element) {
-                $scope.role = "listitem";
+            controller: ['$scope', '$element', '$attrs', function ($scope, $element, $attrs) {
 
                 this.addClass = function (className) {
                     $element.addClass(className);
                 }
 
                 this.setRole = function (role) {
-                    $scope.role = role;
+                    $element.attr('role', role);
                 }
+
+                if (!$attrs.role)
+                    this.setRole('listitem');
 
                 $scope.getClasses = function () {
                     let classList = ['fd-list__item'];
@@ -1546,7 +1561,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                     }
                 })
             }],
-            template: `<li role="{{role}}" ng-class="getClasses()" ng-transclude></li>`
+            template: `<li ng-class="getClasses()" ng-transclude></li>`
         }
     }]).directive('fdListTitle', [function () {
         return {
@@ -1554,6 +1569,38 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
             transclude: true,
             replace: true,
             template: '<span class="fd-list__title" ng-transclude></span>'
+        }
+    }]).directive('fdListSecondary', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: '<span class="fd-list__secondary" ng-transclude></span>'
+        }
+    }]).directive('fdListMessage', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                state: "@"
+            },
+            link: function (scope) {
+                const states = ['success', 'error', 'warning', 'information'];
+                if (scope.state && !states.includes(scope.state)) {
+                    console.error(`fd-list-message error: 'state' must be one of: ${states.join(', ')}`);
+                }
+
+                scope.getClasses = function () {
+                    let classList = ['fd-list__message'];
+
+                    if (scope.state && states.includes(scope.state)) {
+                        classList.push(`fd-list__message--${scope.state}`);
+                    }
+                    return classList;
+                }
+            },
+            template: '<span ng-class="getClasses()" ng-transclude></span>'
         }
     }]).directive('fdListButton', [function () {
         return {
@@ -2475,5 +2522,150 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                     element.addClass(`fd-title--wrap`);
                 }
             }
+        }
+    }]).directive('fdComboboxInput', ['uuid', function (uuid) {
+        /**
+         * dropdownItems: Array[{ text: String, secondaryText: String, value: Any }] - Items to be filtered in the search input.
+         * selectedValue: Any - The value of the selected item
+         * placeholder: String - Placeholder of the search input
+         * compact: Boolean - Whether the search input should be displayed in compact mode
+         * disabled: Boolean - Whether the search input is disabled
+         * state: String - Optional semantic state. Could be one of 'success', 'error', 'warning' or 'information'
+         * message: String - Optional text displayed within the dropdown list
+         * inputId: String - Id attribute for input element inside Combobox component
+         * fdAriaLabel: String - Aria-label for Combobox
+         */
+        return {
+            restrict: 'EA',
+            replace: true,
+            scope: {
+                dropdownItems: '<',
+                selectedValue: '=?',
+                placeholder: '@',
+                compact: '<',
+                disabled: '<',
+                state: '@',
+                message: '@',
+                inputId: '@',
+                fdAriaLabel: '@'
+            },
+            link: function (scope, element) {
+                const inputEl = element.find('input');
+                const initiallySelectedItem = scope.dropdownItems.find(x => x.value === scope.selectedValue);
+                scope.searchTerm = initiallySelectedItem ? initiallySelectedItem.text : '';
+                scope.dropdownItems = scope.dropdownItems || [];
+                scope.filteredDropdownItems = scope.dropdownItems;
+                scope.bodyId = `combobox-body-${uuid.generate()}`;
+
+                scope.onControllClick = function () {
+                    scope.bodyExpanded = !scope.bodyExpanded;
+                    if (scope.bodyExpanded)
+                        inputEl.focus();
+                }
+
+                scope.closeDropdown = function () {
+                    scope.bodyExpanded = false;
+                }
+
+                scope.openDropdown = function () {
+                    scope.bodyExpanded = true;
+                }
+
+                scope.isBodyExpanded = function () {
+                    return scope.bodyExpanded && scope.filteredDropdownItems.length > 0;
+                }
+
+                scope.onInputChange = function () {
+                    scope.filterValues();
+
+                    const item = scope.dropdownItems.find(x => x.text.toLowerCase() === scope.searchTerm.toLowerCase());
+                    scope.selectedValue = item ? item.value : null;
+                }
+
+                scope.filterValues = function () {
+                    if (scope.searchTerm) {
+                        scope.filteredDropdownItems = scope.dropdownItems.filter(x => x.text.toLowerCase().startsWith(scope.searchTerm.toLowerCase()));
+                    } else {
+                        scope.filteredDropdownItems = scope.dropdownItems;
+                    }
+                }
+
+                scope.onKeyDown = function (event) {
+                    const ARROW_UP = 38;
+                    const ARROW_DOWN = 40;
+                    if (event.keyCode === ARROW_UP || event.keyCode === ARROW_DOWN) {
+                        const elements = [inputEl[0], ...element.find('.fd-popover__body li')];
+                        const index = elements.findIndex(x => x === event.target);
+                        if (index === -1) return;
+
+                        if (event.keyCode === ARROW_DOWN) {
+                            if (index < elements.length - 1) {
+                                elements[index + 1].focus();
+                                event.preventDefault();
+                            }
+                        } else if (event.keyCode === ARROW_UP) {
+                            if (index > 0) {
+                                elements[index - 1].focus();
+                                event.preventDefault();
+                            }
+                        }
+                    }
+                }
+
+                scope.selectItem = function (item) {
+                    scope.selectedValue = item.value;
+                    scope.searchTerm = item.text;
+                    scope.filterValues();
+                    scope.closeDropdown();
+                }
+
+                scope.getHighlightedText = function (value) {
+                    return scope.shouldRendedHighlightedText(value) ? value.substring(0, scope.searchTerm.length) : null;
+                }
+
+                scope.shouldRendedHighlightedText = function (value) {
+                    return value.toLowerCase().startsWith(scope.searchTerm.toLowerCase()) && value.length > scope.searchTerm.length;
+                }
+
+                scope.getLabel = function (value) {
+                    return scope.shouldRendedHighlightedText(value) ? value.substring(scope.searchTerm.length) : value;
+                }
+
+                scope.isDisabled = function () {
+                    return scope.disabled ? true : undefined;
+                }
+
+                element.on('focusout', function (e) {
+                    if (!e.relatedTarget || !element[0].contains(e.relatedTarget)) {
+                        scope.$apply(scope.closeDropdown);
+                    }
+                });
+            },
+            template: `<div class="fd-popover" ng-keydown="onKeyDown($event)">
+                <div class="fd-popover__control" ng-attr-disabled="{{ isDisabled() }}" ng-attr-aria-disabled="{{isDisabled() }}" aria-expanded="{{ isBodyExpanded() }}" aria-haspopup="true" aria-controls="{{ bodyId }}">
+                    <fd-input-group class="fd-input-group--control" fd-disabled="{{isDisabled() }}" state="{{ state }}">
+                        <fd-input ng-attr-id="{{ inputId }}" type="text" autocomplete="off" placeholder="{{ placeholder }}" in-group="true" compact="{{ compact }}" ng-focus="openDropdown()" ng-change="onInputChange()" ng-model="$parent.$parent.searchTerm"></fd-input>
+                        <fd-input-group-addon has-button="true" compact="{{ compact }}">
+                            <fd-button class="fd-select__button" in-group="true" compact="{{ compact }}" glyph="sap-icon--navigation-down-arrow" fd-type="transparent" state="{{ isBodyExpanded() ? 'expanded' : '' }}" ng-click="onControllClick()"
+                                ng-attr-aria-label="{{ fdAriaLabel }}"
+                                aria-controls="{{ bodyId }}"
+                                aria-haspopup="true"></fd-button>
+                        </fd-input-group-addon>
+                    </fd-input-group>
+                </div>
+                <div ng-if="!disabled" id="{{ bodyId }}" class="fd-popover__body fd-popover__body--no-arrow fd-popover__body--dropdown fd-popover__body--dropdown-fill" aria-hidden="{{ !isBodyExpanded() }}" ng-attr-aria-label="{{ fdAriaLabel }}">
+                    <div class="fd-popover__wrapper">
+                        <fd-list-message ng-if="message" state="{{ state }}">{{ message }}</fd-list-message>
+                        <fd-list dropdown-mode="true" compact="compact" has-message="!!message">
+                            <fd-list-item ng-repeat="item in filteredDropdownItems" role="option" tabindex="0" selected="item.value === selectedValue" ng-click="selectItem(item)">
+                                <fd-list-title>
+                                    <span ng-if="shouldRendedHighlightedText(item.text)" class="fd-list__bold">{{ getHighlightedText(item.text) }}</span>{{ getLabel(item.text) }}
+                                </fd-list-title>
+                                <fd-list-seconday ng-if="item.secondaryText">{{ item.secondaryText }}</fd-list-seconday>
+                            </fd-list-item>
+                        </fd-list>
+                    </div>
+                </div>
+            </div>`
         }
     }]);
