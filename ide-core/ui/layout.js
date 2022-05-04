@@ -8,7 +8,7 @@
  * Contributors:
  *   SAP - initial API and implementation
  */
-angular.module('ideLayout', ['idePerspective', 'ideMessageHub'])
+angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub'])
     .constant('SplitPaneState', {
         EXPANDED: 0,
         COLLAPSED: 1
@@ -631,7 +631,7 @@ angular.module('ideLayout', ['idePerspective', 'ideMessageHub'])
                                 data.resourcePath,
                                 data.resourceLabel,
                                 data.contentType,
-                                data.editorId || Editors.defaultEditorId,
+                                data.editorId,
                                 data.extraArgs
                             )
                         );
@@ -827,32 +827,26 @@ angular.module('ideLayout', ['idePerspective', 'ideMessageHub'])
                     return shortenedPaths;
                 }
 
-                $scope.openEditor = function (resourcePath, resourceLabel, contentType, editorId = "editor", extraArgs = null) {
+                $scope.openEditor = function (resourcePath, resourceLabel, contentType, editorId, extraArgs = null) {
                     if (resourcePath) {
                         let editorPath = Editors.editorProviders[editorId];
+                        let eId = editorId;
                         if (!editorPath) {
                             let editors = Editors.editorsForContentType[contentType];
                             if (editors && editors.length > 0) {
-                                if (editors.length == 1) {
-                                    editorId = editors[0].id;
+                                if (editors.length === 1) {
+                                    eId = editors[0].id;
                                 } else {
-                                    let formEditors = editors.filter(function (e) {
-                                        switch (e.id) {
-                                            case "orion":
-                                            case "monaco":
-                                            case "ace":
-                                                return false;
-                                            default:
-                                                return true;
+                                    for (let i = 0; i < editors.length; i++) {
+                                        if (editors[i].id !== Editors.defaultEditor.id) {
+                                            eId = editors[i].id;
                                         }
-                                    });
-                                    editorId = formEditors.length > 0 ? formEditors[0].id : editors[0].id;
+                                    }
                                 }
                             } else {
-                                editorId = Editors.defaultEditorId;
+                                eId = Editors.defaultEditor.id;
                             }
-
-                            editorPath = Editors.editorProviders[editorId];
+                            editorPath = Editors.editorProviders[eId];
                         }
 
                         let params = Object.assign({
@@ -860,7 +854,7 @@ angular.module('ideLayout', ['idePerspective', 'ideMessageHub'])
                             contentType: contentType
                         }, extraArgs || {});
 
-                        if (editorId === 'flowable')
+                        if (eId === 'flowable')
                             editorPath += resourcePath;
 
                         let result = findCenterSplittedTabView(resourcePath);
@@ -887,6 +881,8 @@ angular.module('ideLayout', ['idePerspective', 'ideMessageHub'])
                         shortenCenterTabsLabels();
 
                         $scope.$digest();
+                    } else {
+                        console.error('openEditor: resourcePath is undefined');
                     }
                 };
                 $scope.closeEditor = function (resourcePath) {

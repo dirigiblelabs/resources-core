@@ -11,7 +11,6 @@
 /*
  * Provides key microservices for constructing and managing the IDE UI
  */
-const defaultEditorId = "monaco"; // This has to go
 angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
     .constant('branding', brandingInfo)
     .constant('perspective', perspectiveData)
@@ -38,40 +37,6 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
     .service('DialogWindows', ['$resource', function ($resource) {
         return $resource('/services/v4/js/ide-core/services/dialog-windows.js');
     }])
-    .provider('Editors', function editorProvider() {
-        this.$get = ['$http', function editorsFactory($http) {
-            let editorProviders = {};
-            let editorsForContentType = {};
-
-            $http.get('/services/v4/js/ide-core/services/editors.js')
-                .then(function (response) {
-                    for (let i = 0; i < response.data.length; i++) {
-                        editorProviders[response.data[i].id] = response.data[i].link;
-                        for (let j = 0; j < response.data[i].contentTypes.length; j++) {
-                            if (!editorsForContentType[response.data[i].contentTypes[j]]) {
-                                editorsForContentType[response.data[i].contentTypes[j]] = [{
-                                    'id': response.data[i].id,
-                                    'label': response.data[i].label
-                                }];
-                            } else {
-                                editorsForContentType[response.data[i].contentTypes[j]].push({
-                                    'id': response.data[i].id,
-                                    'label': response.data[i].label
-                                });
-                            }
-                        }
-                    }
-                }, function (response) {
-                    console.error("ide-core: could not get editors", response);
-                });
-
-            return {
-                defaultEditorId: defaultEditorId,
-                editorProviders: editorProviders,
-                editorsForContentType: editorsForContentType
-            };
-        }];
-    })
     .filter('removeSpaces', [function () {
         return function (string) {
             if (!angular.isString(string)) return string;
