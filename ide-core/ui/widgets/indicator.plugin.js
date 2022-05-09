@@ -14,6 +14,17 @@
 
     if ($.jstree.plugins.indicator) { return; }
 
+    let indicatorClasses = {
+        'CD': 'dg-jstree--changed',
+        'S': 'dg-jstree--submodule',
+        'A': 'dg-jstree--added',
+        'M': 'dg-jstree--modified',
+        'D': 'dg-jstree--deleted',
+        'U': 'dg-jstree--untracked',
+        'C': 'dg-jstree--conflict',
+        'R': 'dg-jstree--renamed',
+    };
+
     $.jstree.defaults.indicator = {
         sort: true,
         customSort: function (firstNodeId, secondNodeId) {
@@ -33,30 +44,12 @@
                 let indicatorClass = "";
                 let indicatorText = "";
                 let isDotClass = false;
-                if (node.state.submodule) {
-                    indicatorClass = "dg-jstree--submodule";
-                    indicatorText = "S";
-                } else if (node.state.containsChanges) {
-                    indicatorClass = "dg-jstree--changed";
+                if (node.state.containsChanges) {
                     isDotClass = true;
-                } else if (node.state.added) {
-                    indicatorClass = "dg-jstree--added";
-                    indicatorText = "A";
-                } else if (node.state.modified) {
-                    indicatorClass = "dg-jstree--modified";
-                    indicatorText = "M";
-                } else if (node.state.deleted) {
-                    indicatorClass = "dg-jstree--deleted";
-                    indicatorText = "D";
-                } else if (node.state.untracked) {
-                    indicatorClass = "dg-jstree--untracked";
-                    indicatorText = "U";
-                } else if (node.state.conflict) {
-                    indicatorClass = "dg-jstree--conflict";
-                    indicatorText = "C";
-                } else if (node.state.renamed) {
-                    indicatorClass = "dg-jstree--renamed";
-                    indicatorText = "R";
+                    indicatorClass = indicatorClasses['CD'];
+                } else if (node.state.status) {
+                    indicatorText = node.state.status;
+                    indicatorClass = indicatorClasses[node.state.status];
                 }
                 if (indicatorClass) {
                     const link = element.querySelector("a:first-of-type");
@@ -126,15 +119,7 @@
                 } else if (!obj.state.containsChanges) {
                     for (let i = 0; i < obj.children.length; i++) {
                         let child = this._model.data[obj.children[i]];
-                        if (
-                            child.state.containsChanges
-                            || child.state.added
-                            || child.state.modified
-                            || child.state.deleted
-                            || child.state.untracked
-                            || child.state.conflict
-                            || child.state.renamed
-                        ) {
+                        if (child.state.status) {
                             containsChanges = true;
                             for (let j = 0; j < child.parents.length; j++) {
                                 let childParent = this._model.data[child.parents[j]];
