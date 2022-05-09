@@ -834,15 +834,13 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub'])
                         if (!editorPath) {
                             let editors = Editors.editorsForContentType[contentType];
                             if (editors && editors.length > 0) {
-                                if (editors.length === 1) {
-                                    eId = editors[0].id;
-                                } else {
-                                    for (let i = 0; i < editors.length; i++) {
-                                        if (editors[i].id !== Editors.defaultEditor.id) {
-                                            eId = editors[i].id;
-                                        }
+                                for (let i = 0; i < editors.length; i++) {
+                                    if (editors[i].id !== Editors.defaultEditor.id) {
+                                        eId = editors[i].id;
+                                        break;
                                     }
                                 }
+                                if (!eId) eId = Editors.defaultEditor.id;
                             } else {
                                 eId = Editors.defaultEditor.id;
                             }

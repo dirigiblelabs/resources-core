@@ -17,16 +17,17 @@ angular.module('ideEditors', ['ngResource'])
                             }
                         }
                         for (let j = 0; j < response.data[i].contentTypes.length; j++) {
+                            let editorObj = {
+                                'id': response.data[i].id,
+                                'label': response.data[i].label
+                            };
                             if (!editorsForContentType[response.data[i].contentTypes[j]]) {
-                                editorsForContentType[response.data[i].contentTypes[j]] = [{
-                                    'id': response.data[i].id,
-                                    'label': response.data[i].label
-                                }];
+                                editorsForContentType[response.data[i].contentTypes[j]] = [editorObj];
                             } else {
-                                editorsForContentType[response.data[i].contentTypes[j]].push({
-                                    'id': response.data[i].id,
-                                    'label': response.data[i].label
-                                });
+                                // This is needed because there might be duplicate editors from the back-end
+                                if (!editorsForContentType[response.data[i].contentTypes[j]].some(e => e.id === editorObj.id)) {
+                                    editorsForContentType[response.data[i].contentTypes[j]].push(editorObj);
+                                }
                             }
                         }
                     }
