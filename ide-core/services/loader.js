@@ -5,14 +5,23 @@ var registry = require("platform/v4/registry");
 let id = request.getParameter("id");
 if (id) {
     let namedScripts = new Map();
+
     namedScripts.set(
-        "ide-core-ui",
+        "ide-view-js",
         [
-            "/ide-core/ui/message-hub.js",
-            "/ide-core/ui/ui-bootstrap-tpls-0.14.3.min.js",
-            "/ide-core/ui/ui-bootstrap.1.3.3.min.js",
-            "/ide-core/ui/ui-core-ng-modules.js",
-            "/ide-core/ui/ui-layout.js"
+            "/ide-core/core/message-hub.js",
+            "/ide-core/core/ide-message-hub.js",
+            "/ide-core/ui/theming.js",
+            "/ide-core/ui/widgets.js",
+            "/ide-core/ui/view.js"
+        ]
+    );
+
+    namedScripts.set(
+        "ide-view-css",
+        [
+            "/resources/styles/core.css",
+            "/resources/styles/widgets.css"
         ]
     );
 

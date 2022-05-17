@@ -773,8 +773,20 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                     };
                 },
                 post: function (scope, element) {
-                    element.on('focusout', function () {
-                        scope.$apply(scope.hidePopover());
+                    let hidePopoverOnMouseUp = false;
+                    element.on('focusout', function (e) {
+                        if (!e.relatedTarget || !element[0].contains(e.relatedTarget)) {
+                            scope.$apply(scope.hidePopover());
+                        } else {
+                            hidePopoverOnMouseUp = true;
+                        }
+                    });
+
+                    element.on('mouseup', function () {
+                        if (hidePopoverOnMouseUp) {
+                            scope.$apply(scope.hidePopover);
+                            hidePopoverOnMouseUp = false;
+                        }
                     });
 
                     scope.mainActionClicked = function () {
@@ -833,8 +845,20 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                     scope.popoverId = `p${uuid.generate()}`;
                 },
                 post: function (scope, element) {
-                    element.on('focusout', function () {
-                        scope.$apply(scope.hidePopover());
+                    let hidePopoverOnMouseUp = false;
+                    element.on('focusout', function (e) {
+                        if (!e.relatedTarget || !element[0].contains(e.relatedTarget)) {
+                            scope.$apply(scope.hidePopover);
+                        } else {
+                            hidePopoverOnMouseUp = true;
+                        }
+                    });
+
+                    element.on('mouseup', function () {
+                        if (hidePopoverOnMouseUp) {
+                            scope.$apply(scope.hidePopover);
+                            hidePopoverOnMouseUp = false;
+                        }
                     });
 
                     scope.hidePopover = function () {
