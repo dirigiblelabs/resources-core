@@ -76,13 +76,15 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                 scope.menuItems = [];
                 scope.callbackTopic = "";
 
-                scope.menuClick = function (itemId, data) {
-                    messageHub.postMessage(scope.callbackTopic, { itemId: itemId, data: data }, true);
+                scope.menuClick = function (itemId, data, isDisabled = false) {
+                    if (!isDisabled)
+                        messageHub.postMessage(scope.callbackTopic, { itemId: itemId, data: data }, true);
                 };
 
                 element.on('click', function (event) {
                     event.stopPropagation();
                     element[0].classList.add("dg-hidden");
+                    openedMenuId = '';
                     scope.hideAllSubmenus();
                 });
 
@@ -90,6 +92,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     event.preventDefault();
                     event.stopPropagation();
                     element[0].classList.add("dg-hidden");
+                    openedMenuId = '';
                     scope.hideAllSubmenus();
                 });
 
@@ -173,6 +176,12 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
             link: function (scope, element, attr) {
                 let openedMenuId = "";
                 scope.menuClick = scope.menuClick();
+
+                scope.isScrollable = function () {
+                    for (let i = 0; i < scope.menuItems.length; i++)
+                        if (scope.menuItems[i].items) return "";
+                    return "fd-scrollbar fd-menu--overflow dg-menu__sublist--overflow";
+                }
 
                 scope.menuHovered = function () {
                     if (openedMenuId !== "" && openedMenuId !== attr["id"]) {
@@ -774,7 +783,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     loadingMessage: "",
                     loader: false,
                     callbackTopic: null,
-                    items: []
+                    items: [],
                 };
                 scope.selectDialog = {
                     title: "",
@@ -1030,7 +1039,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                                 loader: false,
                                 footer: data.footer,
                                 buttons: data.buttons,
-                                callbackTopic: data.callbackTopic
+                                callbackTopic: data.callbackTopic,
                             });
                             scope.showFormDialog();
                         });

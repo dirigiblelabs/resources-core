@@ -8,6 +8,9 @@
  * Contributors:
  *   SAP - initial API and implementation
  */
+
+// Deprecated, do not edit.
+
 let extensions = require('core/v4/extensions');
 let response = require('http/v4/response');
 

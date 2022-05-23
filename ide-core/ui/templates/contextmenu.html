@@ -1,9 +1,11 @@
 <div class="dg-contextmenu-overlay dg-hidden">
     <nav class="fd-menu">
         <ul class="fd-menu__list" role="menu">
-            <li class="fd-menu__item" role="presentation" ng-repeat-start="menuItem in menuItems track by $index">
-                <span ng-if="!menuItem.items" class="fd-menu__link" role="menuitem"
-                    ng-click="menuClick(menuItem.id, menuItem.data)" ng-mouseenter="menuHovered()">
+            <li class="fd-menu__item" role="presentation" ng-repeat-start="menuItem in menuItems track by $index"
+                ng-click="!menuItem.isDisabled || $event.stopPropagation()">
+                <span ng-if="!menuItem.items" class="fd-menu__link"
+                    ng-class="{'true': 'is-disabled'}[menuItem.isDisabled]" role="menuitem"
+                    ng-click="menuClick(menuItem.id, menuItem.data, menuItem.isDisabled)" ng-mouseenter="menuHovered()">
                     <span class="fd-menu__addon-before">
                         <i ng-if="menuItem.icon" class="{{ menuItem.icon }}" role="presentation"></i>
                     </span>

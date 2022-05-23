@@ -1,7 +1,8 @@
-<ul class="fd-menu__sublist" aria-hidden="true" role="menu">
-    <li class="fd-menu__item" role="presentation" ng-repeat-start="menuItem in menuItems track by $index">
-        <span ng-if="!menuItem.items" class="fd-menu__link" role="menuitem"
-            ng-click="menuClick(menuItem.id, menuItem.data)" ng-mouseenter="menuHovered()">
+<ul class="fd-menu__sublist" aria-hidden="true" role="menu" ng-class="isScrollable()">
+    <li class="fd-menu__item" role="presentation" ng-repeat-start="menuItem in menuItems track by $index"
+        ng-click="!menuItem.isDisabled || $event.stopPropagation()">
+        <span ng-if="!menuItem.items" class="fd-menu__link" ng-class="{'true': 'is-disabled'}[menuItem.isDisabled]"
+            role="menuitem" ng-click="menuClick(menuItem.id, menuItem.data)" ng-mouseenter="menuHovered()">
             <span class="fd-menu__addon-before">
                 <i ng-if="menuItem.icon" class="{{ menuItem.icon }}" role="presentation"></i>
             </span>
