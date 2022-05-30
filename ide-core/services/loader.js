@@ -9,6 +9,10 @@ if (id) {
     namedScripts.set(
         "ide-view-js",
         [
+            "/jquery/3.6.0/jquery.min.js",
+            "/angularjs/1.8.2/angular.min.js",
+            "/angularjs/1.8.2/angular-resource.min.js",
+            "/angular-aria/1.8.2/angular-aria.min.js",
             "/ide-core/core/message-hub.js",
             "/ide-core/core/ide-message-hub.js",
             "/ide-core/ui/theming.js",
@@ -20,6 +24,7 @@ if (id) {
     namedScripts.set(
         "ide-view-css",
         [
+            "/fundamental-styles/0.23.0/dist/fundamental-styles.css",
             "/resources/styles/core.css",
             "/resources/styles/widgets.css"
         ]
