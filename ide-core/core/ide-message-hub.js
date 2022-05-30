@@ -96,7 +96,7 @@ angular.module('ideMessageHub', [])
                 loadingMessage = "",
                 header = "",
                 subheader = "",
-                footer = ""
+                footer = "",
             ) {
                 if (!id)
                     throw Error("Form Dialog: You must specify a dialog id");
@@ -115,7 +115,7 @@ angular.module('ideMessageHub', [])
                     loadingMessage: loadingMessage,
                     footer: footer,
                     buttons: buttons,
-                    callbackTopic: callbackTopic
+                    callbackTopic: callbackTopic,
                 }, 'ide.formDialog.show');
             };
             let updateFormDialog = function (

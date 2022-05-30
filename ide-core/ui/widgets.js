@@ -2017,6 +2017,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
          * dgPlaceholder: String - Short hint displayed when no item is selected yet.
          * dropdownFill: Boolean - Adjusts the popover body that wraps the dropdown to match the text length
          * labelId: String - The id of the label element if present (Necessary for aria-labelledby)
+         * dgDropdownFixed: Boolean
          */
         return {
             restrict: 'EA',
@@ -2030,7 +2031,8 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 message: '@',
                 dgPlaceholder: '@',
                 dropdownFill: '<',
-                labelId: '@'
+                labelId: '@',
+                dgDropdownFixed: '@',
             },
             controller: ['$scope', '$element', function ($scope, $element) {
                 $scope.items = [];
@@ -2063,7 +2065,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 }
 
                 $scope.getPopoverBodyClasses = function () {
-                    let classList = ['fd-popover__body', 'fd-popover__body--no-arrow', 'fd-popover__body--dropdown'];
+                    let classList = ['fd-popover__body', 'fd-popover__body--no-arrow', 'fd-popover__body--dropdown', 'fd-scrollbar', 'dg-menu__sublist--overflow'];
 
                     if ($scope.dropdownFill) {
                         classList.push('fd-popover__body--dropdown-fill');
@@ -2158,6 +2160,19 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                     $scope.closeDropdown();
                 }
 
+                $scope.getStyle = function () {
+                    if ($scope.dgDropdownFixed === 'true') {
+                        let pos = $element[0].getBoundingClientRect();
+                        return {
+                            transition: 'none',
+                            transform: 'none',
+                            position: 'fixed',
+                            top: `${pos.bottom}px`,
+                            left: `${pos.left}px`,
+                        };
+                    } else return {};
+                };
+
                 $element.on('focusout', function (e) {
                     if (!e.relatedTarget || !$element[0].contains(e.relatedTarget)) {
                         $scope.$apply($scope.closeDropdown);
@@ -2175,7 +2190,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                         </button>
                     </div>
                 </div>
-                <div id="{{ bodyId }}" aria-hidden="{{ !bodyExpanded }}" ng-class="getPopoverBodyClasses()">
+                <div id="{{ bodyId }}" aria-hidden="{{ !bodyExpanded }}" ng-class="getPopoverBodyClasses()" ng-style="getStyle()">
                     <div ng-if="message" aria-live="assertive" ng-class="getListMessageClasses()" role="alert">{{ message }}</div>
                     <ul ng-class="getListClasses()" aria-activedescendant="{{ getSelectedItemId() }}" aria-labelledby="{{ labelId }}" role="listbox" ng-transclude></ul>
                 </div>

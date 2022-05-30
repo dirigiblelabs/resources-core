@@ -65,6 +65,6 @@ exports.getMenu = function () {
 			action: 'openView',
 		});
 	}
-
+	console.log(menu);
 	return menu;
 }
