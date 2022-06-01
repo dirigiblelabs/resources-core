@@ -2017,7 +2017,8 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
          * dgPlaceholder: String - Short hint displayed when no item is selected yet.
          * dropdownFill: Boolean - Adjusts the popover body that wraps the dropdown to match the text length
          * labelId: String - The id of the label element if present (Necessary for aria-labelledby)
-         * dgDropdownFixed: Boolean
+         * dropdownFixed: Boolean - Dropdown css position will be fixed, allowing for use in dialogs.
+         * placement: String - Placement of the dropdown. It can be any of 'top', 'bottom', 'left', and then can be suffixed with '-start' or '-end'. Deafult is 'bottom-start'. Incompatible with dropdownFixed.
          */
         return {
             restrict: 'EA',
@@ -2032,7 +2033,8 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 dgPlaceholder: '@',
                 dropdownFill: '<',
                 labelId: '@',
-                dgDropdownFixed: '@',
+                dropdownFixed: '@',
+                placement: '@',
             },
             controller: ['$scope', '$element', function ($scope, $element) {
                 $scope.items = [];
@@ -2069,6 +2071,29 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
 
                     if ($scope.dropdownFill) {
                         classList.push('fd-popover__body--dropdown-fill');
+                    }
+                    if ($scope.placement && $scope.dropdownFixed !== 'true') {
+                        switch ($scope.placement) {
+                            case 'bottom-end':
+                                classList.push('dg-popover--align-bottom-end');
+                                break;
+                            case 'top':
+                            case 'top-start':
+                                classList.push('dg-popover--align-top-start');
+                                break;
+                            case 'top-end':
+                                classList.push('dg-popover--align-top-end');
+                                break;
+                            case 'left':
+                            case 'left-start':
+                                classList.push('dg-popover--align-left-start');
+                                break;
+                            case 'left-end':
+                                classList.push('dg-popover--align-left-end');
+                                break;
+                            default:
+                                break;
+                        }
                     }
 
                     return classList.join(' ');
@@ -2282,6 +2307,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
          * itemsPerPageOptions: Array<Number> - The options for items per page dropdown. If not specified the dropdown will not be displayed
          * pageChage: Function - Callback called when the page has changed. Args: (pageNumber : Number)
          * itemsPerPageChange: Function - Callback called when the 'itemsPerPage' dropdown selection has changed: Args: (itemsPerPage : Number)
+         * itemsPerPagePlacement: String - Placement of the dropdown for items per page. See 'placement' on fdSelect.
          */
         return {
             restrict: 'EA',
@@ -2294,7 +2320,8 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 displayTotalItems: '<',
                 itemsPerPageOptions: '<',
                 pageChage: '&',
-                itemsPerPageChange: '&'
+                itemsPerPageChange: '&',
+                itemsPerPagePlacement: '@',
             },
             link: function (scope) {
                 const maxButtonsInShortMode = 9; // must be an odd number (min 5)
@@ -2475,7 +2502,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
             template: `<div ng-class="getClasses()">
                 <div ng-if="itemsPerPageOptions" class="fd-pagination__per-page">
                     <label class="fd-form-label fd-pagination__per-page-label" id="{{ itemsPerPageLabelId }}">Results per page: </label>
-                    <fd-select selected-value="$parent.itemsPerPage" dg-size="{{ compact ? 'compact' : null }}" label-id="{{ itemsPerPageLabelId }}">
+                    <fd-select selected-value="$parent.itemsPerPage" dg-size="{{ compact ? 'compact' : null }}" label-id="{{ itemsPerPageLabelId }}" placement="{{ itemsPerPagePlacement }}">
                         <fd-option ng-repeat="option in itemsPerPageOptions" text="{{ option }}" value="option"></fd-option>
                     </fd-select>
                 </div>

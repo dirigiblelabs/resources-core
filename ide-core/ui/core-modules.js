@@ -757,6 +757,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                 let selectDialogs = [];
                 scope.searchInput = { value: "" }; // AngularJS - "If you use ng-model, you have to use an object property, not just a variable"
                 scope.activeDialog = null;
+                scope.excludeFromRequired = {};
                 scope.alert = {
                     title: "",
                     message: "",
@@ -835,6 +836,9 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     if (element[0].classList.contains("dg-hidden"))
                         element[0].classList.remove("dg-hidden");
                     scope.formDialog = formDialogs[0];
+                    for (let key in scope.excludeFromRequired) {
+                        delete scope.excludeFromRequired[key];
+                    }
                     ideFormDialog.classList.add("fd-dialog--active");
                     scope.activeDialog = 'form';
                 };
@@ -957,6 +961,24 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     scope.window.link = "";
                     scope.window.parameters = "";
                     checkForDialogs();
+                };
+
+                scope.shouldHide = function (item) {
+                    if (item.visibility) {
+                        for (let i = 0; i < scope.formDialog.items.length; i++) {
+                            if (scope.formDialog.items[i].id === item.visibility.id && scope.formDialog.items[i].value === item.visibility.value) {
+                                if (item.visibility.hidden) {
+                                    scope.excludeFromRequired[item.id] = false;
+                                    return false;
+                                } else {
+                                    scope.excludeFromRequired[item.id] = true;
+                                    return true;
+                                }
+                            }
+                        }
+                        return item.visibility.hidden;
+                    }
+                    return false;
                 };
 
                 function checkForDialogs() {
@@ -1137,6 +1159,13 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     },
                     true
                 );
+
+                scope.isRequired = function (id, required = false) {
+                    if (scope.excludeFromRequired[id] === true) {
+                        return false;
+                    }
+                    return required;
+                }
 
                 scope.inputValidation = function (isValid, item) {
                     if (isValid) {
