@@ -37,24 +37,24 @@ angular.module('ideMessageHub', [])
                     text: text,
                 }, 'ide.status.caret');
             };
-            let announceAlert = function (title, message, type) {
+            let showAlert = function (title, message, type) {
                 messageHub.post({
                     title: title,
                     message: message,
                     type: type
                 }, 'ide.alert');
             };
-            let announceAlertSuccess = function (title, message) {
-                announceAlert(title, message, "success");
+            let showAlertSuccess = function (title, message) {
+                showAlert(title, message, "success");
             };
-            let announceAlertInfo = function (title, message) {
-                announceAlert(title, message, "info");
+            let showAlertInfo = function (title, message) {
+                showAlert(title, message, "info");
             };
-            let announceAlertWarning = function (title, message) {
-                announceAlert(title, message, "warning");
+            let showAlertWarning = function (title, message) {
+                showAlert(title, message, "warning");
             };
-            let announceAlertError = function (title, message) {
-                announceAlert(title, message, "error");
+            let showAlertError = function (title, message) {
+                showAlert(title, message, "error");
             };
             let showDialog = function (
                 title = "",
@@ -319,10 +319,10 @@ angular.module('ideMessageHub', [])
                 setStatusMessage: setStatusMessage,
                 setStatusError: setStatusError,
                 setStatusCaret: setStatusCaret,
-                announceAlertSuccess: announceAlertSuccess,
-                announceAlertInfo: announceAlertInfo,
-                announceAlertWarning: announceAlertWarning,
-                announceAlertError: announceAlertError,
+                showAlertSuccess: showAlertSuccess,
+                showAlertInfo: showAlertInfo,
+                showAlertWarning: showAlertWarning,
+                showAlertError: showAlertError,
                 showDialog: showDialog,
                 showDialogAsync: showDialogAsync,
                 showFormDialog: showFormDialog,
