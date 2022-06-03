@@ -2186,7 +2186,7 @@ angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
                 }
 
                 $scope.getStyle = function () {
-                    if ($scope.dgDropdownFixed === 'true') {
+                    if ($scope.dropdownFixed === 'true') {
                         let pos = $element[0].getBoundingClientRect();
                         return {
                             transition: 'none',

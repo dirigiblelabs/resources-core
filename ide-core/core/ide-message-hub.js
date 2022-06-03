@@ -83,6 +83,42 @@ angular.module('ideMessageHub', [])
                     callbackTopic: callbackTopic
                 }, 'ide.dialog');
             };
+            let showDialogAsync = function (
+                title = "",
+                body = "",
+                buttons = [{
+                    id: "b1",
+                    type: "normal", // normal, emphasized, transparent
+                    label: "Ok",
+                }],
+                loader = false,
+                header = "",
+                subheader = "",
+                footer = ""
+            ) {
+                return new Promise((resolve, reject) => {
+                    if (buttons.length === 0)
+                        reject(new Error("Dialog: There must be at least one button"));
+
+                    const callbackTopic = `ide.dialog.${new Date().valueOf()}`;
+
+                    messageHub.post({
+                        header: header,
+                        subheader: subheader,
+                        title: title,
+                        body: body,
+                        footer: footer,
+                        loader: loader,
+                        buttons: buttons,
+                        callbackTopic: callbackTopic
+                    }, 'ide.dialog');
+
+                    const handler = messageHub.subscribe(function (msg) {
+                        messageHub.unsubscribe(handler);
+                        resolve(msg);
+                    }, callbackTopic);
+                });
+            };
             let showFormDialog = function (
                 id,
                 title = "",
@@ -171,43 +207,6 @@ angular.module('ideMessageHub', [])
                     throw Error("Loading Dialog: You must specify a dialog id");
                 messageHub.post({ id: id }, 'ide.loadingDialog.hide');
             };
-            let showDialogAsync = function (
-                title = "",
-                body = "",
-                buttons = [{
-                    id: "b1",
-                    type: "normal", // normal, emphasized, transparent
-                    label: "Ok",
-                }],
-                loader = false,
-                header = "",
-                subheader = "",
-                footer = ""
-            ) {
-                return new Promise((resolve, reject) => {
-                    if (buttons.length === 0)
-                        reject(new Error("Dialog: There must be at least one button"));
-
-                    const callbackTopic = `ide.dialog.${new Date().valueOf()}`;
-
-                    messageHub.post({
-                        header: header,
-                        subheader: subheader,
-                        title: title,
-                        body: body,
-                        footer: footer,
-                        loader: loader,
-                        buttons: buttons,
-                        callbackTopic: callbackTopic
-                    }, 'ide.dialog');
-
-                    const handler = messageHub.subscribe(function (msg) {
-                        messageHub.unsubscribe(handler);
-                        resolve(msg);
-                    }, callbackTopic);
-                });
-            };
-
             let showSelectDialog = function (
                 title,
                 listItems,
