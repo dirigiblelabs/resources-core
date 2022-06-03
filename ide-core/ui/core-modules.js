@@ -1260,9 +1260,19 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
             restrict: 'E',
             replace: true,
             link: function (scope) {
+                scope.busy = '';
                 scope.message = '';
                 scope.caret = '';
                 scope.error = '';
+                messageHub.onDidReceiveMessage(
+                    'ide.status.busy',
+                    function (data) {
+                        scope.$apply(function () {
+                            scope.busy = data.message;
+                        });
+                    },
+                    true
+                );
                 messageHub.onDidReceiveMessage(
                     'ide.status.message',
                     function (data) {

@@ -22,12 +22,28 @@ angular.module('ideMessageHub', [])
                 if (!absolute && this.eventIdPrefix !== "") eventId = this.eventIdPrefix + this.eventIdDelimiter + eventId;
                 return messageHub.subscribe(callbackFunc, eventId);
             }.bind(this);
+            let showStatusBusy = function (message) {
+                if (!message)
+                    throw Error("Status: you must provide a message");
+                messageHub.post({
+                    message: message,
+                }, 'ide.status.busy');
+            };
+            let hideStatusBusy = function () {
+                messageHub.post({
+                    message: '',
+                }, 'ide.status.busy');
+            };
             let setStatusMessage = function (message) {
+                if (!message)
+                    throw Error("Status: you must provide a message");
                 messageHub.post({
                     message: message,
                 }, 'ide.status.message');
             };
             let setStatusError = function (message) {
+                if (!message)
+                    throw Error("Status: you must provide a message");
                 messageHub.post({
                     message: message,
                 }, 'ide.status.error');
@@ -316,6 +332,8 @@ angular.module('ideMessageHub', [])
                 messageHub.unsubscribe(handler);
             };
             return {
+                showStatusBusy: showStatusBusy,
+                hideStatusBusy: hideStatusBusy,
                 setStatusMessage: setStatusMessage,
                 setStatusError: setStatusError,
                 setStatusCaret: setStatusCaret,
