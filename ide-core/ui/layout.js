@@ -940,7 +940,6 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub'])
                             } else {
                                 let centerViewTab = mapViewToTab(view, params);
                                 centerViewTab["params"] = params;
-                                console.log(centerViewTab);
                                 currentTabsView.selectedTab = view.id;
                                 currentTabsView.tabs.push(centerViewTab);
                             }
