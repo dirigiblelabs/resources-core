@@ -8,7 +8,7 @@
  * Contributors:
  *   SAP - initial API and implementation
  */
-angular.module('ideUI', ['ngAria', 'ideTheming', 'ideMessageHub'])
+angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     .factory('uuid', function () {
         return {
             generate: function () {
