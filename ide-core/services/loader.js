@@ -31,15 +31,19 @@ if (id) {
     );
 
     let namedScript = namedScripts.get(id);
+    if (id.endsWith('-js')) response.setContentType("text/javascript;charset=UTF-8");
+    else response.setContentType("text/css");
     if (namedScript) {
         namedScript.forEach(function (item) {
             response.println(registry.getText(item));
         });
     } else {
+        response.setContentType("text/plain");
         response.println("Script with 'id': " + id + " is not known.");
     }
 
 } else {
+    response.setContentType("text/plain");
     response.println("Provide the 'id' parameter of the script");
 }
 
