@@ -1,4 +1,4 @@
-angular.module('ideView', ['ngResource'])
+angular.module('ideView', ['ngResource', 'ideTheming'])
     .constant('view', (typeof viewData != 'undefined') ? viewData : editorData)
     .factory('baseHttpInterceptor', function () {
         let csrfToken = null;
