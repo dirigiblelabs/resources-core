@@ -1,7 +1,7 @@
 angular.module('ideTheming', ['ngResource', 'ideMessageHub'])
     .provider('theming', function ThemingProvider() {
         this.$get = ['$resource', '$http', 'messageHub', function editorsFactory($resource, $http, messageHub) {
-            let theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme'));
+            let theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme') || '{}');
             // legacySwitcher is deprecated. Remove once all views have been migrated.
             let legacySwitcher = $resource('/services/v4/js/theme/resources.js?name=:themeId', { themeId: 'default' });
             let themes = [];
@@ -9,7 +9,7 @@ angular.module('ideTheming', ['ngResource', 'ideMessageHub'])
             $http.get('/services/v4/js/theme/resources.js/themes?legacy=false')
                 .then(function (response) {
                     themes = response.data;
-                    if (!theme) setTheme("quartz-light");
+                    if (!theme.version) setTheme("quartz-light");
                     else {
                         for (let i = 0; i < themes.length; i++) {
                             if (themes[i].id === theme.id) {
@@ -70,10 +70,10 @@ angular.module('ideTheming', ['ngResource', 'ideMessageHub'])
         }];
     })
     .factory('Theme', function () {
-        let theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme'));
+        let theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme') || '{}');
         return {
             reload: function () {
-                theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme'));
+                theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme') || '{}');
             },
             getLinks: function () {
                 return theme.links || [];
