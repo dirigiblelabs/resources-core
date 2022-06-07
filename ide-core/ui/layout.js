@@ -127,7 +127,11 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub'])
                         $scope.views = views;
 
                         const viewExists = (v) => views.some(x => x.id === v.id);
-                        const viewById = (viewId) => $scope.views.find(v => v.id === viewId);
+                        const viewById = (ret, viewId) => {
+                            const v = $scope.views.find(v => v.id === viewId);
+                            if (v) ret.push(v);
+                            return ret;
+                        };
                         const byLeftRegion = view => view.region.startsWith('left')
                         const byBottomRegion = view => view.region === 'center-bottom' || view.region === 'bottom';
                         const byCenterRegion = view => view.region === 'center-top' || view.region === 'center-middle' || view.region === 'center';
@@ -153,7 +157,7 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub'])
                             let newlyAddedViews, removedViewsIds;
                             let initialOpenViewsChanged = !angular.equals(savedState.initialOpenViews, $scope.initialOpenViews);
                             if (initialOpenViewsChanged) {
-                                newlyAddedViews = $scope.initialOpenViews.filter(x => savedState.initialOpenViews.every(y => x !== y)).map(viewById);
+                                newlyAddedViews = $scope.initialOpenViews.filter(x => savedState.initialOpenViews.every(y => x !== y)).reduce(viewById, []);
                                 removedViewsIds = savedState.initialOpenViews.filter(x => $scope.initialOpenViews.every(y => x !== y));
 
                                 $scope.explorerTabs = $scope.explorerTabs
@@ -181,7 +185,7 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub'])
                             shortenCenterTabsLabels();
 
                         } else {
-                            let openViews = $scope.initialOpenViews.map(viewById);
+                            let openViews = $scope.initialOpenViews.reduce(viewById, []);
 
                             $scope.explorerTabs = openViews
                                 .filter(byLeftRegion)

@@ -2051,7 +2051,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 $scope.getClasses = function () {
                     let classList = ['fd-select'];
 
-                    if ($scope.size === 'compact') {
+                    if ($scope.dgSize === 'compact') {
                         classList.push('fd-select--compact');
                     }
 
