@@ -156,7 +156,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                             menu.style.top = `${msg.data.posY}px`;
                             menu.style.left = `${msg.data.posX}px`;
                             element[0].classList.remove("dg-hidden");
-                        })
+                        });
                     },
                     true
                 );
