@@ -1234,7 +1234,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                                     }
                                     found = true;
                                     windows.push({
-                                        title: dialogWindows[i].title,
+                                        title: dialogWindows[i].label,
                                         dialogWindowId: dialogWindows[i].id,
                                         callbackTopic: data.callbackTopic,
                                         link: dialogWindows[i].link,
