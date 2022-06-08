@@ -702,7 +702,7 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub'])
 
                 messageHub.onFileSaved(function (fileDescriptor) {
                     if (closingFileArgs) {
-                        let fileName = `${fileDescriptor.workspace}/${fileDescriptor.path}`;
+                        let fileName = `/${fileDescriptor.workspace}${fileDescriptor.path}`;
                         if (fileName === closingFileArgs.file) {
                             closeCenterTab(fileName);
 
