@@ -55,66 +55,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
 
         return classNames;
 
-    }).directive('dgContextmenu', ['messageHub', '$window', function (messageHub, $window) {
-        return {
-            restrict: 'A',
-            replace: false,
-            scope: {
-                callback: '&dgContextmenu',
-                includedElements: '=',
-                excludedElements: '=',
-            },
-            link: function (scope, element) {
-                scope.callback = scope.callback();
-                element.on('contextmenu', function (event) {
-                    if (scope.includedElements) {
-                        let isIncluded = false;
-                        if (scope.includedElements.ids && scope.includedElements.ids.includes(event.target.id)) isIncluded = true;
-                        if (!isIncluded && scope.includedElements.classes) {
-                            for (let i = 0; i < scope.includedElements.classes.length; i++) {
-                                if (event.target.classList.contains(scope.includedElements.classes[i]))
-                                    isIncluded = true;
-                            }
-                        }
-                        if (!isIncluded && scope.includedElements.types && scope.includedElements.types.includes(event.target.tagName)) isIncluded = true;
-                        if (!isIncluded) return;
-                    } else if (scope.excludedElements) {
-                        if (scope.excludedElements.ids && scope.excludedElements.ids.includes(event.target.id)) return;
-                        if (scope.excludedElements.classes) {
-                            for (let i = 0; i < scope.excludedElements.classes.length; i++) {
-                                if (event.target.classList.contains(scope.excludedElements.classes[i])) return;
-                            }
-                        }
-                        if (scope.excludedElements.types && scope.excludedElements.types.includes(event.target.tagName)) return;
-                    }
-                    event.preventDefault();
-                    let menu = scope.callback(event.target);
-                    if (menu) {
-                        let posX;
-                        let posY;
-                        if ($window.frameElement) {
-                            let frame = $window.frameElement.getBoundingClientRect();
-                            posX = frame.x + event.clientX;
-                            posY = frame.y + event.clientY;
-                        } else {
-                            posX = event.clientX;
-                            posY = event.clientY;
-                        }
-                        messageHub.postMessage(
-                            'ide-contextmenu.open',
-                            {
-                                posX: posX,
-                                posY: posY,
-                                callbackTopic: menu.callbackTopic,
-                                items: menu.items
-                            },
-                            true
-                        );
-                    }
-                });
-            }
-        };
-    }]).directive('fdScrollbar', [function () {
+    }).directive('fdScrollbar', [function () {
         return {
             restrict: 'AE',
             transclude: true,
@@ -217,10 +158,36 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     }
                 },
             },
-            template: `<div class="fd-busy-indicator" ng-class="getClasses()" aria-hidden="{{ dgHidden }}" aria-label="Loading">
+            template: `<div class="fd-busy-indicator" ng-class="getClasses()" ng-hide="dgHidden === 'true'" aria-label="Loading">
                 <div class="fd-busy-indicator--circle-0"></div>
                 <div class="fd-busy-indicator--circle-1"></div>
                 <div class="fd-busy-indicator--circle-2"></div>
+            </div>`,
+        }
+    }]).directive('fdBusyIndicatorExtended', [function () {
+        /**
+         * dgSize: String - The size of the avatar. Possible options are 'm' and 'l'.
+         * dgHidden: Boolean - Show/hide the busy indicator.
+         * contrast: Boolean - Contrast mode.
+         */
+        return {
+            restrict: 'E',
+            transclude: true,
+            replace: true,
+            scope: {
+                dgSize: '@',
+                dgHidden: '@',
+                contrast: '@',
+            },
+            link: {
+                pre: function (scope) {
+                    if (!scope.dgHidden)
+                        scope.dgHidden = false;
+                },
+            },
+            template: `<div class="fd-busy-indicator-extended" ng-hide="dgHidden === 'true'">
+                <fd-busy-indicator dg-size="{{ dgSize }}" dg-hidden="{{ dgHidden }}" contrast="{{ contrast }}"></fd-busy-indicator>
+                <div class="fd-busy-indicator-extended__label" ng-hide="dgHidden === 'true'" ng-transclude></div>
             </div>`,
         }
     }]).directive('fdFieldset', [function () {
@@ -2018,7 +1985,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
          * dropdownFill: Boolean - Adjusts the popover body that wraps the dropdown to match the text length
          * labelId: String - The id of the label element if present (Necessary for aria-labelledby)
          * dropdownFixed: Boolean - Dropdown css position will be fixed, allowing for use in dialogs.
-         * placement: String - Placement of the dropdown. It can be any of 'top', 'bottom', 'left', and then can be suffixed with '-start' or '-end'. Deafult is 'bottom-start'. Incompatible with dropdownFixed.
+         * placement: String - Placement of the dropdown. It can be any of 'top', 'bottom', 'right', and then can be suffixed with '-start' or '-end'. Deafult is 'bottom-start'. Incompatible with dropdownFixed.
          */
         return {
             restrict: 'EA',
@@ -2084,12 +2051,12 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                             case 'top-end':
                                 classList.push('dg-popover--align-top-end');
                                 break;
-                            case 'left':
-                            case 'left-start':
-                                classList.push('dg-popover--align-left-start');
+                            case 'right':
+                            case 'right-start':
+                                classList.push('dg-popover--align-right-start');
                                 break;
-                            case 'left-end':
-                                classList.push('dg-popover--align-left-end');
+                            case 'right-end':
+                                classList.push('dg-popover--align-right-end');
                                 break;
                             default:
                                 break;
