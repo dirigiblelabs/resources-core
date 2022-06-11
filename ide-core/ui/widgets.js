@@ -2790,7 +2790,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             transclude: {
                 'title': 'fdCardTitle',
                 'subtitle': '?fdCardSubtitle',
-                'counter': '?fdCardCounter',
+                'status': '?fdCardStatus',
                 'avatar': '?fdAvatar'
             },
             scope: {
@@ -2812,7 +2812,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 <div class="fd-card__header-text">
                     <div class="fd-card__title-area">
                         <ng-transclude ng-transclude-slot="title"></ng-transclude>
-                        <ng-transclude ng-transclude-slot="counter"></ng-transclude>
+                        <ng-transclude ng-transclude-slot="status"></ng-transclude>
                     </div>
                     <div class="fd-card__subtitle-area">
                         <ng-transclude ng-transclude-slot="subtitle"></ng-transclude>
@@ -2834,9 +2834,10 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             transclude: true,
             template: `<div class="fd-card__subtitle" ng-transclude></div>`
         }
-    }]).directive('fdCardCounter', ['classNames', function (classNames) {
+    }]).directive('fdCardStatus', ['classNames', function (classNames) {
         /**
          * status: String - One of 'negative', 'critical', 'positive' or 'informative'
+         * dgType: String - Could be 'counter' or 'status' (default value)
          */
         return {
             restrict: 'EA',
@@ -2848,8 +2849,9 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             link: function (scope) {
                 const statuses = ['negative', 'critical', 'positive', 'informative'];
 
-                scope.getClasses = () => classNames('fd-object-status', 'fd-card__counter', {
-                    [`fd-object-status--${scope.status}`]: scope.status && statuses.includes(scope.status)
+                scope.getClasses = () => classNames('fd-object-status', {
+                    [`fd-object-status--${scope.status}`]: scope.status && statuses.includes(scope.status),
+                    'fd-card__counter': scope.dgType === 'counter'
                 });
             },
             template: `<span ng-class="getClasses()" ng-transclude></span>`
