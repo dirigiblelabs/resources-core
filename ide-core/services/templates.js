@@ -8,6 +8,9 @@
  * Contributors:
  *   SAP - initial API and implementation
  */
+
+// Deprecated, do not edit.
+
 let extensions = require('core/v4/extensions');
 let response = require('http/v4/response');
 
@@ -18,6 +21,7 @@ rs.service()
 	.get(function (ctx, request, response) {
 		let templates = getTemplates();
 		templates = sortTemplates(templates);
+		response.setContentType("application/json");
 		response.println(JSON.stringify(templates));
 	})
 	.resource("extensions")
@@ -26,6 +30,7 @@ rs.service()
 		let fileExtensions = [];
 		templates.forEach(template => { if (template.extension) fileExtensions.push(template.extension); });
 		let uniqueFileExtensions = [...new Set(fileExtensions)]
+    response.setContentType("application/json");
 		response.println(JSON.stringify(uniqueFileExtensions));
 	})
 	.resource("count")
@@ -33,6 +38,7 @@ rs.service()
 		let templates = getTemplates();
 		let count = 0;
 		templates.forEach(template => { if (!template.extension) count++; });
+    response.setContentType("application/json");
 		response.println(JSON.stringify(count));
 	})
 	.resource("countFileTemplates")
@@ -40,7 +46,9 @@ rs.service()
 		let templates = getTemplates();
 		let count = 0;
 		templates.forEach(template => { if (template.extension) count++; });
+    response.setContentType("application/json");
 		response.println(JSON.stringify(count));
+
 	})
 	.execute();
 
