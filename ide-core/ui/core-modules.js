@@ -286,7 +286,10 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                 }
 
                 function loadMenu() {
-                    scope.menu = $resource(scope.url).query();
+                    $resource(scope.url).query().$promise
+                        .then(function (data) {
+                            scope.menu = data;
+                        });
                 }
 
                 scope.branding = branding;
