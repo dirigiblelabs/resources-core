@@ -430,6 +430,16 @@ angular.module('ideMessageHub', [])
                     throw Error('Callback argument must be a function');
                 return messageHub.subscribe(callbackFunc, 'ide.event.unpublish');
             };
+            let announceWorkspaceChanged = function (workspace) {
+                if (workspace !== undefined && !(typeof workspace === 'object' && !Array.isArray(workspace) && workspace !== null) && !workspace.hasOwnProperty('name'))
+                    throw Error('You must provide an appropriate workspace object, containing the "name" key');
+                messageHub.post({ data: workspace }, 'ide.workspace.changed');
+            };
+            let onWorkspaceChanged = function (callbackFunc) {
+                if (typeof callbackFunc !== 'function')
+                    throw Error('Callback argument must be a function');
+                return messageHub.subscribe(callbackFunc, 'ide.workspace.changed');
+            };
             return {
                 showStatusBusy: showStatusBusy,
                 hideStatusBusy: hideStatusBusy,
@@ -481,6 +491,8 @@ angular.module('ideMessageHub', [])
                 onPublish: onPublish,
                 announceUnpublish: announceUnpublish,
                 onUnpublish: onUnpublish,
+                announceWorkspaceChanged: announceWorkspaceChanged,
+                onWorkspaceChanged: onWorkspaceChanged,
             };
         }];
     });
