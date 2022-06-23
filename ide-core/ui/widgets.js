@@ -796,6 +796,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     }]).directive('fdPopover', ['uuid', function (uuid) {
         /**
          * dgAlign: String - Relative position of the popover. Possible values are "left" and "right". If not provided, left is assumed.
+         * closeInnerclick: Boolean - If the popover should close when there is a click event inside it. Default is true.
          */
         return {
             restrict: 'E',
@@ -806,6 +807,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             replace: true,
             scope: {
                 dgAlign: '@',
+                closeInnerclick: '@'
             },
             link: {
                 pre: function (scope) {
@@ -821,8 +823,11 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         }
                     });
 
-                    element.on('mouseup', function () {
+                    element.on('mouseup', function (e) {
                         if (hidePopoverOnMouseUp) {
+                            if (scope.closeInnerclick === 'false' && element[0].contains(e.target)) {
+                                return;
+                            }
                             scope.$apply(scope.hidePopover);
                             hidePopoverOnMouseUp = false;
                         }
