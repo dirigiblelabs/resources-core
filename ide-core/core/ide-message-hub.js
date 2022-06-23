@@ -223,6 +223,24 @@ angular.module('ideMessageHub', [])
                     throw Error("Loading Dialog: You must specify a dialog id");
                 messageHub.post({ id: id }, 'ide.loadingDialog.hide');
             };
+            let showBusyDialog = function (
+                id,
+                text = '',
+                callbackTopic = '',
+            ) {
+                if (!id)
+                    throw Error("Busy Dialog: You must specify a dialog id");
+                messageHub.post({
+                    id: id,
+                    text: text,
+                    callbackTopic: callbackTopic
+                }, 'ide.busyDialog.show');
+            };
+            let hideBusyDialog = function (id) {
+                if (!id)
+                    throw Error("Busy Dialog: You must specify a dialog id");
+                messageHub.post({ id: id }, 'ide.busyDialog.hide');
+            };
             let showSelectDialog = function (
                 title,
                 listItems,
@@ -458,6 +476,8 @@ angular.module('ideMessageHub', [])
                 showLoadingDialog: showLoadingDialog,
                 updateLoadingDialog: updateLoadingDialog,
                 hideLoadingDialog: hideLoadingDialog,
+                showBusyDialog: showBusyDialog,
+                hideBusyDialog: hideBusyDialog,
                 showSelectDialog: showSelectDialog,
                 showDialogWindow: showDialogWindow,
                 openView: openView,
