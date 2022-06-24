@@ -51,12 +51,12 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub'])
             restrict: 'E',
             replace: true,
             scope: {
-                name: '@', // Shouldn't this be id?
+                id: '@',
                 settings: '=',
             },
             link: function (scope) {
                 Views.get().then(function (views) {
-                    const view = views.find(v => v.id === scope.name);
+                    const view = views.find(v => v.id === scope.id);
                     if (view) {
                         scope.path = view.settings.path;
                         if (!view.params) {
