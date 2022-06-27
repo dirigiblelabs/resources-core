@@ -43,6 +43,14 @@ if (id) {
     );
 
     namedScripts.set(
+        "file-upload-js",
+        [
+            "/es5-shim/4.6.7/es5-shim.min.js",
+            "/angular-file-upload/2.6.1/dist/angular-file-upload.min.js",
+        ]
+    );
+
+    namedScripts.set(
         "ide-view-css",
         [
             "/fundamental-styles/0.24.0/dist/fundamental-styles.css",
