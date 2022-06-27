@@ -458,6 +458,14 @@ angular.module('ideMessageHub', [])
                     throw Error('Callback argument must be a function');
                 return messageHub.subscribe(callbackFunc, 'ide.workspace.changed');
             };
+            let announceWorkspacesModified = function () {
+                trigger('ide.workspaces.modified', true);
+            };
+            let onWorkspacesModified = function (callbackFunc) {
+                if (typeof callbackFunc !== 'function')
+                    throw Error('Callback argument must be a function');
+                return messageHub.subscribe(callbackFunc, 'ide.workspaces.modified');
+            };
             return {
                 showStatusBusy: showStatusBusy,
                 hideStatusBusy: hideStatusBusy,
@@ -513,6 +521,8 @@ angular.module('ideMessageHub', [])
                 onUnpublish: onUnpublish,
                 announceWorkspaceChanged: announceWorkspaceChanged,
                 onWorkspaceChanged: onWorkspaceChanged,
+                announceWorkspacesModified: announceWorkspacesModified,
+                onWorkspacesModified: onWorkspacesModified,
             };
         }];
     });
