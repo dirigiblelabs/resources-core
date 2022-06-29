@@ -84,6 +84,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                 element.on('click', function (event) {
                     event.stopPropagation();
                     element[0].classList.add("dg-hidden");
+                    menu.classList.add('dg-invisible');
                     openedMenuId = '';
                     scope.hideAllSubmenus();
                 });
@@ -92,6 +93,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     event.preventDefault();
                     event.stopPropagation();
                     element[0].classList.add("dg-hidden");
+                    menu.classList.add('dg-invisible');
                     openedMenuId = '';
                     scope.hideAllSubmenus();
                 });
@@ -136,6 +138,17 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     submenu.setAttribute("aria-hidden", false);
                 };
 
+                scope.correctMenuPosition = function () {
+                    let rect = menu.getBoundingClientRect();
+                    let bottom = element[0].clientHeight - rect.bottom;
+                    let right = element[0].clientWidth - rect.right;
+
+                    if (bottom < 0) menu.style.top = `${rect.top + bottom}px`;
+                    if (right < 0) menu.style.left = `${rect.left + right}px`;
+
+                    menu.classList.remove('dg-invisible');
+                }
+
                 messageHub.onDidReceiveMessage(
                     'ide-contextmenu.open',
                     function (msg) {
@@ -145,6 +158,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                             menu.style.top = `${msg.data.posY}px`;
                             menu.style.left = `${msg.data.posX}px`;
                             element[0].classList.remove("dg-hidden");
+                            scope.correctMenuPosition();
                         });
                     },
                     true
