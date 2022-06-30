@@ -2509,10 +2509,12 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 </div>
             </div>`
         }
-    }]).directive('fdBar', [function () {
+    }]).directive('fdBar', ['classNames', function (classNames) {
         /**
          * barDesign: String - Whether the Bar component is used as a header, subheader, header-with-subheader, footer or floating-footer. Types available: 'header','subheader','header-with-subheader','footer','floating-footer'
          * cozy: Boolean - Whether to apply cozy mode to the Bar.
+         * inPage: Boolean - Whether the Bar component is used in Page Layout.
+         * size: String - The size of the Page in Page responsive design. Available sizes: 's' | 'm_l' | 'xl'
          */
         return {
             restrict: 'EA',
@@ -2521,26 +2523,27 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             scope: {
                 barDesign: '@',
                 cozy: '<',
+                inPage: '<',
+                size: '@'
             },
             link: function (scope) {
                 const barDesigns = ['header', 'subheader', 'header-with-subheader', 'footer', 'floating-footer'];
+                const sizes = ['s', 'm_l', 'xl'];
+
                 if (scope.barDesign && !barDesigns.includes(scope.barDesign)) {
                     console.error(`fd-bar error: 'bar-design' must be one of: ${barDesigns.join(', ')}`);
                 }
 
-                scope.getClasses = function () {
-                    let classList = ['fd-bar'];
-
-                    if (scope.barDesign && barDesigns.includes(scope.barDesign)) {
-                        classList.push(`fd-bar--${scope.barDesign}`);
-                    }
-
-                    if (scope.cozy) {
-                        classList.push('fd-bar--cozy');
-                    }
-
-                    return classList.join(' ');
+                if (scope.size && !sizes.includes(scope.size)) {
+                    console.error(`fd-bar error: 'size' must be one of: ${sizes.join(', ')}`);
                 }
+
+                scope.getClasses = () => classNames('fd-bar', {
+                    [`fd-bar--${scope.barDesign}`]: barDesigns.includes(scope.barDesign),
+                    'fd-bar--cozy': scope.cozy,
+                    'fd-bar--page': scope.inPage,
+                    [`fd-bar--page-${scope.size}`]: sizes.includes(scope.size)
+                });
             },
             template: `<div ng-class="getClasses()" ng-transclude></div>`
         }
@@ -2939,7 +2942,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 }
 
                 this.hasCurrentStep = function () {
-                    return $scope.currentStep > 1 && $scope.currentStep <= $scope.steps.length;
+                    return $scope.currentStep >= 1 && $scope.currentStep <= $scope.steps.length;
                 }
 
                 this.allStepsCompleted = function () {
@@ -3096,5 +3099,123 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             transclude: true,
             replace: true,
             template: `<div class="fd-wizard__next-step" ng-transclude></div>`
+        }
+    }]).directive('fdPanel', [function () {
+        /**
+         * expanded: Boolean - Whether the panel is expanded or not
+         * fixed: Boolean - Whether the panel is expandable or not
+         * compact: Boolean - Panel size
+         * expandedChange: Function - A callback called when the Expand button is clicked
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                expanded: '<',
+                fixed: '<',
+                compact: '<',
+                expandedChange: '&'
+            },
+            controller: ['$scope', 'classNames', function ($scope, classNames) {
+                $scope.expanded = !!$scope.expanded;
+
+                this.isFixed = () => $scope.fixed;
+                this.isExpanded = () => $scope.expanded;
+                this.isCompact = () => $scope.compact;
+                this.getContentId = () => $scope.contentId;
+                this.getTitleId = () => $scope.titleId;
+
+                this.setContentId = (id) => {
+                    $scope.contentId = id;
+                }
+
+                this.setTitleId = (id) => {
+                    $scope.titleId = id;
+                }
+
+                this.toggleExpanded = function () {
+                    $scope.expanded = !$scope.expanded;
+
+                    if ($scope.expandedChange) {
+                        $scope.expandedChange({ expanded: $scope.expanded });
+                    }
+                }
+
+                $scope.getClasses = () => classNames('fd-panel', {
+                    'fd-panel--compact': $scope.compact,
+                    'fd-panel--fixed': $scope.fixed
+                });
+            }],
+            template: `<div ng-class="getClasses()" ng-transclude></div>`
+        }
+    }]).directive('fdPanelHeader', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-panel__header" ng-transclude></div>`
+        }
+    }]).directive('fdPanelExpand', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            require: '^^fdPanel',
+            link: function (scope, element, attrs, panelCtrl) {
+                scope.isFixed = () => panelCtrl.isFixed();
+                scope.isCompact = () => panelCtrl.isCompact();
+                scope.isExpanded = () => panelCtrl.isExpanded();
+                scope.getContentId = () => panelCtrl.getContentId();
+                scope.getTitleId = () => panelCtrl.getTitleId();
+                scope.toggleExpanded = function () {
+                    panelCtrl.toggleExpanded();
+                }
+                scope.getExpandButtonIcon = function () {
+                    return panelCtrl.isExpanded() ? 'sap-icon--slim-arrow-down' : 'sap-icon--slim-arrow-right';
+                }
+            },
+            template: `<div ng-show="!isFixed()" class="fd-panel__expand">
+                <fd-button ng-click="toggleExpanded()" glyph="{{ getExpandButtonIcon() }}" dg-type="transparent" compact="{{ isCompact() || 'false' }}" class="fd-panel__button" 
+                    aria-haspopup="true" aria-expanded="{{ isExpanded() }}" aria-controls="{{ getContentId() }}" aria-labelledby="{{ getTitleId() }}" 
+                    aria-label="expand/collapse panel"></fd-button>
+            </div>`
+        }
+    }]).directive('fdPanelTitle', ['uuid', function (uuid) {
+        return {
+            restrict: 'A',
+            require: '^^fdPanel',
+            link: function (scope, element, attrs, panelCtrl) {
+                element.addClass('fd-panel__title');
+
+                let id = attrs.id;
+                if (!id) {
+                    id = `pt-${uuid.generate()}`;
+                    element[0].setAttribute('id', id);
+                }
+
+                panelCtrl.setTitleId(id);
+            }
+        }
+    }]).directive('fdPanelContent', ['uuid', function (uuid) {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            require: '^fdPanel',
+            link: function (scope, element, attrs, panelCtrl) {
+                scope.isHidden = function () {
+                    return !panelCtrl.isFixed() && !panelCtrl.isExpanded();
+                }
+
+                let id = attrs.id;
+                if (!id) {
+                    id = `ph-${uuid.generate()}`;
+                    element[0].setAttribute('id', id);
+                }
+
+                panelCtrl.setContentId(id);
+            },
+            template: `<div role="region" class="fd-panel__content" aria-hidden="{{ isHidden() }}" ng-transclude></div>`
         }
     }]);
