@@ -120,7 +120,7 @@
                                 <fd-form-input-message-group dg-inactive="{{ item.error ? false : true }}">
                                     <fd-input id="{{ item.id }}" type="text" placeholder="{{ item.placeholder}}"
                                         state="{{ item.error ? 'error' : '' }}" name="{{ 'i' + item.id }}"
-                                        dg-required="{{ isRequired(item.id, item.required) }}" ng-model="item.value"
+                                        ng-required="{{ isRequired(item.id, item.required) }}" ng-model="item.value"
                                         ng-trim="false" ng-minlength="item.minlength || 0"
                                         ng-maxlength="item.maxlength || -1" ng-pattern="item.pattern || ''"
                                         ng-change="inputValidation(formFieldset['i' + item.id].$valid, item)">
