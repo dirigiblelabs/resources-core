@@ -2894,13 +2894,13 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             scope: {
                 currentStep: '<',
                 completedSteps: '<',
-                dgSize: '@'
+                dgSize: '@',
             },
             controller: ['$scope', function ($scope) {
                 $scope.steps = [];
                 const validSizes = ['sm', 'md', 'lg', 'xl'];
                 if ($scope.dgSize && !validSizes.includes($scope.dgSize)) {
-                    console.error(`fd-wizard error: 'dgSize' must be one of: ${validSizes.join(', ')}`);
+                    console.error(`fd-wizard error: 'dg-size' must be one of: ${validSizes.join(', ')}`);
                 }
 
                 this.addStep = function (step) {
@@ -2953,8 +2953,13 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     return $scope.dgSize;
                 }
 
-                this.isValidSize = function () {
+                this.isValidSize = function (size) {
+                    if (size) return validSizes.includes(size);
                     return validSizes.includes($scope.dgSize);
+                }
+
+                this.getValidSizes = function () {
+                    return validSizes;
                 }
             }],
             template: `<section class="fd-wizard" ng-transclude></section>`
@@ -3015,6 +3020,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     }]).directive('fdWizardContent', ['classNames', function (classNames) {
         /**
          * dgBackground: String - When specified applies specific background. Could be one of: 'solid', 'list', 'transparent'
+         * dgSize: String - When specified adds horizontal paddings to the content. Could be one of: 'sm', 'md', 'lg', 'xl'
          */
         return {
             restrict: 'EA',
@@ -3022,16 +3028,20 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             replace: true,
             require: '^fdWizard',
             scope: {
-                dgBackground: '@'
+                dgBackground: '@',
+                dgSize: '@',
             },
             link: function (scope, element, attrs, wizCtrl) {
                 const validBackgrounds = ['solid', 'list', 'transparent'];
+                if (scope.dgSize && !wizCtrl.isValidSize(scope.dgSize)) {
+                    console.error(`fd-wizard-content error: 'dg-size' must be one of: ${wizCtrl.getValidSizes().join(', ')}`);
+                }
                 if (scope.dgBackground && !validBackgrounds.includes(scope.dgBackground)) {
                     console.error(`fd-wizard-content error: 'dgBackground' must be one of: ${validBackgrounds.join(', ')}`);
                 }
 
                 scope.getClasses = () => classNames('fd-wizard__content', {
-                    [`fd-wizard__content--${wizCtrl.getSize()}`]: wizCtrl.isValidSize(),
+                    [`fd-wizard__content--${scope.dgSize}`]: wizCtrl.isValidSize(scope.dgSize),
                     [`fd-wizard__content--${scope.dgBackground}`]: validBackgrounds.includes(scope.dgBackground)
                 });
             },
@@ -3040,6 +3050,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     }]).directive('fdWizardStep', ['classNames', function (classNames) {
         /**
          * dgLabel: String - The step label
+         * dgSize: String - When specified adds horizontal paddings to the content. Could be one of: 'sm', 'md', 'lg', 'xl'
          * optionalLabel: String - An optional text displayed below the label
          * indicatorGlyph: String - Indicator icon class/classes. When specified overrides the 'indicatorLabel' attribute
          * indicatorLabel: String - Indicator label
@@ -3053,6 +3064,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             require: '^fdWizard',
             scope: {
                 dgLabel: '@',
+                dgSize: '@',
                 optionalLabel: '@',
                 indicatorGlyph: '@',
                 indicatorLabel: '@',
@@ -3060,6 +3072,9 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 stepClick: '&',
             },
             link: function (scope, element, attrs, wizCtrl) {
+                if (scope.dgSize && !wizCtrl.isValidSize(scope.dgSize)) {
+                    console.error(`fd-wizard-content error: 'dg-size' must be one of: ${wizCtrl.getValidSizes().join(', ')}`);
+                }
                 wizCtrl.addStep(scope);
 
                 scope.isStepCurrent = function () {
@@ -3071,7 +3086,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 }
 
                 scope.getClasses = () => classNames('fd-wizard__step-content-container', {
-                    [`fd-wizard__step-content-container--${wizCtrl.getSize()}`]: wizCtrl.isValidSize()
+                    [`fd-wizard__step-content-container--${scope.dgSize}`]: wizCtrl.isValidSize(scope.dgSize),
                 });
 
                 scope.$on('$destroy', function () {
@@ -3080,18 +3095,30 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             },
             template: `<div ng-show="isStepCurrent()" ng-class="getClasses()" ng-transclude></div>`
         };
-    }]).directive('fdWizardSummary', [function () {
+    }]).directive('fdWizardSummary', ['classNames', function (classNames) {
+        /**
+         * dgSize: String - When specified adds horizontal paddings to the content. Could be one of: 'sm', 'md', 'lg', 'xl'
+         */
         return {
             restrict: 'EA',
             transclude: true,
             replace: true,
             require: '^fdWizard',
+            scope: {
+                dgSize: '@',
+            },
             link: function (scope, element, attrs, wizCtrl) {
+                if (scope.dgSize && !wizCtrl.isValidSize(scope.dgSize)) {
+                    console.error(`fd-wizard-content error: 'dg-size' must be one of: ${wizCtrl.getValidSizes().join(', ')}`);
+                }
                 scope.allStepsCompleted = function () {
                     return wizCtrl.allStepsCompleted() && !wizCtrl.hasCurrentStep();
                 }
+                scope.getClasses = () => classNames('fd-wizard__step-content-container', {
+                    [`fd-wizard__step-content-container--${scope.dgSize}`]: wizCtrl.isValidSize(scope.dgSize),
+                });
             },
-            template: `<div ng-show="allStepsCompleted()" class="fd-wizard__step-content-container" ng-transclude></div>`
+            template: `<div ng-show="allStepsCompleted()" ng-class="getClasses()" ng-transclude></div>`
         };
     }]).directive('fdWizardNextStep', [function () {
         return {
