@@ -332,7 +332,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     };
                 },
             },
-            template: `<input class="fd-input" ng-class="getClasses()" ng-disabled="dgDisabled" ng-required="dgRequired === 'true'" ng-transclude>`,
+            template: `<input class="fd-input" ng-class="getClasses()" ng-disabled="dgDisabled" ng-transclude>`,
         }
     }]).directive('fdInputGroup', [function () {
         /**
