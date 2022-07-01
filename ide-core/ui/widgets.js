@@ -2493,7 +2493,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
 
                     <a ng-if="pageNumber !== currentPage || isShortMode()" ng-repeat-start="pageNumber in pageNumbers = getPageNumbers()" href="javascript:void(0)" ng-class="getNumberButtonClasses(pageNumber)" aria-label="{{ getNumberButtonAriaLabel(pageNumber) }}" aria-current="{{ currentPage === pageNumber }}" ng-click="gotoPage(pageNumber)">{{ pageNumber }}</a>
                     <label ng-if="pageNumber === currentPage" id="{{ currentPageLabelId }}" class="fd-form-label fd-pagination__label" aria-label="Page input, Current page, Page {currentPage}">Page:</label>
-                    <fd-input ng-if="pageNumber === currentPage" aria-labelledby="{{ getCurrentPageInputAriaLabelledBy() }}" class="fd-pagination__input" type="number" min="1" max="{{ getPageCount() }}" compact="{{ compact }}" dg-required="true" state="{{ currentPageInputState }}" ng-model="$parent.$parent.currentPageInput" ng-keydown="$event.keyCode === 13 && changePage()" ng-blur="onCurrentPageInputBlur()" ng-change="onCurrentPageInputChange()"></fd-input>
+                    <fd-input ng-if="pageNumber === currentPage" aria-labelledby="{{ getCurrentPageInputAriaLabelledBy() }}" class="fd-pagination__input" type="number" min="1" max="{{ getPageCount() }}" compact="{{ compact }}" ng-required state="{{ currentPageInputState }}" ng-model="$parent.$parent.currentPageInput" ng-keydown="$event.keyCode === 13 && changePage()" ng-blur="onCurrentPageInputBlur()" ng-change="onCurrentPageInputChange()"></fd-input>
                     <label ng-if="pageNumber === currentPage" id="{{ currentPageOfLabelId }}" class="fd-form-label fd-pagination__label">of {{ getPageCount() }}</label>
                     <span ng-if="showEllipsys($index, pageNumbers.length)" ng-repeat-end class="fd-pagination__more" role="presentation"></span>
 
@@ -3245,5 +3245,60 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 panelCtrl.setContentId(id);
             },
             template: `<div role="region" class="fd-panel__content" aria-hidden="{{ isHidden() }}" ng-transclude></div>`
+        }
+    }]).directive('fdMessagePage', ['classNames', function (classNames) {
+        /**
+         * glyph: String - Icon class
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                glyph: '@'
+            },
+            link: function (scope) {
+                if (!scope.glyph) {
+                    console.error('fd-message-page error: You should provide glpyh icon using the "glyph" attribute');
+                }
+
+                scope.getIconClasses = () => classNames(scope.glyph, 'fd-message-page__icon');
+            },
+            template: `<div class="fd-message-page">
+                <div class="fd-message-page__container">
+                    <div class="fd-message-page__icon-container">
+                        <i role="presentation" ng-class="getIconClasses()"></i>
+                    </div>
+                    <div role="status" aria-live="polite" class="fd-message-page__content" ng-transclude></div>
+                </div>
+            </div>`
+        }
+    }]).directive('fdMessagePageTitle', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-message-page__title" ng-transclude></div>`
+        }
+    }]).directive('fdMessagePageSubtitle', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-message-page__subtitle" ng-transclude></div>`
+        }
+    }]).directive('fdMessagePageActions', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-message-page__actions" ng-transclude></div>`
+        }
+    }]).directive('fdMessagePageMore', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-message-page__more" ng-transclude></div>`
         }
     }]);
