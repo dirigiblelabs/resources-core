@@ -2807,12 +2807,14 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             scope: {
                 interactive: '<'
             },
-            link: function (scope, element) {
+            link: function (scope, element, attributes, controller, $transclude) {
                 if (scope.interactive === undefined)
                     scope.interactive = true;
 
                 const avatarEl = element.find('.fd-avatar');
                 avatarEl.addClass('fd-card__avatar');
+
+                scope.isSubtitleFilled = () => { return $transclude.isSlotFilled('fdCardSubtitle') };
 
                 scope.getClasses = () => classNames('fd-card__header', {
                     'fd-card__header--non-interactive': !scope.interactive
@@ -2825,8 +2827,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         <ng-transclude ng-transclude-slot="title"></ng-transclude>
                         <ng-transclude ng-transclude-slot="status"></ng-transclude>
                     </div>
-                    <div class="fd-card__subtitle-area">
-                        <ng-transclude ng-transclude-slot="subtitle"></ng-transclude>
+                    <div ng-if="isSubtitleFilled()" class="fd-card__subtitle-area" ng-transclude="subtitle">
                     </div>
                 </div>
             </a>`
