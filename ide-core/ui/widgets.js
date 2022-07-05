@@ -134,7 +134,6 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     }]).directive('fdBusyIndicator', [function () {
         /**
          * dgSize: String - The size of the avatar. Possible options are 'm' and 'l'.
-         * dgHidden: Boolean - Show/hide the busy indicator.
          * contrast: Boolean - Contrast mode.
          */
         return {
@@ -143,13 +142,10 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             replace: true,
             scope: {
                 dgSize: '@',
-                dgHidden: '@',
                 contrast: '@',
             },
             link: {
                 pre: function (scope) {
-                    if (!scope.dgHidden)
-                        scope.dgHidden = false;
                     scope.getClasses = function () {
                         let classList = [];
                         if (scope.dgSize) classList.push(`fd-busy-indicator--${scope.dgSize}`);
@@ -158,16 +154,15 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     }
                 },
             },
-            template: `<div class="fd-busy-indicator" ng-class="getClasses()" ng-hide="dgHidden === 'true'" aria-label="Loading">
-                <div class="fd-busy-indicator--circle-0"></div>
-                <div class="fd-busy-indicator--circle-1"></div>
-                <div class="fd-busy-indicator--circle-2"></div>
+            template: `<div class="fd-busy-indicator" ng-class="getClasses()" aria-label="Loading">
+                <div class="fd-busy-indicator__circle"></div>
+				<div class="fd-busy-indicator__circle"></div>
+				<div class="fd-busy-indicator__circle"></div>
             </div>`,
         }
     }]).directive('fdBusyIndicatorExtended', [function () {
         /**
          * dgSize: String - The size of the avatar. Possible options are 'm' and 'l'.
-         * dgHidden: Boolean - Show/hide the busy indicator.
          * contrast: Boolean - Contrast mode.
          */
         return {
@@ -176,18 +171,11 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             replace: true,
             scope: {
                 dgSize: '@',
-                dgHidden: '@',
                 contrast: '@',
             },
-            link: {
-                pre: function (scope) {
-                    if (!scope.dgHidden)
-                        scope.dgHidden = false;
-                },
-            },
-            template: `<div class="fd-busy-indicator-extended" ng-hide="dgHidden === 'true'">
-                <fd-busy-indicator dg-size="{{ dgSize }}" dg-hidden="{{ dgHidden }}" contrast="{{ contrast }}"></fd-busy-indicator>
-                <div class="fd-busy-indicator-extended__label" ng-hide="dgHidden === 'true'" ng-transclude></div>
+            template: `<div class="fd-busy-indicator-extended">
+                <fd-busy-indicator dg-size="{{dgSize}}" contrast="{{contrast}}"></fd-busy-indicator>
+                <div class="fd-busy-indicator-extended__label" ng-transclude></div>
             </div>`,
         }
     }]).directive('fdFieldset', [function () {
