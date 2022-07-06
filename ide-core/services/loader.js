@@ -20,15 +20,16 @@ response.flush();
 response.close();
 
 function setETag(scriptId) {
+    let maxAge = 30 * 24 * 60 * 60;
     let etag = uuid.random();
     response.addCookie({
         'name': getCacheKey(scriptId),
         'value': etag,
         'path': '/',
-        'maxAge': 30 * 24 * 60 * 60
+        'maxAge': maxAge
     });
     response.setHeader("ETag", etag);
-    response.setHeader('Cache-Control', `public, must-revalidate, max-age=${30 * 24 * 60 * 60}`);
+    response.setHeader('Cache-Control', `public, must-revalidate, max-age=${maxAge}`);
 }
 
 function getCacheKey(scriptId) {
@@ -82,6 +83,7 @@ function getLocations(scriptId) {
                 "/jquery/3.6.0/jquery.min.js",
                 "/angularjs/1.8.2/angular.min.js",
                 "/angularjs/1.8.2/angular-resource.min.js",
+                "/angularjs/1.8.2/angular-cookies.min.js",
                 "/angular-aria/1.8.2/angular-aria.min.js",
                 "/ide-core/core/message-hub.js",
                 "/ide-core/core/ide-message-hub.js",
