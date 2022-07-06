@@ -1220,7 +1220,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     return required;
                 }
 
-                scope.inputValidation = function (isValid, item) {
+                scope.isValid = function (isValid, item) {
                     if (isValid) {
                         item.error = false;
                     } else {
