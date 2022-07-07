@@ -66,7 +66,7 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
             template: `<link rel="icon" type="image/x-icon" ng-href="{{icon}}">`
         };
     }])
-    .directive('ideContextmenu', ['messageHub', function (messageHub) {
+    .directive('ideContextmenu', ['messageHub', '$window', function (messageHub, $window) {
         return {
             restrict: 'E',
             replace: true,
@@ -136,18 +136,14 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                     submenuLink.setAttribute("aria-expanded", true);
                     submenuLink.classList.add("is-expanded");
                     submenu.setAttribute("aria-hidden", false);
+                    requestAnimationFrame(function () {
+                        let rect = submenu.getBoundingClientRect();
+                        let bottom = $window.innerHeight - rect.bottom;
+                        let right = $window.innerWidth - rect.right;
+                        if (bottom < 0) submenu.style.top = `${bottom}px`;
+                        if (right < 0) submenu.style.left = `${right}px`;
+                    });
                 };
-
-                scope.correctMenuPosition = function () {
-                    let rect = menu.getBoundingClientRect();
-                    let bottom = element[0].clientHeight - rect.bottom;
-                    let right = element[0].clientWidth - rect.right;
-
-                    if (bottom < 0) menu.style.top = `${rect.top + bottom}px`;
-                    if (right < 0) menu.style.left = `${rect.left + right}px`;
-
-                    menu.classList.remove('dg-invisible');
-                }
 
                 messageHub.onDidReceiveMessage(
                     'ide-contextmenu.open',
@@ -158,7 +154,14 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                             menu.style.top = `${msg.data.posY}px`;
                             menu.style.left = `${msg.data.posX}px`;
                             element[0].classList.remove("dg-hidden");
-                            scope.correctMenuPosition();
+                            requestAnimationFrame(function () {
+                                let rect = menu.getBoundingClientRect();
+                                let bottom = $window.innerHeight - rect.bottom;
+                                let right = $window.innerWidth - rect.right;
+                                if (bottom < 0) menu.style.top = `${rect.top + bottom}px`;
+                                if (right < 0) menu.style.left = `${rect.left + right}px`;
+                                menu.classList.remove('dg-invisible');
+                            });
                         });
                     },
                     true
@@ -167,7 +170,7 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
             templateUrl: '/services/v4/web/ide-core/ui/templates/contextmenu.html'
         };
     }])
-    .directive('ideContextmenuSubmenu', function () {
+    .directive('ideContextmenuSubmenu', ['$window', function ($window) {
         return {
             restrict: 'E',
             replace: true,
@@ -212,11 +215,18 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                     submenuLink.setAttribute("aria-expanded", true);
                     submenuLink.classList.add("is-expanded");
                     submenu.setAttribute("aria-hidden", false);
+                    requestAnimationFrame(function () {
+                        let rect = submenu.getBoundingClientRect();
+                        let bottom = $window.innerHeight - rect.bottom;
+                        let right = $window.innerWidth - rect.right;
+                        if (bottom < 0) submenu.style.top = `${bottom}px`;
+                        if (right < 0) submenu.style.left = `${right}px`;
+                    });
                 };
             },
             templateUrl: '/services/v4/web/ide-core/ui/templates/contextmenuSubmenu.html'
         };
-    })
+    }])
     .directive('ideHeader', ['$window', '$cookies', '$resource', 'branding', 'theming', 'User', 'messageHub', function ($window, $cookies, $resource, branding, theming, User, messageHub) {
         return {
             restrict: 'E',
