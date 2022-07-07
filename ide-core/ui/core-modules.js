@@ -11,7 +11,7 @@
 /*
  * Provides key microservices for constructing and managing the IDE UI
  */
-angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
+angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideMessageHub'])
     .constant('branding', brandingInfo)
     .constant('perspective', perspectiveData)
     .service('Perspectives', ['$resource', function ($resource) {
@@ -217,7 +217,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
             templateUrl: '/services/v4/web/ide-core/ui/templates/contextmenuSubmenu.html'
         };
     })
-    .directive('ideHeader', ['$window', '$resource', 'branding', 'theming', 'User', 'messageHub', function ($window, $resource, branding, theming, User, messageHub) {
+    .directive('ideHeader', ['$window', '$cookies', '$resource', 'branding', 'theming', 'User', 'messageHub', function ($window, $cookies, $resource, branding, theming, User, messageHub) {
         return {
             restrict: 'E',
             replace: true,
@@ -389,6 +389,11 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
 
                 scope.resetTheme = function () {
                     scope.resetViews();
+                    for (let cookie in $cookies.getAll()) {
+                        if (cookie.startsWith("DIRIGIBLE")) {
+                            $cookies.remove(cookie, { path: "/" });
+                        }
+                    }
                 };
 
                 scope.resetViews = function () {
@@ -675,7 +680,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
             </div>`
         }
     }])
-    .directive('ideSidebar', ['Perspectives', 'perspective', function (Perspectives, perspective) {
+    .directive('ideSidebar', ['Perspectives', 'perspective', 'messageHub', function (Perspectives, perspective, messageHub) {
         return {
             restrict: 'E',
             replace: true,
@@ -687,6 +692,23 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                         if (icon) return icon;
                         return "/services/v4/web/resources/images/unknown.svg";
                     }
+                },
+                post: function () {
+                    messageHub.onDidReceiveMessage(
+                        'ide-core.openPerspective',
+                        function (data) {
+                            let url = data.link;
+                            if (data.params) {
+                                let urlParams = '';
+                                for (const property in data.params) {
+                                    urlParams += `${property}=${encodeURIComponent(data.params[property])}&`;
+                                }
+                                url += `?${urlParams.slice(0, -1)}`;
+                            }
+                            window.location.href = url;
+                        },
+                        true
+                    );
                 },
             },
             templateUrl: '/services/v4/web/ide-core/ui/templates/ideSidebar.html'
@@ -1217,7 +1239,7 @@ angular.module('idePerspective', ['ngResource', 'ideTheming', 'ideMessageHub'])
                     return required;
                 }
 
-                scope.inputValidation = function (isValid, item) {
+                scope.isValid = function (isValid, item) {
                     if (isValid) {
                         item.error = false;
                     } else {

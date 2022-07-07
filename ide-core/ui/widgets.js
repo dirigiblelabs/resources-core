@@ -55,6 +55,41 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
 
         return classNames;
 
+    }).directive('dgInputRules', function ($parse) {
+        /**
+         * How to use:
+         * <input ng-model="inputModel" ng-required dg-input-rules="inputRules"
+         * Example object (inputRules):
+         * {
+         *    excluded: ['this', 'that'],
+         *    patterns: ['^[^/]*$'],
+         * }
+         */
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, controller) {
+                let parseFn = $parse(attr.dgInputRules);
+                scope.inputRules = parseFn(scope);
+
+                function validation(value) {
+                    if (value) {
+                        let isValid = true;
+                        if (scope.inputRules.excluded) isValid = !scope.inputRules.excluded.includes(value);
+                        if (isValid && scope.inputRules.patterns) {
+                            for (let i = 0; i < scope.inputRules.patterns.length; i++) {
+                                isValid = RegExp(scope.inputRules.patterns[i], 'g').test(value);
+                                if (!isValid) break;
+                            }
+                        }
+                        controller.$setValidity('inputRules', isValid);
+                    } else {
+                        controller.$setValidity('inputRules', false);
+                    }
+                    return value;
+                }
+                controller.$parsers.push(validation);
+            }
+        };
     }).directive('fdScrollbar', [function () {
         return {
             restrict: 'AE',
@@ -134,7 +169,6 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     }]).directive('fdBusyIndicator', [function () {
         /**
          * dgSize: String - The size of the avatar. Possible options are 'm' and 'l'.
-         * dgHidden: Boolean - Show/hide the busy indicator.
          * contrast: Boolean - Contrast mode.
          */
         return {
@@ -143,13 +177,10 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             replace: true,
             scope: {
                 dgSize: '@',
-                dgHidden: '@',
                 contrast: '@',
             },
             link: {
                 pre: function (scope) {
-                    if (!scope.dgHidden)
-                        scope.dgHidden = false;
                     scope.getClasses = function () {
                         let classList = [];
                         if (scope.dgSize) classList.push(`fd-busy-indicator--${scope.dgSize}`);
@@ -158,16 +189,15 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     }
                 },
             },
-            template: `<div class="fd-busy-indicator" ng-class="getClasses()" ng-hide="dgHidden === 'true'" aria-label="Loading">
-                <div class="fd-busy-indicator--circle-0"></div>
-                <div class="fd-busy-indicator--circle-1"></div>
-                <div class="fd-busy-indicator--circle-2"></div>
+            template: `<div class="fd-busy-indicator" ng-class="getClasses()" aria-label="Loading">
+                <div class="fd-busy-indicator__circle"></div>
+				<div class="fd-busy-indicator__circle"></div>
+				<div class="fd-busy-indicator__circle"></div>
             </div>`,
         }
     }]).directive('fdBusyIndicatorExtended', [function () {
         /**
          * dgSize: String - The size of the avatar. Possible options are 'm' and 'l'.
-         * dgHidden: Boolean - Show/hide the busy indicator.
          * contrast: Boolean - Contrast mode.
          */
         return {
@@ -176,18 +206,11 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             replace: true,
             scope: {
                 dgSize: '@',
-                dgHidden: '@',
                 contrast: '@',
             },
-            link: {
-                pre: function (scope) {
-                    if (!scope.dgHidden)
-                        scope.dgHidden = false;
-                },
-            },
-            template: `<div class="fd-busy-indicator-extended" ng-hide="dgHidden === 'true'">
-                <fd-busy-indicator dg-size="{{ dgSize }}" dg-hidden="{{ dgHidden }}" contrast="{{ contrast }}"></fd-busy-indicator>
-                <div class="fd-busy-indicator-extended__label" ng-hide="dgHidden === 'true'" ng-transclude></div>
+            template: `<div class="fd-busy-indicator-extended">
+                <fd-busy-indicator dg-size="{{dgSize}}" contrast="{{contrast}}"></fd-busy-indicator>
+                <div class="fd-busy-indicator-extended__label" ng-transclude></div>
             </div>`,
         }
     }]).directive('fdFieldset', [function () {
@@ -332,7 +355,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     };
                 },
             },
-            template: `<input class="fd-input" ng-class="getClasses()" ng-disabled="dgDisabled" ng-required="dgRequired === 'true'" ng-transclude>`,
+            template: `<input class="fd-input" ng-class="getClasses()" ng-disabled="dgDisabled" ng-transclude>`,
         }
     }]).directive('fdInputGroup', [function () {
         /**
@@ -883,6 +906,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
          * dgAlign: String - Relative position of the popover. Possible values are "left" and "right". If not provided, left is assumed.
          * maxHeight: Number - Maximum popover height in pixels before it starts scrolling. Default is 250 px.
          * noArrow: Boolean - If the popup should have an arrow.
+         * dropdownFill: Boolean - The dropdown body will be adjusted to match the text length.
          */
         return {
             restrict: 'E',
@@ -892,6 +916,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 maxHeight: '@',
                 dgAlign: '@',
                 noArrow: '@',
+                dropdownFill: '@',
             },
             link: {
                 pre: function (scope) {
@@ -902,7 +927,8 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     scope.getClasses = function () {
                         let classList = [];
                         if (scope.dgAlign === 'right') classList.push('fd-popover__body--right');
-                        if (scope.noArrow) classList.push('fd-popover__body--no-arrow');
+                        if (scope.noArrow === "true") classList.push('fd-popover__body--no-arrow');
+                        if (scope.dropdownFill === "true") classList.push('fd-popover__body--dropdown-fill');
                         return classList.join(' ');
                     };
                 },
@@ -1737,9 +1763,10 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             restrict: 'EA',
             transclude: true,
             replace: true,
-            require: '^fdListItem',
+            require: '?^fdListItem',
             link: function (scope, element, attrs, listItemCtrl) {
-                listItemCtrl.setRole('option');
+                if (listItemCtrl)
+                    listItemCtrl.setRole('option');
             },
             template: '<div class="fd-form-item fd-list__form-item" ng-transclude></div>'
         }
@@ -1886,7 +1913,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 <i ng-if="glyph" role="presentation" ng-class="glyph"></i>
             </span>`
         }
-    }]).directive('fdObjectStatus', [function () {
+    }]).directive('fdObjectStatus', ['classNames', function (classNames) {
         /**
          * status: String - One of 'negative', 'critical', 'positive' or 'informative'
          * glyph: String - Icon class.
@@ -1908,16 +1935,18 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 indication: '<',
                 large: '<'
             },
-            link: function (scope, element) {
+            controller: ['$scope', '$element', function (scope, element) {
                 const statuses = ['negative', 'critical', 'positive', 'informative'];
 
-                scope.getIconClasses = function () {
-                    let classList = ['fd-object-status__icon'];
-                    if (scope.glyph) {
-                        classList.push(scope.glyph);
-                    }
-                    return classList.join(' ');
+                this.setIsUploadCollection = function () {
+                    scope.isUploadCollection = true;
+                    element.addClass('fd-upload-collection__status-group-item');
                 }
+
+                scope.getIconClasses = () => classNames('fd-object-status__icon', scope.glyph);
+                scope.getTextClasses = () => classNames('fd-object-status__text', {
+                    'fd-upload-collection__status-group-item-text': scope.isUploadCollection
+                })
 
                 element.addClass('fd-object-status');
 
@@ -1975,9 +2004,9 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
 
                     element.addClass(`fd-object-status--indication-${indication}`);
                 });
-            },
+            }],
             template: `<i ng-if="glyph" ng-class="getIconClasses()" role="presentation"></i>
-                       <span ng-if="text" class="fd-object-status__text">{{text}}</span>`
+                       <span ng-if="text" ng-class="getTextClasses()">{{text}}</span>`
         }
     }]).directive('fdSelect', ['uuid', function (uuid) {
         /**
@@ -2490,7 +2519,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
 
                     <a ng-if="pageNumber !== currentPage || isShortMode()" ng-repeat-start="pageNumber in pageNumbers = getPageNumbers()" href="javascript:void(0)" ng-class="getNumberButtonClasses(pageNumber)" aria-label="{{ getNumberButtonAriaLabel(pageNumber) }}" aria-current="{{ currentPage === pageNumber }}" ng-click="gotoPage(pageNumber)">{{ pageNumber }}</a>
                     <label ng-if="pageNumber === currentPage" id="{{ currentPageLabelId }}" class="fd-form-label fd-pagination__label" aria-label="Page input, Current page, Page {currentPage}">Page:</label>
-                    <fd-input ng-if="pageNumber === currentPage" aria-labelledby="{{ getCurrentPageInputAriaLabelledBy() }}" class="fd-pagination__input" type="number" min="1" max="{{ getPageCount() }}" compact="{{ compact }}" dg-required="true" state="{{ currentPageInputState }}" ng-model="$parent.$parent.currentPageInput" ng-keydown="$event.keyCode === 13 && changePage()" ng-blur="onCurrentPageInputBlur()" ng-change="onCurrentPageInputChange()"></fd-input>
+                    <fd-input ng-if="pageNumber === currentPage" aria-labelledby="{{ getCurrentPageInputAriaLabelledBy() }}" class="fd-pagination__input" type="number" min="1" max="{{ getPageCount() }}" compact="{{ compact }}" ng-required state="{{ currentPageInputState }}" ng-model="$parent.$parent.currentPageInput" ng-keydown="$event.keyCode === 13 && changePage()" ng-blur="onCurrentPageInputBlur()" ng-change="onCurrentPageInputChange()"></fd-input>
                     <label ng-if="pageNumber === currentPage" id="{{ currentPageOfLabelId }}" class="fd-form-label fd-pagination__label">of {{ getPageCount() }}</label>
                     <span ng-if="showEllipsys($index, pageNumbers.length)" ng-repeat-end class="fd-pagination__more" role="presentation"></span>
 
@@ -2506,10 +2535,12 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 </div>
             </div>`
         }
-    }]).directive('fdBar', [function () {
+    }]).directive('fdBar', ['classNames', function (classNames) {
         /**
          * barDesign: String - Whether the Bar component is used as a header, subheader, header-with-subheader, footer or floating-footer. Types available: 'header','subheader','header-with-subheader','footer','floating-footer'
          * cozy: Boolean - Whether to apply cozy mode to the Bar.
+         * inPage: Boolean - Whether the Bar component is used in Page Layout.
+         * size: String - The size of the Page in Page responsive design. Available sizes: 's' | 'm_l' | 'xl'
          */
         return {
             restrict: 'EA',
@@ -2518,26 +2549,27 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             scope: {
                 barDesign: '@',
                 cozy: '<',
+                inPage: '<',
+                size: '@'
             },
             link: function (scope) {
                 const barDesigns = ['header', 'subheader', 'header-with-subheader', 'footer', 'floating-footer'];
+                const sizes = ['s', 'm_l', 'xl'];
+
                 if (scope.barDesign && !barDesigns.includes(scope.barDesign)) {
                     console.error(`fd-bar error: 'bar-design' must be one of: ${barDesigns.join(', ')}`);
                 }
 
-                scope.getClasses = function () {
-                    let classList = ['fd-bar'];
-
-                    if (scope.barDesign && barDesigns.includes(scope.barDesign)) {
-                        classList.push(`fd-bar--${scope.barDesign}`);
-                    }
-
-                    if (scope.cozy) {
-                        classList.push('fd-bar--cozy');
-                    }
-
-                    return classList.join(' ');
+                if (scope.size && !sizes.includes(scope.size)) {
+                    console.error(`fd-bar error: 'size' must be one of: ${sizes.join(', ')}`);
                 }
+
+                scope.getClasses = () => classNames('fd-bar', {
+                    [`fd-bar--${scope.barDesign}`]: barDesigns.includes(scope.barDesign),
+                    'fd-bar--cozy': scope.cozy,
+                    'fd-bar--page': scope.inPage,
+                    [`fd-bar--page-${scope.size}`]: sizes.includes(scope.size)
+                });
             },
             template: `<div ng-class="getClasses()" ng-transclude></div>`
         }
@@ -2801,12 +2833,14 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             scope: {
                 interactive: '<'
             },
-            link: function (scope, element) {
+            link: function (scope, element, attributes, controller, $transclude) {
                 if (scope.interactive === undefined)
                     scope.interactive = true;
 
                 const avatarEl = element.find('.fd-avatar');
                 avatarEl.addClass('fd-card__avatar');
+
+                scope.isSubtitleFilled = () => { return $transclude.isSlotFilled('fdCardSubtitle') };
 
                 scope.getClasses = () => classNames('fd-card__header', {
                     'fd-card__header--non-interactive': !scope.interactive
@@ -2819,8 +2853,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         <ng-transclude ng-transclude-slot="title"></ng-transclude>
                         <ng-transclude ng-transclude-slot="status"></ng-transclude>
                     </div>
-                    <div class="fd-card__subtitle-area">
-                        <ng-transclude ng-transclude-slot="subtitle"></ng-transclude>
+                    <div ng-if="isSubtitleFilled()" class="fd-card__subtitle-area" ng-transclude="subtitle">
                     </div>
                 </div>
             </a>`
@@ -2888,13 +2921,13 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             scope: {
                 currentStep: '<',
                 completedSteps: '<',
-                dgSize: '@'
+                dgSize: '@',
             },
             controller: ['$scope', function ($scope) {
                 $scope.steps = [];
                 const validSizes = ['sm', 'md', 'lg', 'xl'];
                 if ($scope.dgSize && !validSizes.includes($scope.dgSize)) {
-                    console.error(`fd-wizard error: 'dgSize' must be one of: ${validSizes.join(', ')}`);
+                    console.error(`fd-wizard error: 'dg-size' must be one of: ${validSizes.join(', ')}`);
                 }
 
                 this.addStep = function (step) {
@@ -2936,7 +2969,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 }
 
                 this.hasCurrentStep = function () {
-                    return $scope.currentStep > 1 && $scope.currentStep <= $scope.steps.length;
+                    return $scope.currentStep >= 1 && $scope.currentStep <= $scope.steps.length;
                 }
 
                 this.allStepsCompleted = function () {
@@ -2947,8 +2980,13 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     return $scope.dgSize;
                 }
 
-                this.isValidSize = function () {
+                this.isValidSize = function (size) {
+                    if (size) return validSizes.includes(size);
                     return validSizes.includes($scope.dgSize);
+                }
+
+                this.getValidSizes = function () {
+                    return validSizes;
                 }
             }],
             template: `<section class="fd-wizard" ng-transclude></section>`
@@ -3009,6 +3047,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     }]).directive('fdWizardContent', ['classNames', function (classNames) {
         /**
          * dgBackground: String - When specified applies specific background. Could be one of: 'solid', 'list', 'transparent'
+         * dgSize: String - When specified adds horizontal paddings to the content. Could be one of: 'sm', 'md', 'lg', 'xl'
          */
         return {
             restrict: 'EA',
@@ -3016,16 +3055,20 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             replace: true,
             require: '^fdWizard',
             scope: {
-                dgBackground: '@'
+                dgBackground: '@',
+                dgSize: '@',
             },
             link: function (scope, element, attrs, wizCtrl) {
                 const validBackgrounds = ['solid', 'list', 'transparent'];
+                if (scope.dgSize && !wizCtrl.isValidSize(scope.dgSize)) {
+                    console.error(`fd-wizard-content error: 'dg-size' must be one of: ${wizCtrl.getValidSizes().join(', ')}`);
+                }
                 if (scope.dgBackground && !validBackgrounds.includes(scope.dgBackground)) {
                     console.error(`fd-wizard-content error: 'dgBackground' must be one of: ${validBackgrounds.join(', ')}`);
                 }
 
                 scope.getClasses = () => classNames('fd-wizard__content', {
-                    [`fd-wizard__content--${wizCtrl.getSize()}`]: wizCtrl.isValidSize(),
+                    [`fd-wizard__content--${scope.dgSize}`]: wizCtrl.isValidSize(scope.dgSize),
                     [`fd-wizard__content--${scope.dgBackground}`]: validBackgrounds.includes(scope.dgBackground)
                 });
             },
@@ -3034,6 +3077,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     }]).directive('fdWizardStep', ['classNames', function (classNames) {
         /**
          * dgLabel: String - The step label
+         * dgSize: String - When specified adds horizontal paddings to the content. Could be one of: 'sm', 'md', 'lg', 'xl'
          * optionalLabel: String - An optional text displayed below the label
          * indicatorGlyph: String - Indicator icon class/classes. When specified overrides the 'indicatorLabel' attribute
          * indicatorLabel: String - Indicator label
@@ -3047,6 +3091,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             require: '^fdWizard',
             scope: {
                 dgLabel: '@',
+                dgSize: '@',
                 optionalLabel: '@',
                 indicatorGlyph: '@',
                 indicatorLabel: '@',
@@ -3054,6 +3099,9 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 stepClick: '&',
             },
             link: function (scope, element, attrs, wizCtrl) {
+                if (scope.dgSize && !wizCtrl.isValidSize(scope.dgSize)) {
+                    console.error(`fd-wizard-content error: 'dg-size' must be one of: ${wizCtrl.getValidSizes().join(', ')}`);
+                }
                 wizCtrl.addStep(scope);
 
                 scope.isStepCurrent = function () {
@@ -3065,7 +3113,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 }
 
                 scope.getClasses = () => classNames('fd-wizard__step-content-container', {
-                    [`fd-wizard__step-content-container--${wizCtrl.getSize()}`]: wizCtrl.isValidSize()
+                    [`fd-wizard__step-content-container--${scope.dgSize}`]: wizCtrl.isValidSize(scope.dgSize),
                 });
 
                 scope.$on('$destroy', function () {
@@ -3074,18 +3122,30 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             },
             template: `<div ng-show="isStepCurrent()" ng-class="getClasses()" ng-transclude></div>`
         };
-    }]).directive('fdWizardSummary', [function () {
+    }]).directive('fdWizardSummary', ['classNames', function (classNames) {
+        /**
+         * dgSize: String - When specified adds horizontal paddings to the content. Could be one of: 'sm', 'md', 'lg', 'xl'
+         */
         return {
             restrict: 'EA',
             transclude: true,
             replace: true,
             require: '^fdWizard',
+            scope: {
+                dgSize: '@',
+            },
             link: function (scope, element, attrs, wizCtrl) {
+                if (scope.dgSize && !wizCtrl.isValidSize(scope.dgSize)) {
+                    console.error(`fd-wizard-content error: 'dg-size' must be one of: ${wizCtrl.getValidSizes().join(', ')}`);
+                }
                 scope.allStepsCompleted = function () {
                     return wizCtrl.allStepsCompleted() && !wizCtrl.hasCurrentStep();
                 }
+                scope.getClasses = () => classNames('fd-wizard__step-content-container', {
+                    [`fd-wizard__step-content-container--${scope.dgSize}`]: wizCtrl.isValidSize(scope.dgSize),
+                });
             },
-            template: `<div ng-show="allStepsCompleted()" class="fd-wizard__step-content-container" ng-transclude></div>`
+            template: `<div ng-show="allStepsCompleted()" ng-class="getClasses()" ng-transclude></div>`
         };
     }]).directive('fdWizardNextStep', [function () {
         return {
@@ -3093,5 +3153,372 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             transclude: true,
             replace: true,
             template: `<div class="fd-wizard__next-step" ng-transclude></div>`
+        }
+    }]).directive('fdPanel', [function () {
+        /**
+         * expanded: Boolean - Whether the panel is expanded or not
+         * fixed: Boolean - Whether the panel is expandable or not
+         * compact: Boolean - Panel size
+         * expandedChange: Function - A callback called when the Expand button is clicked
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                expanded: '<',
+                fixed: '<',
+                compact: '<',
+                expandedChange: '&'
+            },
+            controller: ['$scope', 'classNames', function ($scope, classNames) {
+                $scope.expanded = !!$scope.expanded;
+
+                this.isFixed = () => $scope.fixed;
+                this.isExpanded = () => $scope.expanded;
+                this.isCompact = () => $scope.compact;
+                this.getContentId = () => $scope.contentId;
+                this.getTitleId = () => $scope.titleId;
+
+                this.setContentId = (id) => {
+                    $scope.contentId = id;
+                }
+
+                this.setTitleId = (id) => {
+                    $scope.titleId = id;
+                }
+
+                this.toggleExpanded = function () {
+                    $scope.expanded = !$scope.expanded;
+
+                    if ($scope.expandedChange) {
+                        $scope.expandedChange({ expanded: $scope.expanded });
+                    }
+                }
+
+                $scope.getClasses = () => classNames('fd-panel', {
+                    'fd-panel--compact': $scope.compact,
+                    'fd-panel--fixed': $scope.fixed
+                });
+            }],
+            template: `<div ng-class="getClasses()" ng-transclude></div>`
+        }
+    }]).directive('fdPanelHeader', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-panel__header" ng-transclude></div>`
+        }
+    }]).directive('fdPanelExpand', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            require: '^^fdPanel',
+            link: function (scope, element, attrs, panelCtrl) {
+                scope.isFixed = () => panelCtrl.isFixed();
+                scope.isCompact = () => panelCtrl.isCompact();
+                scope.isExpanded = () => panelCtrl.isExpanded();
+                scope.getContentId = () => panelCtrl.getContentId();
+                scope.getTitleId = () => panelCtrl.getTitleId();
+                scope.toggleExpanded = function () {
+                    panelCtrl.toggleExpanded();
+                }
+                scope.getExpandButtonIcon = function () {
+                    return panelCtrl.isExpanded() ? 'sap-icon--slim-arrow-down' : 'sap-icon--slim-arrow-right';
+                }
+            },
+            template: `<div ng-show="!isFixed()" class="fd-panel__expand">
+                <fd-button ng-click="toggleExpanded()" glyph="{{ getExpandButtonIcon() }}" dg-type="transparent" compact="{{ isCompact() || 'false' }}" class="fd-panel__button" 
+                    aria-haspopup="true" aria-expanded="{{ isExpanded() }}" aria-controls="{{ getContentId() }}" aria-labelledby="{{ getTitleId() }}" 
+                    aria-label="expand/collapse panel"></fd-button>
+            </div>`
+        }
+    }]).directive('fdPanelTitle', ['uuid', function (uuid) {
+        return {
+            restrict: 'A',
+            require: '^^fdPanel',
+            link: function (scope, element, attrs, panelCtrl) {
+                element.addClass('fd-panel__title');
+
+                let id = attrs.id;
+                if (!id) {
+                    id = `pt-${uuid.generate()}`;
+                    element[0].setAttribute('id', id);
+                }
+
+                panelCtrl.setTitleId(id);
+            }
+        }
+    }]).directive('fdPanelContent', ['uuid', function (uuid) {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            require: '^fdPanel',
+            link: function (scope, element, attrs, panelCtrl) {
+                scope.isHidden = function () {
+                    return !panelCtrl.isFixed() && !panelCtrl.isExpanded();
+                }
+
+                let id = attrs.id;
+                if (!id) {
+                    id = `ph-${uuid.generate()}`;
+                    element[0].setAttribute('id', id);
+                }
+
+                panelCtrl.setContentId(id);
+            },
+            template: `<div role="region" class="fd-panel__content" aria-hidden="{{ isHidden() }}" ng-transclude></div>`
+        }
+    }]).directive('fdMessagePage', ['classNames', function (classNames) {
+        /**
+         * glyph: String - Icon class
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                glyph: '@'
+            },
+            link: function (scope) {
+                if (!scope.glyph) {
+                    console.error('fd-message-page error: You should provide glpyh icon using the "glyph" attribute');
+                }
+
+                scope.getIconClasses = () => classNames(scope.glyph, 'fd-message-page__icon');
+            },
+            template: `<div class="fd-message-page">
+                <div class="fd-message-page__container">
+                    <div class="fd-message-page__icon-container">
+                        <i role="presentation" ng-class="getIconClasses()"></i>
+                    </div>
+                    <div role="status" aria-live="polite" class="fd-message-page__content" ng-transclude></div>
+                </div>
+            </div>`
+        }
+    }]).directive('fdMessagePageTitle', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-message-page__title" ng-transclude></div>`
+        }
+    }]).directive('fdMessagePageSubtitle', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-message-page__subtitle" ng-transclude></div>`
+        }
+    }]).directive('fdMessagePageActions', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-message-page__actions" ng-transclude></div>`
+        }
+    }]).directive('fdMessagePageMore', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-message-page__more" ng-transclude></div>`
+        }
+    }]).directive('fdUploadCollection', ['classNames', function (classNames) {
+        /**
+         * small: Boolean - Whether or not this is the small upload collection.
+         * selection: Boolean - Whether or not this upload collection supports selection.
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                small: '<',
+                selection: '<'
+            },
+            link: function (scope) {
+                scope.getClassNames = () => classNames('fd-list', 'fd-list--byline', 'fd-upload-collection', {
+                    'fd-upload-collection--sm': scope.small,
+                    'fd-list--selection': scope.selection
+                });
+            },
+            template: `<ul ng-class="getClassNames()" role="list" ng-transclude></ul>`
+        }
+    }]).directive('fdUploadCollectionItem', ['classNames', function (classNames) {
+        /**
+         * dgSelected: Boolean - Whether or not this item is selected
+         * fileName: Boolean - The name of the file, not including the type extension.
+         * extension: Boolean - The file type extension.
+         * fileNameChanged: Function - Event emitted when the user changes a file name. Args: (fileName : String)
+         * deleteClicked: Function - Event emitted when presses the delete button.
+         */
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            scope: {
+                dgSelected: '<',
+                fileName: '@',
+                extension: '@',
+                fileNameChanged: '&',
+                deleteClicked: '&'
+            },
+            controller: ['$scope', function ($scope) {
+                $scope.editing = false;
+                this.getFileName = function () {
+                    return $scope.fileName;
+                }
+                this.getEditedFileName = function () {
+                    return $scope.editedFileName;
+                }
+                this.getExtension = function () {
+                    return $scope.extension;
+                }
+                this.isEditing = function () {
+                    return $scope.editing;
+                }
+                this.setEditing = function (editing) {
+                    $scope.editing = editing;
+                    $scope.editedFileName = $scope.fileName;
+                }
+                this.fileNameChanged = function (fileName) {
+                    $scope.editedFileName = fileName;
+                }
+                this.applyFilenameChange = function () {
+                    $scope.fileName = $scope.editedFileName;
+                    this.setEditing(false);
+
+                    if ($scope.fileNameChanged)
+                        $scope.fileNameChanged({ fileName: $scope.fileName });
+                }
+
+                this.deleteItem = function () {
+                    if ($scope.deleteClicked)
+                        $scope.deleteClicked();
+                }
+
+                $scope.getClassNames = () => classNames('fd-list__item', 'fd-upload-collection__item', {
+                    'is-selected': $scope.dgSelected
+                });
+                $scope.getAriaSelected = () => $scope.dgSelected ? 'true' : undefined;
+            }],
+            template: `<li role="listitem" tabindex="0" ng-class="getClassNames()" ng-attr-aria-selected="{{ getAriaSelected() }}" ng-transclude></li>`
+        }
+    }]).directive('fdUploadCollectionItemContent', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-list__content" ng-transclude><div>`
+        }
+    }]).directive('fdUploadCollectionTitleContainer', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-upload-collection__title-container" ng-transclude></div>`
+        }
+    }]).directive('fdUploadCollectionTitle', [function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            require: '^^fdUploadCollectionItem',
+            link: function (scope, element, attr, itemCtrl) {
+                scope.getTitle = () => `${itemCtrl.getFileName()}.${itemCtrl.getExtension()}`;
+                scope.isEditing = () => itemCtrl.isEditing();
+            },
+            template: `<span ng-if="!isEditing()" class="fd-list__title fd-upload-collection__title">{{ getTitle() }}</span>`
+        }
+    }]).directive('fdUploadCollectionFormItem', [function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            require: '^^fdUploadCollectionItem',
+            link: function (scope, element, attr, itemCtrl) {
+                let editing;
+                scope.file = { name: itemCtrl.getFileName() };
+                scope.getExtension = () => itemCtrl.getExtension();
+                scope.isEditing = () => {
+                    if (editing !== itemCtrl.isEditing()) {
+                        scope.file.name = itemCtrl.getFileName();
+                        editing = itemCtrl.isEditing();
+                    }
+                    return editing;
+                }
+                scope.onFileNameChange = () => itemCtrl.fileNameChanged(scope.file.name);
+                scope.getInputState = () => scope.file.name ? null : 'error';
+            },
+            template: `<div ng-if="isEditing()" class="fd-upload-collection__form-item">
+                <fd-input type="text" placeholder="Filename" state="{{ getInputState() }}" ng-required ng-model="file.name" ng-change="onFileNameChange()" style="pointer-events: all"></fd-input>
+                <span class="fd-upload-collection__extension">.{{ getExtension() }}</span>
+            </div>`
+        }
+    }]).directive('fdUploadCollectionDescription', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-upload-collection__description" ng-transclude><div>`
+        }
+    }]).directive('fdUploadCollectionTextSeparator', [function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            template: `<span class="fd-upload-collection__text-separator"></span>`
+        }
+    }]).directive('fdUploadCollectionStatusGroup', [function () {
+        return {
+            restrict: 'EA',
+            transclude: true,
+            replace: true,
+            template: `<div class="fd-upload-collection__status-group" ng-transclude><div>`
+        }
+    }]).directive('fdUploadCollectionStatusItem', [function () {
+        return {
+            restrict: 'A',
+            require: 'fdObjectStatus',
+            link: function (scope, element, attr, objectStatusCtrl) {
+                objectStatusCtrl.setIsUploadCollection();
+            }
+        }
+    }]).directive('fdUploadCollectionButtonGroup', [function () {
+        return {
+            restrict: 'EA',
+            replace: true,
+            require: '^fdUploadCollectionItem',
+            link: function (scope, element, attr, itemCtrl) {
+                scope.isEditing = () => itemCtrl.isEditing();
+                scope.editClick = (e) => {
+                    e.stopPropagation();
+
+                    itemCtrl.setEditing(true);
+                }
+                scope.cancelClick = (e) => {
+                    e.stopPropagation();
+
+                    itemCtrl.setEditing(false);
+                }
+                scope.deleteClick = (e) => {
+                    e.stopPropagation();
+
+                    itemCtrl.deleteItem();
+                }
+                scope.okClick = (e) => {
+                    e.stopPropagation();
+
+                    itemCtrl.applyFilenameChange();
+                }
+                scope.getOkButtonState = () => itemCtrl.getEditedFileName() ? undefined : 'disabled';
+            },
+            template: `<div class="fd-upload-collection__button-group">
+                <fd-button ng-if="!isEditing()" aria-label="Edit" dg-type="transparent" glyph="sap-icon--edit" ng-click="editClick($event)"></fd-button>
+				<fd-button ng-if="!isEditing()" aria-label="Delete" dg-type="transparent" glyph="sap-icon--decline" ng-click="deleteClick($event)"></fd-button>
+                <fd-button ng-if="isEditing()" dg-label="Ok" state="{{ getOkButtonState() }}" dg-type="transparent" ng-click="okClick($event)"></fd-button>
+				<fd-button ng-if="isEditing()" dg-label="Cancel" dg-type="transparent" ng-click="cancelClick($event)"></fd-button>
+            <div>`
         }
     }]);
