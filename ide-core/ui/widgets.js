@@ -55,6 +55,41 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
 
         return classNames;
 
+    }).directive('dgInputRules', function ($parse) {
+        /**
+         * How to use:
+         * <input ng-model="inputModel" ng-required dg-input-rules="inputRules"
+         * Example object (inputRules):
+         * {
+         *    excluded: ['this', 'that'],
+         *    patterns: ['^[^/]*$'],
+         * }
+         */
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, controller) {
+                let parseFn = $parse(attr.dgInputRules);
+                scope.inputRules = parseFn(scope);
+
+                function validation(value) {
+                    if (value) {
+                        let isValid = true;
+                        if (scope.inputRules.excluded) isValid = !scope.inputRules.excluded.includes(value);
+                        if (isValid && scope.inputRules.patterns) {
+                            for (let i = 0; i < scope.inputRules.patterns.length; i++) {
+                                isValid = RegExp(scope.inputRules.patterns[i], 'g').test(value);
+                                if (!isValid) break;
+                            }
+                        }
+                        controller.$setValidity('inputRules', isValid);
+                    } else {
+                        controller.$setValidity('inputRules', false);
+                    }
+                    return value;
+                }
+                controller.$parsers.push(validation);
+            }
+        };
     }).directive('fdScrollbar', [function () {
         return {
             restrict: 'AE',

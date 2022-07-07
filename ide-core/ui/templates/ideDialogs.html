@@ -120,8 +120,8 @@
                                         state="{{ item.error ? 'error' : '' }}" name="{{ 'i' + item.id }}"
                                         ng-required="{{ isRequired(item.id, item.required) }}" ng-model="item.value"
                                         ng-trim="false" ng-minlength="item.minlength || 0"
-                                        ng-maxlength="item.maxlength || -1" ng-pattern="item.pattern || ''"
-                                        ng-change="inputValidation(formFieldset['i' + item.id].$valid, item)">
+                                        ng-maxlength="item.maxlength || -1" dg-input-rules="item.inputRules || {}"
+                                        ng-change="isValid(formFieldset['i' + item.id].$valid, item)">
                                     </fd-input>
                                     <fd-form-message dg-type="error">{{ item.errorMsg || "Incorrect input" }}
                                     </fd-form-message>
