@@ -60,7 +60,7 @@
                     </div>
                     <div class="fd-bar__element" ng-repeat="btn in dialog.buttons">
                         <button class="fd-dialog__decisive-button fd-button fd-button--compact"
-                            ng-class="{'normal':'', 'emphasized':'fd-button--emphasized', 'transparent':'fd-button--transparent'}[btn.type]"
+                            ng-class="{'emphasized':'fd-button--emphasized','transparent':'fd-button--transparent','negative':'fd-button--negative'}[btn.type]"
                             ng-click="hideDialog(btn.id)">{{ btn.label }}</button>
                     </div>
                 </div>
