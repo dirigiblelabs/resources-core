@@ -1014,10 +1014,10 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                         for (let i = 0; i < scope.formDialog.items.length; i++) {
                             if (scope.formDialog.items[i].id === item.visibility.id && scope.formDialog.items[i].value === item.visibility.value) {
                                 if (item.visibility.hidden) {
-                                    scope.excludeFromRequired[item.id] = false;
+                                    scope.excludeFromRequired[item.id] = true;
                                     return false;
                                 } else {
-                                    scope.excludeFromRequired[item.id] = true;
+                                    scope.excludeFromRequired[item.id] = false;
                                     return true;
                                 }
                             }
