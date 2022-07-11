@@ -77,13 +77,14 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         if (scope.inputRules.excluded) isValid = !scope.inputRules.excluded.includes(value);
                         if (isValid && scope.inputRules.patterns) {
                             for (let i = 0; i < scope.inputRules.patterns.length; i++) {
-                                isValid = RegExp(scope.inputRules.patterns[i], 'g').test(value);
+                                isValid = RegExp(scope.inputRules.patterns[i]).test(value);
                                 if (!isValid) break;
                             }
                         }
                         controller.$setValidity('inputRules', isValid);
                     } else {
-                        controller.$setValidity('inputRules', false);
+                        if (attr.required) controller.$setValidity('inputRules', false);
+                        else controller.$setValidity('inputRules', true);
                     }
                     return value;
                 }
