@@ -3082,8 +3082,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 }
 
                 this.isValidSize = function (size) {
-                    if (size) return validSizes.includes(size);
-                    return validSizes.includes($scope.dgSize);
+                    return validSizes.includes(size);
                 }
 
                 this.getValidSizes = function () {
@@ -3108,7 +3107,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     return wizCtrl.getSteps();
                 }
                 scope.getProgressBarClasses = () => classNames('fd-wizard__progress-bar', {
-                    [`fd-wizard__progress-bar--${wizCtrl.getSize()}`]: wizCtrl.isValidSize()
+                    [`fd-wizard__progress-bar--${wizCtrl.getSize()}`]: wizCtrl.isValidSize(wizCtrl.getSize())
                 });
                 scope.getConnectorClasses = (step) => classNames('fd-wizard__connector', {
                     'fd-wizard__connector--active': wizCtrl.isStepCompleted(step)
