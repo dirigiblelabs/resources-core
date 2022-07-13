@@ -71,24 +71,21 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 let parseFn = $parse(attr.dgInputRules);
                 scope.inputRules = parseFn(scope);
 
-                function validation(value) {
-                    if (value) {
+                function validation(modelValue, viewValue) {
+                    if (viewValue) {
                         let isValid = true;
-                        if (scope.inputRules.excluded) isValid = !scope.inputRules.excluded.includes(value);
+                        if (scope.inputRules.excluded) isValid = !scope.inputRules.excluded.includes(viewValue);
                         if (isValid && scope.inputRules.patterns) {
                             for (let i = 0; i < scope.inputRules.patterns.length; i++) {
-                                isValid = RegExp(scope.inputRules.patterns[i]).test(value);
+                                isValid = RegExp(scope.inputRules.patterns[i]).test(viewValue);
                                 if (!isValid) break;
                             }
                         }
-                        controller.$setValidity('inputRules', isValid);
-                    } else {
-                        if (attr.required) controller.$setValidity('inputRules', false);
-                        else controller.$setValidity('inputRules', true);
-                    }
-                    return value;
+                        return isValid;
+                    } else if (attr.required) return false;
+                    return true;
                 }
-                controller.$parsers.push(validation);
+                controller.$validators.pattern = validation;
             }
         };
     }).directive('fdScrollbar', [function () {
