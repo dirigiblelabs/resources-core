@@ -167,11 +167,8 @@
                 <div ng-show="formDialog.loader && formDialog.loadingMessage">
                     <strong>Status: </strong>{{ formDialog.loadingMessage }}
                 </div>
-                <div class="fd-dialog__loader fd-busy-indicator--l" ng-show="formDialog.loader" aria-label="loading">
-                    <div class="fd-busy-indicator--circle-0"></div>
-                    <div class="fd-busy-indicator--circle-1"></div>
-                    <div class="fd-busy-indicator--circle-2"></div>
-                </div>
+                <fd-busy-indicator class="fd-margin-top--sm fd-margin-bottom--tiny" dg-size="l"
+                    ng-show="formDialog.loader"></fd-busy-indicator>
             </div>
             <footer ng-hide="formDialog.loader" ng-if="formDialog.buttons.length > 0"
                 class="fd-dialog__footer fd-bar fd-bar--footer">
