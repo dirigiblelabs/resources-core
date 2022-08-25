@@ -6,7 +6,7 @@
         <a class="fd-tabs__link" href="" ng-click="tabClick(pane, $event)" title="{{pane.id}}">
           <span class="fd-tabs__tag">
             {{pane.label}} <span class="description">{{pane.description}}</span>
-            <button ng-show="closable"
+            <button ng-show="isPaneClosable(pane)"
               class="fd-button fd-button--transparent fd-button--compact fd-message-strip__close" aria-label="Close">
               <i class="sap-icon--decline"></i>
             </button>
