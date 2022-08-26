@@ -10,7 +10,7 @@
         </split-pane>
         <split-pane size="auto" min-size="100" snap-offset="0" ng-transclude>
             <split direction="vertical" state="splitPanesState.main" ng-transclude>
-                <split-pane ng-if="!layoutSettings.hideEditorsPane" size="70" min-size="0" snap-offset="0"
+                <split-pane ng-if="!layoutSettings.hideEditorsPane" size="auto" min-size="0" snap-offset="0"
                     class="pane-center" ng-transclude>
 
                     <splitted-tabs direction="centerSplittedTabViews.direction" panes="centerSplittedTabViews.panes"
@@ -20,8 +20,8 @@
                     </splitted-tabs>
 
                 </split-pane>
-                <split-pane ng-if="bottomTabs.length > 0" size="30" min-size="0" snap-offset="100" class="pane-bottom"
-                    ng-transclude>
+                <split-pane ng-if="bottomTabs.length > 0" size="{{ layoutSettings.bottomPaneSize }}" min-size="0"
+                    snap-offset="100" class="pane-bottom" ng-transclude>
                     <tabs selected-pane="selection.selectedBottomTab" hide-tabs="layoutSettings.hideBottomTabs">
                         <buttons ng-if="!layoutSettings.hideEditorsPane" class="dg-split-pane-buttons">
                             <button class="fd-button fd-button--compact fd-button--transparent"
