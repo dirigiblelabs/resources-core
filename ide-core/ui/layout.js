@@ -79,8 +79,11 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub', 'i
                 };
 
                 $scope.layoutSettings = {
-                    explorerTabsSize: 20,
-                    rightTabsSize: 20,
+                    explorerPaneSize: 20,
+                    rightPaneSize: 20,
+                    hideEditorsPane: false,
+                    hideCenterTabs: false,
+                    hideBottomTabs: false,
                     ...($scope.viewsLayoutModel.layoutSettings || {})
                 };
                 $scope.selection = {
@@ -1359,6 +1362,7 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub', 'i
                 selectedPane: '=',
                 focused: '<',
                 closable: '<',
+                hideTabs: '<',
                 removeTab: '&',
             },
             controller: ['$scope', '$element', 'messageHub', function ($scope, $element, messageHub) {
@@ -1584,7 +1588,8 @@ angular.module('ideLayout', ['idePerspective', 'ideEditors', 'ideMessageHub', 'i
                 focusedPane: '<',
                 removeTab: '&',
                 moveTab: '&',
-                splitTabs: '&'
+                splitTabs: '&',
+                hideTabs: '<'
             },
             link: function (scope) {
                 scope.onRemoveTab = function (pane) {

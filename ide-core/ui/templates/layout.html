@@ -1,6 +1,6 @@
 <div class="dg-perspective-view">
     <split direction="horizontal" ng-transclude>
-        <split-pane ng-if="explorerTabs.length > 0" size="{{ layoutSettings.explorerTabsSize }}" min-size="0"
+        <split-pane ng-if="explorerTabs.length > 0" size="{{ layoutSettings.explorerPaneSize }}" min-size="0"
             snap-offset="100" class="pane-left" ng-transclude>
             <explorer-toolbar items="explorerTabs"></explorer-toolbar>
             <accordion>
@@ -15,13 +15,14 @@
 
                     <splitted-tabs direction="centerSplittedTabViews.direction" panes="centerSplittedTabViews.panes"
                         focused-pane="focusedTabView" remove-tab="closeCenterTab(pane)"
-                        split-tabs="splitCenterTabs(direction, pane)" ng-transclude>
+                        split-tabs="splitCenterTabs(direction, pane)" hide-tabs="layoutSettings.hideCenterTabs"
+                        ng-transclude>
                     </splitted-tabs>
 
                 </split-pane>
                 <split-pane ng-if="bottomTabs.length > 0" size="30" min-size="0" snap-offset="100" class="pane-bottom"
                     ng-transclude>
-                    <tabs selected-pane="selection.selectedBottomTab">
+                    <tabs selected-pane="selection.selectedBottomTab" hide-tabs="layoutSettings.hideBottomTabs">
                         <buttons ng-if="!layoutSettings.hideEditorsPane" class="dg-split-pane-buttons">
                             <button class="fd-button fd-button--compact fd-button--transparent"
                                 ng-click="toggleEditorsPane()">
@@ -41,7 +42,7 @@
                 </split-pane>
             </split>
         </split-pane>
-        <split-pane ng-if="rightTabs.length > 0" size="{{ layoutSettings.rightTabsSize }}" min-size="0"
+        <split-pane ng-if="rightTabs.length > 0" size="{{ layoutSettings.rightPaneSize }}" min-size="0"
             snap-offset="100" class="pane-right" ng-transclude>
             <accordion>
                 <accordion-pane ng-repeat="view in rightTabs | filter:{hidden:'!true'}" view="view"
