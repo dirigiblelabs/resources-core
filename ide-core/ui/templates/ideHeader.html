@@ -1,13 +1,14 @@
 <div class="fd-tool-header fd-tool-header--menu">
     <div class="fd-tool-header__group">
-        <header-hamburger-menu menu-handler="menuClick" menu-list="menu"></header-hamburger-menu>
+        <div class="dg-hamburger-menu" fd-tool-header-element header-hamburger-menu menu-handler="menuClick"
+            menu-list="menu"></div>
         <a class="fd-tool-header__element dg-header-logo" href="{{ branding.brandUrl }}">
             <img class="fd-tool-header__logo" ng-src="{{ branding.logo }}" alt="" />
         </a>
         <a class="fd-tool-header__element" href="{{ branding.brandUrl }}" style="text-decoration: none">
-            <h4 class="fd-title fd-title--h5 fd-tool-header__title">{{ branding.brand }}</h4>
+            <h5 class="fd-title fd-title--h5 fd-tool-header__title">{{ branding.brand }}</h5>
         </a>
-        <header-menu menu-handler="menuClick" menu-list="menu"></header-menu>
+        <div class="dg-menubar" fd-tool-header-group header-menu menu-handler="menuClick" menu-list="menu"></div>
     </div>
     <div class="fd-tool-header__group">
         <div class="fd-tool-header__element dg-backdrop-element">

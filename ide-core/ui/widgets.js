@@ -1120,7 +1120,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     scope.hide = function (event) {
                         if (scope.isExpanded) {
                             if (event.relatedTarget) {
-                                if (event.relatedTarget.className.includes('fd-menu__')) {
+                                if (typeof event.relatedTarget.className === 'string' && event.relatedTarget.className.includes('fd-menu__')) {
                                     scope.hideSubmenu();
                                 } else if (!element[0].contains(event.relatedTarget)) {
                                     toHide = setTimeout(function () {
