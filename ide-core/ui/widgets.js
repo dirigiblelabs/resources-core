@@ -816,7 +816,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 </fd-popover-body>
             </div>`,
         }
-    }]).directive('fdPopover', ['uuid', function (uuid) {
+    }]).directive('fdPopover', ['uuid', '$window', function (uuid, $window) {
         /**
          * dgAlign: String - Relative position of the popover. Possible values are "left" and "right". If not provided, left is assumed.
          * closeInnerclick: Boolean - If the popover should close when there is a click event inside it(*1). Default is true.
@@ -833,37 +833,39 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             replace: true,
             scope: {
                 dgAlign: '@',
-                closeInnerclick: '@'
+                closeInnerclick: '<'
             },
             link: {
                 pre: function (scope) {
                     scope.popoverId = `p${uuid.generate()}`;
+                    if (!angular.isDefined(scope.closeInnerclick))
+                        scope.closeInnerclick = true;
                 },
                 post: function (scope, element) {
-                    let hidePopoverOnMouseUp = false;
-                    element.on('focusout', function (e) {
-                        if (!e.relatedTarget || !element[0].contains(e.relatedTarget)) {
-                            scope.$apply(scope.hidePopover);
-                        } else {
-                            hidePopoverOnMouseUp = true;
+                    scope.pointerHandler = function (e) {
+                        if (!element[0].contains(e.target)) {
+                            scope.$apply(scope.hidePopover());
                         }
-                    });
-
-                    element.on('mouseup', function (e) {
-                        if (hidePopoverOnMouseUp) {
-                            if (scope.closeInnerclick === 'false' && element[0].contains(e.target)) {
-                                return;
+                    };
+                    if (scope.closeInnerclick) {
+                        element.on('focusout', function (e) {
+                            if (e.relatedTarget && !element[0].contains(e.relatedTarget)) {
+                                scope.$apply(scope.hidePopover);
                             }
-                            scope.$apply(scope.hidePopover);
-                            hidePopoverOnMouseUp = false;
-                        }
-                    });
+                        });
+                        element.on('pointerup', function (e) {
+                            if (e.originalEvent && e.originalEvent.isSubmenuItem) return;
+                            else if (scope.popoverControl && e.target === scope.popoverControl) return;
+                            else if (element[0].contains(e.target)) scope.hidePopover();
+                        });
+                    }
 
                     scope.hidePopover = function () {
                         if (scope.popoverBody) {
                             scope.popoverControl.setAttribute('aria-expanded', 'false');
                             scope.popoverBody.setAttribute('aria-hidden', 'true');
                         }
+                        $window.removeEventListener('pointerup', scope.pointerHandler);
                     };
 
                     scope.togglePopover = function () {
@@ -874,9 +876,9 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         if (scope.popoverBody.getAttribute('aria-hidden') === 'true') {
                             scope.popoverControl.setAttribute('aria-expanded', 'true');
                             scope.popoverBody.setAttribute('aria-hidden', 'false');
+                            $window.addEventListener('pointerup', scope.pointerHandler);
                         } else {
-                            scope.popoverControl.setAttribute('aria-expanded', 'false');
-                            scope.popoverBody.setAttribute('aria-hidden', 'true');
+                            scope.hidePopover();
                         };
                     };
                 }
@@ -904,25 +906,37 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             },
             template: '<div class="fd-popover__control" ng-transclude></div>',
         }
-    }]).directive('fdPopoverBody', [function () {
+    }]).directive('fdPopoverBody', ['$window', function ($window) {
         /**
          * dgAlign: String - Relative position of the popover. Possible values are "left" and "right". If not provided, left is assumed.
-         * maxHeight: Number - Maximum popover height in pixels before it starts scrolling. Default is 250 px.
+         * maxHeight: Number - Maximum popover height in pixels before it starts scrolling. Default is the height of the window.
          * noArrow: Boolean - If the popup should have an arrow.
          * dropdownFill: Boolean - The dropdown body will be adjusted to match the text length.
+         * canScroll: Boolean - Enable/disable scroll popover support. Default is true.
          */
         return {
             restrict: 'E',
             transclude: true,
             replace: true,
             scope: {
-                maxHeight: '@',
-                dgAlign: '@',
-                noArrow: '@',
-                dropdownFill: '@',
+                maxHeight: '@?',
+                dgAlign: '@?',
+                noArrow: '@?',
+                dropdownFill: '@?',
+                canScroll: '<?',
             },
             link: {
-                pre: function (scope) {
+                pre: function (scope, element) {
+                    scope.setDefault = function () {
+                        if (!angular.isDefined(scope.canScroll))
+                            scope.canScroll = true;
+                        let rect = element[0].getBoundingClientRect();
+                        scope.defaultHeight = $window.innerHeight - rect.top;
+                    };
+                    scope.setDefault();
+                    $window.addEventListener('resize', function () {
+                        scope.$apply(function () { scope.setDefault() });
+                    });
                     if (scope.$parent && scope.$parent.popoverId)
                         scope.popoverId = scope.$parent.popoverId;
                     else if (scope.$parent && scope.$parent.$parent && scope.$parent.$parent.popoverId)
@@ -930,35 +944,70 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     scope.getClasses = function () {
                         let classList = [];
                         if (scope.dgAlign === 'right') classList.push('fd-popover__body--right');
-                        if (scope.noArrow === "true") classList.push('fd-popover__body--no-arrow');
-                        if (scope.dropdownFill === "true") classList.push('fd-popover__body--dropdown-fill');
+                        if (scope.noArrow === 'true') classList.push('fd-popover__body--no-arrow');
+                        if (scope.dropdownFill === 'true') classList.push('fd-popover__body--dropdown-fill');
                         return classList.join(' ');
                     };
                 },
             },
             template: `<div id="{{ popoverId }}" class="fd-popover__body" ng-class="getClasses()" aria-hidden="true">
-                <div class="fd-popover__wrapper fd-scrollbar" style="max-height:{{ maxHeight || 250 }}px;" ng-transclude>
-                </div>
+                <div ng-if="canScroll" class="fd-popover__wrapper fd-scrollbar" style="max-height:{{ maxHeight || defaultHeight }}px;" ng-transclude></div>
+                <ng-transclude ng-if="!canScroll"></ng-transclude>
             </div>`,
         }
-    }]).directive('fdMenu', [function () {
+    }]).directive('fdMenu', ['$window', function ($window) {
+        /**
+         * maxHeight: Number - Maximum height in pixels before it starts scrolling. Default is the height of the window.
+         * canScroll: Boolean - Enable/disable scroll menu support. Default is false.
+         */
         return {
             restrict: 'E',
             transclude: true,
             replace: true,
-            template: `<nav aria-label="menu" class="fd-menu"><ul class="fd-menu__list" role="menu" ng-transclude></ul></nav>`
+            scope: {
+                maxHeight: '@?',
+                canScroll: '<?',
+            },
+            link: {
+                pre: function (scope, element) {
+                    let rect = element[0].getBoundingClientRect();
+                    scope.defaultHeight = $window.innerHeight - rect.top;
+                },
+                post: function (scope, element) {
+                    $window.addEventListener('resize', function () {
+                        let rect = element[0].getBoundingClientRect();
+                        scope.defaultHeight = $window.innerHeight - rect.top;
+                    });
+                    scope.getClasses = function () {
+                        let classList = [];
+                        if (scope.canScroll) {
+                            classList.push('fd-menu--overflow');
+                            element[0].style.maxHeight = `${scope.maxHeight || scope.defaultHeight}px`;
+                        } else element[0].style.removeProperty('max-height');
+                        return classList.join(' ');
+                    };
+                },
+            },
+            template: `<nav aria-label="menu" class="fd-menu" ng-class="getClasses()"><ul class="fd-menu__list" role="menu" ng-transclude></ul></nav>`
         }
     }]).directive('fdMenuItem', [function () {
+        /**
+         * title: String - Title/label of the menu item.
+         * maxHeight: Number - Maximum height in pixels before it starts scrolling. Default is the height of the window.
+         * canScroll: Boolean - Enable/disable scroll menu support. Default is false.
+         * iconBefore: String - Icon class. Displays the icon before the title.
+         * iconAfter: String - Icon class. Displays the icon at the end of the menu item.
+         */
         return {
             restrict: 'E',
             transclude: false,
             replace: true,
             scope: {
                 title: '@',
-                isActive: '@',
-                isSelected: '@',
-                iconBefore: '@',
-                iconAfter: '@',
+                isActive: '@?',
+                isSelected: '@?',
+                iconBefore: '@?',
+                iconAfter: '@?',
             },
             link: function (scope) {
                 scope.getClasses = function () {
@@ -978,6 +1027,121 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         <i class="{{ iconAfter }}" role="presentation"></i>
                     </span>
                 </span>
+            </li>`
+        }
+    }]).directive('fdMenuSublist', ['uuid', '$window', function (uuid, $window) {
+        /**
+         * title: String - Title/label of the menu item.
+         * maxHeight: Number - Maximum height in pixels before it starts scrolling. Default is the height of the window.
+         * canScroll: Boolean - Enable/disable scroll menu support. Default is false.
+         * icon: String - Icon class. Displays the icon before the title.
+         */
+        return {
+            restrict: 'E',
+            transclude: true,
+            replace: true,
+            scope: {
+                title: '@',
+                icon: '@?',
+                maxHeight: '@?',
+                canScroll: '<?',
+            },
+            link: {
+                pre: function (scope) {
+                    scope.sublistId = `sl${uuid.generate()}`;
+                    scope.isExpanded = false;
+                    scope.defaultHeight = $window.innerHeight;
+                },
+                post: function (scope, element) {
+                    let toHide = 0;
+                    $window.addEventListener('resize', function () {
+                        scope.$apply(function () {
+                            scope.defaultHeight = $window.innerHeight;
+                            scope.setPosition();
+                        });
+                    });
+                    scope.pointerHandler = function (e) {
+                        if (!element[0].contains(e.target)) {
+                            scope.$apply(scope.hideSubmenu());
+                        }
+                    };
+                    element.on('pointerup', function (e) {
+                        let listItem;
+                        let list;
+                        if (e.target.tagName !== "LI") {
+                            listItem = e.target.closest('li');
+                        } else {
+                            listItem = e.target;
+                        }
+                        for (let i = 0; i < listItem.children.length; i++) {
+                            if (listItem.children[i].tagName === 'UL') {
+                                list = listItem.children[i];
+                            }
+                        }
+                        if (list && list.id === scope.sublistId) {
+                            e.originalEvent.isSubmenuItem = true;
+                            if (e.originalEvent.pointerType !== 'mouse')
+                                scope.$apply(scope.show());
+                        }
+                    });
+                    scope.getClasses = function () {
+                        let classList = [];
+                        if (scope.isExpanded === 'true') classList.push('is-expanded');
+                        return classList.join(' ');
+                    };
+                    scope.setPosition = function () {
+                        if (!angular.isDefined(scope.menu)) scope.menu = element[0].querySelector(`#${scope.sublistId}`);
+                        requestAnimationFrame(function () {
+                            let rect = scope.menu.getBoundingClientRect();
+                            let bottom = $window.innerHeight - rect.bottom;
+                            let right = $window.innerWidth - rect.right;
+                            if (bottom < 0) scope.menu.style.top = `${bottom}px`;
+                            if (right < 0) {
+                                scope.menu.style.left = `${scope.menu.offsetWidth * -1}px`;
+                                scope.menu.classList.add('dg-submenu--left');
+                            }
+                        });
+                    };
+                    scope.show = function () {
+                        if (toHide) clearTimeout(toHide);
+                        if (!scope.isExpanded) {
+                            scope.isExpanded = true;
+                            scope.setPosition();
+                            $window.addEventListener('pointerup', scope.pointerHandler);
+                        }
+                    };
+                    scope.hideSubmenu = function () {
+                        scope.isExpanded = false;
+                        scope.menu.style.removeProperty('top');
+                        scope.menu.style.removeProperty('left');
+                        scope.menu.classList.remove('dg-submenu--left');
+                        $window.removeEventListener('pointerup', scope.pointerHandler);
+                    };
+                    scope.hide = function (event) {
+                        if (scope.isExpanded) {
+                            if (event.relatedTarget) {
+                                if (event.relatedTarget.className.includes('fd-menu__')) {
+                                    scope.hideSubmenu();
+                                } else if (!element[0].contains(event.relatedTarget)) {
+                                    toHide = setTimeout(function () {
+                                        scope.$apply(scope.hideSubmenu());
+                                    }, 300);
+                                }
+                            } else if (!element[0] === event.currentTarget) { // Firefox tooltip fix
+                                scope.hideSubmenu();
+                            }
+                        }
+                    };
+                }
+            },
+            template: `<li class="fd-menu__item" role="presentation" ng-mouseenter="show()" ng-mouseleave="hide($event)">
+                <span class="fd-menu__link has-child" aria-controls="{{sublistId}}" aria-expanded="{{isExpanded}}" aria-haspopup="true" role="menuitem" ng-class="getClasses()">
+                    <span ng-if="icon" class="fd-menu__addon-before"><i class="{{icon}}" role="presentation"></i></span>
+                    <span class="fd-menu__title">{{title}}</span>
+                    <span class="fd-menu__addon-after fd-menu__addon-after--submenu"></span>
+                </span>
+                <ul ng-if="canScroll" class="fd-menu__sublist fd-menu--overflow fd-scrollbar dg-menu__sublist--overflow" id="{{sublistId}}" aria-hidden="{{!isExpanded}}" role="menu" style="max-height:{{ maxHeight || defaultHeight }}px;" ng-transclude></ul>
+                <ul ng-if="!canScroll" class="fd-menu__sublist" id="{{sublistId}}" aria-hidden="{{!isExpanded}}" role="menu" ng-transclude></ul>
             </li>`
         }
     }]).directive('fdMenuSeparator', [function () {
@@ -3853,5 +4017,26 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 scope.getText = () => `${tokenizerCtrl.getNumberOfHiddenTokens()} more`;
             },
             template: `<span ng-if="getNumberOfHiddenTokens() > 0" class="fd-tokenizer__indicator">{{ getText() }}</span>`
+        }
+    }]).directive('fdToolHeaderGroup', [function () {
+        return {
+            restrict: 'A',
+            link: function (scope, element) {
+                element.addClass('fd-tool-header__group');
+            }
+        }
+    }]).directive('fdToolHeaderElement', [function () {
+        return {
+            restrict: 'A',
+            link: function (scope, element) {
+                element.addClass('fd-tool-header__element');
+            }
+        }
+    }]).directive('fdToolHeaderButton', [function () {
+        return {
+            restrict: 'A',
+            link: function (scope, element) {
+                element.addClass('fd-tool-header__button');
+            }
         }
     }]);

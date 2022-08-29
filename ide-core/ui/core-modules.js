@@ -500,98 +500,22 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                 menuList: "<",
                 menuHandler: "&",
             },
-            link: function (scope, element) {
-                let isMenuOpen = false;
-                let openedMenuId = "";
+            link: function (scope) {
                 scope.menuHandler = scope.menuHandler();
 
-                messageHub.onDidReceiveMessage(
-                    'header-menu.closeAll',
-                    function () {
-                        if (isMenuOpen) {
-                            scope.hideAllMenus();
-                            scope.hideAllSubmenus();
-                        }
-                    },
-                    true
-                );
-
-                scope.isScrollable = function (menuItems) {
-                    for (let i = 0; i < menuItems.length; i++)
-                        if (menuItems[i].items) return '';
-                    return 'fd-menu--overflow fd-scrollbar dg-headermenu--overflow';
-                }
-
-                scope.menuHovered = function () {
-                    if (openedMenuId !== "") {
-                        let oldSubmenu = element[0].querySelector(`#${openedMenuId}`);
-                        let oldSubmenuLink = element[0].querySelector(`span[aria-controls="${openedMenuId}"]`);
-                        oldSubmenuLink.setAttribute("aria-expanded", false);
-                        oldSubmenuLink.classList.remove("is-expanded");
-                        oldSubmenu.setAttribute("aria-hidden", true);
-                        openedMenuId = "";
-                    }
-                };
-
-                scope.menuClicked = function (menuButton) {
-                    let menu = menuButton.parentElement.querySelector(".fd-menu");
-                    if (menu.classList.contains("dg-hidden")) {
-                        scope.hideAllSubmenus(menu);
-                        scope.hideAllMenus();
-                        let offset = menuButton.getBoundingClientRect();
-                        menu.style.top = `${offset.bottom}px`;
-                        menu.style.left = `${offset.left}px`;
-                        menu.classList.remove("dg-hidden");
-                        messageHub.triggerEvent('ide-header.menuOpened', true);
-                        isMenuOpen = true;
+                scope.isScrollable = function (items) {
+                    if (items) {
+                        for (let i = 0; i < items.length; i++)
+                            if (items[i].items) return false;
                     } else {
-                        menu.classList.add("dg-hidden");
-                        messageHub.triggerEvent('ide-header.menuClosed', true);
-                        isMenuOpen = false;
+                        for (let i = 0; i < scope.menuList.length; i++)
+                            if (scope.menuList[i].items) return false;
                     }
+                    return true;
                 };
 
-                scope.hideAllMenus = function () {
-                    let menus = element[0].querySelectorAll(".fd-menu");
-                    for (let i = 0; i < menus.length; i++) {
-                        if (!menus[i].classList.contains("dg-hidden")) menus[i].classList.add("dg-hidden");
-                    }
-                    messageHub.triggerEvent('ide-header.menuClosed', true);
-                    isMenuOpen = false;
-                };
-
-                scope.hideAllSubmenus = function () {
-                    let submenus = element[0].querySelectorAll('.fd-menu__sublist[aria-hidden="false"]');
-                    let submenusLinks = element[0].querySelectorAll('.is-expanded');
-                    for (let i = 0; i < submenus.length; i++)
-                        submenus[i].setAttribute("aria-hidden", true);
-                    for (let i = 0; i < submenusLinks.length; i++) {
-                        submenusLinks[i].setAttribute("aria-expanded", false);
-                        submenusLinks[i].classList.remove("is-expanded");
-                    }
-                };
-
-                scope.showSubmenu = function (submenuId) {
-                    scope.hideAllSubmenus();
-                    openedMenuId = submenuId;
-                    let submenu = element[0].querySelector(`#${submenuId}`);
-                    let submenus = submenu.querySelectorAll('.fd-menu__sublist');
-                    let submenusLinks = submenu.querySelectorAll('.is-expanded');
-                    for (let i = 0; i < submenus.length; i++)
-                        submenus[i].setAttribute("aria-hidden", true);
-                    for (let i = 0; i < submenusLinks.length; i++) {
-                        submenusLinks[i].setAttribute("aria-expanded", false);
-                        submenusLinks[i].classList.remove("is-expanded");
-                    }
-                    let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
-                    submenuLink.setAttribute("aria-expanded", true);
-                    submenuLink.classList.add("is-expanded");
-                    submenu.setAttribute("aria-hidden", false);
-                };
-
-                scope.menuItemClick = function (item, subItem) {
-                    scope.hideAllMenus();
-                    scope.menuHandler(item, subItem);
+                scope.menuItemClick = function (item) {
+                    scope.menuHandler(item);
                 };
             },
             templateUrl: "/services/v4/web/ide-core/ui/templates/headerMenu.html",
@@ -600,73 +524,22 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
     .directive("headerSubmenu", function () {
         return {
             restrict: "E",
-            replace: true,
+            replace: false,
             scope: {
-                parentItem: "<",
-                submenuIndex: "<",
-                menuHandler: "&",
-                hideMenuFn: "&",
-                isToplevel: "<",
-                idPrefix: "<",
+                sublist: '<',
+                menuHandler: '&',
             },
-            link: function (scope, element, attr) {
-                let openedMenuId = "";
-                scope.hideMenuFn = scope.hideMenuFn();
+            link: function (scope) {
                 scope.menuHandler = scope.menuHandler();
-
-                scope.isScrollable = function (menuItems) {
-                    for (let i = 0; i < menuItems.length; i++)
-                        if (menuItems[i].items) return "";
-                    return "fd-scrollbar dg-menu__sublist--overflow";
-                }
-
-                scope.menuHovered = function () {
-                    if (openedMenuId !== "" && openedMenuId !== attr["id"]) {
-                        let oldSubmenu = element[0].querySelector(`#${openedMenuId}`);
-                        let oldSubmenuLink = element[0].querySelector(`span[aria-controls="${openedMenuId}"]`);
-                        oldSubmenuLink.setAttribute("aria-expanded", false);
-                        oldSubmenuLink.classList.remove("is-expanded");
-                        oldSubmenu.setAttribute("aria-hidden", true);
-                        openedMenuId = "";
-                    }
-                };
-
-                scope.hideAllSubmenus = function () {
-                    let submenus = element[0].querySelectorAll('.fd-menu__sublist[aria-hidden="false"]');
-                    let submenusLinks = element[0].querySelectorAll('.is-expanded');
-                    for (let i = 0; i < submenus.length; i++)
-                        submenus[i].setAttribute("aria-hidden", true);
-                    for (let i = 0; i < submenusLinks.length; i++) {
-                        submenusLinks[i].setAttribute("aria-expanded", false);
-                        submenusLinks[i].classList.remove("is-expanded");
-                    }
-                };
-
-                scope.showSubmenu = function (submenuId) {
-                    scope.hideAllSubmenus();
-                    openedMenuId = submenuId;
-                    let submenu = element[0].querySelector(`#${submenuId}`);
-                    let submenus = submenu.querySelectorAll('.fd-menu__sublist');
-                    let submenusLinks = submenu.querySelectorAll('.is-expanded');
-                    for (let i = 0; i < submenus.length; i++)
-                        submenus[i].setAttribute("aria-hidden", true);
-                    for (let i = 0; i < submenusLinks.length; i++) {
-                        submenusLinks[i].setAttribute("aria-expanded", false);
-                        submenusLinks[i].classList.remove("is-expanded");
-                    }
-                    let submenuLink = element[0].querySelector(`span[aria-controls="${submenuId}"]`);
-                    submenuLink.setAttribute("aria-expanded", true);
-                    submenuLink.classList.add("is-expanded");
-                    submenu.setAttribute("aria-hidden", false);
-                };
-
-                scope.menuItemClick = function (item, subItem) {
-                    scope.hideMenuFn();
-                    if (scope.isToplevel) scope.menuHandler(subItem); // Temp fix for legacy menu api
-                    else scope.menuHandler(item, subItem);
+                scope.isScrollable = function (index) {
+                    for (let i = 0; i < scope.sublist[index].items.length; i++)
+                        if (scope.sublist[index].items[i].items) return false;
+                    return true;
                 };
             },
-            templateUrl: "/services/v4/web/ide-core/ui/templates/headerSubmenu.html",
+            template: `<fd-menu-item ng-repeat-start="item in sublist track by $index" ng-if="!item.items" title="{{ item.label }}" ng-click="menuHandler(item)"></fd-menu-item>
+            <fd-menu-sublist ng-if="item.items" title="{{ item.label }}" can-scroll="isScrollable($index)"><header-submenu sublist="item.items" menu-handler="menuHandler"></header-submenu></fd-menu-sublist>
+            <fd-menu-separator ng-if="item.divider" ng-repeat-end></fd-menu-separator>`,
         };
     })
     .directive('ideContainer', ['perspective', function (perspective) {
