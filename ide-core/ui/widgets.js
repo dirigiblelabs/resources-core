@@ -19,6 +19,21 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 return _p8() + _p8(true) + _p8(true) + _p8();
             }
         };
+    }).factory('backdrop', function ($document) {
+        let backdrop = $document[0].createElement('div');
+        backdrop.classList.add('dg-backdrop');
+        $document[0].body.appendChild(backdrop);
+
+        let activate = function () {
+            $document[0].body.classList.add('dg-backdrop--active');
+        };
+        let deactivate = function () {
+            $document[0].body.classList.remove('dg-backdrop--active');
+        };
+        return {
+            activate: activate,
+            deactivate: deactivate,
+        };
     }).factory('classNames', function () {
         function classNames(...args) {
             let classes = [];
@@ -816,7 +831,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 </fd-popover-body>
             </div>`,
         }
-    }]).directive('fdPopover', ['uuid', '$window', function (uuid, $window) {
+    }]).directive('fdPopover', ['uuid', '$window', 'backdrop', function (uuid, $window, backdrop) {
         /**
          * dgAlign: String - Relative position of the popover. Possible values are "left" and "right". If not provided, left is assumed.
          * closeInnerclick: Boolean - If the popover should close when there is a click event inside it(*1). Default is true.
@@ -842,6 +857,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         scope.closeInnerclick = true;
                 },
                 post: function (scope, element) {
+                    let isHidden = true;
                     scope.pointerHandler = function (e) {
                         if (!element[0].contains(e.target)) {
                             scope.$apply(scope.hidePopover());
@@ -856,7 +872,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         element.on('pointerup', function (e) {
                             if (e.originalEvent && e.originalEvent.isSubmenuItem) return;
                             else if (scope.popoverControl && e.target === scope.popoverControl) return;
-                            else if (element[0].contains(e.target)) scope.hidePopover();
+                            else if (element[0].contains(e.target) && !isHidden) scope.hidePopover();
                         });
                     }
 
@@ -865,7 +881,9 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                             scope.popoverControl.setAttribute('aria-expanded', 'false');
                             scope.popoverBody.setAttribute('aria-hidden', 'true');
                         }
+                        isHidden = true;
                         $window.removeEventListener('pointerup', scope.pointerHandler);
+                        backdrop.deactivate();
                     };
 
                     scope.togglePopover = function () {
@@ -873,10 +891,12 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                             scope.popoverControl = element[0].querySelector(`[aria-controls="${scope.popoverId}"]`);
                             scope.popoverBody = element[0].querySelector(`#${scope.popoverId}`);
                         }
-                        if (scope.popoverBody.getAttribute('aria-hidden') === 'true') {
+                        if (isHidden) {
                             scope.popoverControl.setAttribute('aria-expanded', 'true');
                             scope.popoverBody.setAttribute('aria-hidden', 'false');
+                            isHidden = false;
                             $window.addEventListener('pointerup', scope.pointerHandler);
+                            backdrop.activate();
                         } else {
                             scope.hidePopover();
                         };
@@ -955,10 +975,12 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 <ng-transclude ng-if="!canScroll"></ng-transclude>
             </div>`,
         }
-    }]).directive('fdMenu', ['$window', function ($window) {
+    }]).directive('fdMenu', ['$window', 'backdrop', function ($window, backdrop) {
         /**
          * maxHeight: Number - Maximum height in pixels before it starts scrolling. Default is the height of the window.
          * canScroll: Boolean - Enable/disable scroll menu support. Default is false.
+         * show: Boolean - Use this instead of the CSS 'display' property. Otherwise, the menu will not work properly. Default is true.
+         * noBackdrop: Boolean - Disables the backdrop. Use only when necessary (for example in popovers). This may break the menu if not used properly. Default is false.
          */
         return {
             restrict: 'E',
@@ -967,9 +989,15 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             scope: {
                 maxHeight: '@?',
                 canScroll: '<?',
+                show: '<?',
+                noBackdrop: '<?',
             },
             link: {
                 pre: function (scope, element) {
+                    if (!angular.isDefined(scope.show))
+                        scope.show = true;
+                    if (!angular.isDefined(scope.noBackdrop))
+                        scope.noBackdrop = false;
                     let rect = element[0].getBoundingClientRect();
                     scope.defaultHeight = $window.innerHeight - rect.top;
                 },
@@ -977,6 +1005,12 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     $window.addEventListener('resize', function () {
                         let rect = element[0].getBoundingClientRect();
                         scope.defaultHeight = $window.innerHeight - rect.top;
+                    });
+                    scope.$watch('show', function () {
+                        if (!scope.noBackdrop) {
+                            if (scope.show) backdrop.activate();
+                            else backdrop.deactivate();
+                        }
                     });
                     scope.getClasses = function () {
                         let classList = [];
@@ -988,14 +1022,14 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     };
                 },
             },
-            template: `<nav aria-label="menu" class="fd-menu" ng-class="getClasses()"><ul class="fd-menu__list" role="menu" ng-transclude></ul></nav>`
+            template: `<nav aria-label="menu" class="fd-menu" ng-show="show" ng-class="getClasses()"><ul class="fd-menu__list" role="menu" ng-transclude></ul></nav>`
         }
     }]).directive('fdMenuItem', [function () {
         /**
          * title: String - Title/label of the menu item.
          * maxHeight: Number - Maximum height in pixels before it starts scrolling. Default is the height of the window.
          * canScroll: Boolean - Enable/disable scroll menu support. Default is false.
-         * iconBefore: String - Icon class. Displays the icon before the title.
+         * iconBefore: String - Icon class. Displays the icon before the title. Use 'none' to display a transparent icon.
          * iconAfter: String - Icon class. Displays the icon at the end of the menu item.
          */
         return {
@@ -1020,7 +1054,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             template: `<li class="fd-menu__item" role="presentation">
                 <span class="fd-menu__link" ng-class="getClasses()" role="menuitem">
                     <span ng-if="iconBefore" class="fd-menu__addon-before">
-                        <i class="{{ iconBefore }}" role="presentation"></i>
+                        <i class="{{ iconBefore }}" ng-if="iconBefore !== 'none'" role="presentation"></i>
                     </span>
                     <span class="fd-menu__title">{{ title }}</span>
                     <span ng-if="iconAfter" class="fd-menu__addon-after">
@@ -4018,25 +4052,73 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             },
             template: `<span ng-if="getNumberOfHiddenTokens() > 0" class="fd-tokenizer__indicator">{{ getText() }}</span>`
         }
+    }]).directive('fdToolHeader', ['classNames', function (classNames) {
+        /**
+         * hasMenu: Boolean - If the toolbar will contain a hamburger menu.
+         * dgSize: String - Manually set the horizontal paddings of the tool header. Possible options are 'sm', 'md', 'lg' and 'xl'.
+         * responsive: Boolean - Automatically adjust the horizontal paddings.
+         */
+        return {
+            restrict: 'E',
+            transclude: true,
+            replace: true,
+            scope: {
+                hasMenu: '<',
+                dgSize: '@',
+                responsive: '<'
+            },
+            link: function (scope) {
+                scope.getClasses = () => classNames('fd-tool-header', {
+                    'fd-tool-header--menu': scope.hasMenu,
+                    'fd-tool-header--responsive-paddings': scope.responsive,
+                    [`fd-tool-header--${scope.dgSize}`]: scope.dgSize,
+                });
+            },
+            template: `<div ng-class="getClasses()" ng-transclude></div>`
+        }
     }]).directive('fdToolHeaderGroup', [function () {
         return {
             restrict: 'A',
-            link: function (scope, element) {
-                element.addClass('fd-tool-header__group');
-            }
+            link: {
+                pre: function (scope, element) {
+                    element.addClass('fd-tool-header__group');
+                }
+            },
         }
     }]).directive('fdToolHeaderElement', [function () {
         return {
             restrict: 'A',
-            link: function (scope, element) {
-                element.addClass('fd-tool-header__element');
-            }
+            link: {
+                pre: function (scope, element) {
+                    element.addClass('fd-tool-header__element');
+                }
+            },
         }
     }]).directive('fdToolHeaderButton', [function () {
         return {
             restrict: 'A',
-            link: function (scope, element) {
-                element.addClass('fd-tool-header__button');
-            }
+            link: {
+                pre: function (scope, element) {
+                    element.addClass('fd-tool-header__button');
+                }
+            },
+        }
+    }]).directive('fdToolHeaderTitle', [function () {
+        return {
+            restrict: 'A',
+            link: {
+                pre: function (scope, element) {
+                    element.addClass('fd-tool-header__title');
+                }
+            },
+        }
+    }]).directive('fdToolHeaderLogo', [function () {
+        return {
+            restrict: 'A',
+            link: {
+                pre: function (scope, element) {
+                    element.addClass('fd-tool-header__logo');
+                }
+            },
         }
     }]);

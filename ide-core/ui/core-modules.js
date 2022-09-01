@@ -250,56 +250,9 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                         }
                     };
                 }, post: function (scope, element) {
-                    let isMenuOpen = false;
                     scope.themes = [];
                     scope.currentTheme = theming.getCurrentTheme();
                     scope.user = User.get();
-                    let menuBackdrop = element[0].querySelector(".dg-menu__backdrop");
-                    let themePopover = element[0].querySelector("#themePopover");
-                    let themePopoverButton = element[0].querySelector("#themePopoverButton");
-                    let userPopover = element[0].querySelector("#userPopover");
-                    let userPopoverButton = element[0].querySelector("#userPopoverButton");
-
-                    menuBackdrop.addEventListener('click', function (event) {
-                        event.stopPropagation();
-                        scope.backdropEvent();
-                    });
-
-                    menuBackdrop.addEventListener('contextmenu', function (event) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        scope.backdropEvent();
-                    });
-
-                    function toggleThemePopover(hidden = true) {
-                        isMenuOpen = !hidden;
-                        if (hidden) {
-                            themePopover.classList.add("dg-hidden");
-                            themePopover.setAttribute("aria-expanded", false);
-                            themePopover.setAttribute("aria-hidden", true);
-                            themePopoverButton.setAttribute("aria-expanded", false);
-                        } else {
-                            themePopover.classList.remove("dg-hidden");
-                            themePopover.setAttribute("aria-expanded", true);
-                            themePopover.setAttribute("aria-hidden", false);
-                            themePopoverButton.setAttribute("aria-expanded", true);
-                        }
-                    }
-
-                    function toggleUserPopover(hidden = true) {
-                        isMenuOpen = !hidden;
-                        if (hidden) {
-                            userPopover.classList.add("dg-hidden");
-                            userPopover.setAttribute("aria-expanded", false);
-                            userPopover.setAttribute("aria-hidden", true);
-                            userPopoverButton.setAttribute("aria-expanded", false);
-                        } else {
-                            userPopover.classList.remove("dg-hidden");
-                            userPopover.setAttribute("aria-expanded", true);
-                            userPopover.setAttribute("aria-hidden", false);
-                            userPopoverButton.setAttribute("aria-expanded", true);
-                        }
-                    }
 
                     function loadMenu() {
                         Menu.query({ id: scope.menuExtId }).$promise
@@ -309,51 +262,6 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                     }
 
                     scope.branding = branding;
-
-                    scope.showBackdrop = function () {
-                        menuBackdrop.classList.remove("dg-hidden");
-                    };
-
-                    scope.hideBackdrop = function () {
-                        menuBackdrop.classList.add("dg-hidden");
-                    };
-
-                    scope.backdropEvent = function () {
-                        messageHub.triggerEvent('header-menu.closeAll', true);
-                        if (isMenuOpen) {
-                            if (!themePopover.classList.contains("dg-hidden")) {
-                                toggleThemePopover(true);
-                            }
-                            if (!userPopover.classList.contains("dg-hidden")) {
-                                toggleUserPopover(true);
-                            }
-                        }
-                        scope.hideBackdrop();
-                    };
-
-                    messageHub.onDidReceiveMessage(
-                        'ide-header.menuOpened',
-                        function () {
-                            if (isMenuOpen) {
-                                if (!themePopover.classList.contains("dg-hidden")) {
-                                    toggleThemePopover(true);
-                                }
-                                if (!userPopover.classList.contains("dg-hidden")) {
-                                    toggleUserPopover(true);
-                                }
-                            }
-                            scope.showBackdrop();
-                        },
-                        true
-                    );
-
-                    messageHub.onDidReceiveMessage(
-                        'ide-header.menuClosed',
-                        function () {
-                            if (!isMenuOpen) scope.hideBackdrop();
-                        },
-                        true
-                    );
 
                     messageHub.onDidReceiveMessage(
                         'ide.themesLoaded',
@@ -366,35 +274,10 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                     if (scope.menuExtId)
                         loadMenu.call(scope);
 
-                    scope.themeButtonClicked = function () {
-                        toggleUserPopover(true);
-                        if (themePopover.classList.contains("dg-hidden")) {
-                            scope.showBackdrop();
-                            messageHub.triggerEvent('header-menu.closeAll', true);
-                            toggleThemePopover(false);
-                        } else {
-                            scope.hideBackdrop();
-                            toggleThemePopover(true);
-                        }
-                    };
-
-                    scope.userButtonClicked = function () {
-                        toggleThemePopover(true);
-                        if (userPopover.classList.contains("dg-hidden")) {
-                            scope.showBackdrop();
-                            messageHub.triggerEvent('header-menu.closeAll', true);
-                            toggleUserPopover(false);
-                        } else {
-                            scope.hideBackdrop();
-                            toggleUserPopover(true);
-                        }
-                    };
-
                     scope.setTheme = function (themeId, name) {
                         scope.currentTheme.id = themeId;
                         scope.currentTheme.name = name;
                         theming.setTheme(themeId);
-                        toggleThemePopover(true);
                     };
 
                     scope.resetTheme = function () {
@@ -410,6 +293,10 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                         localStorage.clear();
                         theming.reset();
                         location.reload();
+                    };
+
+                    scope.logout = function () {
+                        location.replace('/logout');
                     };
                 }
             },
@@ -434,7 +321,7 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
         </fd-button>
     </fd-popover-control>
     <fd-popover-body no-arrow="true" can-scroll="false">
-        <fd-menu>
+        <fd-menu no-backdrop="true">
             <fd-menu-sublist ng-repeat="menuItem in menuList track by $index" title="{{ menuItem.label }}"
                 can-scroll="isScrollable(item.items)">
                 <header-submenu sublist="menuItem.items" menu-handler="menuHandler"></header-submenu>
@@ -473,7 +360,7 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
                         </fd-button>
                     </fd-popover-control>
                     <fd-popover-body no-arrow="true" can-scroll="isScrollable()">
-                        <fd-menu>
+                        <fd-menu no-backdrop="true">
                             <fd-menu-item ng-repeat-start="item in menuItem.items track by $index" ng-if="!item.items"
                                 title="{{ item.label }}" ng-click="menuHandler(item)">
                             </fd-menu-item>
