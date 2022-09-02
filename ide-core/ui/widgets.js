@@ -975,12 +975,13 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 <ng-transclude ng-if="!canScroll"></ng-transclude>
             </div>`,
         }
-    }]).directive('fdMenu', ['$window', 'backdrop', function ($window, backdrop) {
+    }]).directive('fdMenu', ['$window', 'backdrop', 'classNames', function ($window, backdrop, classNames) {
         /**
          * maxHeight: Number - Maximum height in pixels before it starts scrolling. Default is the height of the window.
          * canScroll: Boolean - Enable/disable scroll menu support. Default is false.
          * show: Boolean - Use this instead of the CSS 'display' property. Otherwise, the menu will not work properly. Default is true.
          * noBackdrop: Boolean - Disables the backdrop. Use only when necessary (for example in popovers). This may break the menu if not used properly. Default is false.
+         * noShadow: Boolean - Removes the shadow effect. When in popover, it's recommended that you set this to true. Otherwise you will get double shadow. Default is false.
          */
         return {
             restrict: 'E',
@@ -991,6 +992,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 canScroll: '<?',
                 show: '<?',
                 noBackdrop: '<?',
+                noShadow: '<?',
             },
             link: {
                 pre: function (scope, element) {
@@ -1012,17 +1014,17 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                             else backdrop.deactivate();
                         }
                     });
-                    scope.getClasses = function () {
-                        let classList = [];
-                        if (scope.canScroll) {
-                            classList.push('fd-menu--overflow');
-                            element[0].style.maxHeight = `${scope.maxHeight || scope.defaultHeight}px`;
-                        } else element[0].style.removeProperty('max-height');
-                        return classList.join(' ');
+                    scope.getMenuClasses = function () {
+                        if (scope.canScroll) element[0].style.maxHeight = `${scope.maxHeight || scope.defaultHeight}px`;
+                        else element[0].style.removeProperty('max-height');
+                        return classNames({ 'fd-menu--overflow': scope.canScroll });
                     };
+                    scope.getListClasses = () => classNames({
+                        'fd-menu__list--no-shadow': scope.noShadow
+                    });
                 },
             },
-            template: `<nav aria-label="menu" class="fd-menu" ng-show="show" ng-class="getClasses()"><ul class="fd-menu__list" role="menu" ng-transclude></ul></nav>`
+            template: `<nav aria-label="menu" class="fd-menu" ng-show="show" ng-class="getMenuClasses()"><ul class="fd-menu__list" ng-class="getListClasses()" role="menu" ng-transclude></ul></nav>`
         }
     }]).directive('fdMenuItem', [function () {
         /**
