@@ -2866,7 +2866,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 }
             }
         }
-    }]).directive('fdComboboxInput', ['uuid', 'classNames', function (uuid, classNames) {
+    }]).directive('fdComboboxInput', ['uuid', 'classNames', '$window', function (uuid, classNames, $window) {
         /**
          * dropdownItems: Array[{ text: String, secondaryText: String, value: Any }] - Items to be filtered in the search input.
          * ngModel: Any|Array[Any] - The value of the selected item. If multiSelect is set to true this must be an array 
@@ -2877,7 +2877,8 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
          * message: String - Optional text displayed within the dropdown list
          * inputId: String - Id attribute for input element inside Combobox component
          * dgAriaLabel: String - Aria-label for Combobox
-         * multiSelect: Boolean - When true the combobox allows selecting multiple items
+         * multiSelect: Boolean - When true the combobox allows selecting multiple items,
+         * maxBodyHeight: Number - Maximum body height in pixels before it starts scrolling. Default is the height of the window.
          */
         return {
             restrict: 'EA',
@@ -2892,7 +2893,8 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 message: '@',
                 inputId: '@',
                 dgAriaLabel: '@',
-                multiSelect: '<'
+                multiSelect: '<',
+                maxBodyHeight: '@'
             },
             link: function (scope, element, attrs, ngModel) {
 
@@ -3122,6 +3124,23 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         scope.$apply(scope.closeDropdown);
                     }
                 });
+
+                scope.$watchCollection('dropdownItems', function (items) {
+                    if (items === undefined || items === null)
+                        scope.dropdownItems = [];
+
+                    scope.filteredDropdownItems = items || [];
+                });
+
+                scope.setDefault = function () {
+                    let rect = element[0].getBoundingClientRect();
+                    scope.defaultHeight = $window.innerHeight - rect.bottom;
+                };
+                scope.setDefault();
+
+                $window.addEventListener('resize', function () {
+                    scope.$apply(function () { scope.setDefault() });
+                });
             },
             template: `<div class="fd-popover" ng-keydown="onKeyDown($event)">
                 <div class="fd-popover__control" ng-attr-disabled="{{ isDisabled() }}" ng-attr-aria-disabled="{{isDisabled() }}" aria-expanded="{{ isBodyExpanded() }}" aria-haspopup="true" aria-controls="{{ bodyId }}">
@@ -3141,7 +3160,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     </fd-input-group>
                 </div>
                 <div ng-if="!dgDisabled" id="{{ bodyId }}" class="fd-popover__body fd-popover__body--no-arrow fd-popover__body--dropdown fd-popover__body--dropdown-fill" aria-hidden="{{ !isBodyExpanded() }}" ng-attr-aria-label="{{ dgAriaLabel }}">
-                    <div class="fd-popover__wrapper">
+                    <div class="fd-popover__wrapper fd-scrollbar" style="max-height:{{ maxBodyHeight || defaultHeight }}px;">
                         <fd-list-message ng-if="message" state="{{ state }}">{{ message }}</fd-list-message>
                         <fd-list class="{{getListClasses()}}" dropdown-mode="true" compact="compact" has-message="!!message">
                             <fd-list-item ng-repeat="item in filteredDropdownItems" role="option" tabindex="0" dg-selected="isSelected(item)" ng-click="onItemClick(item)">
