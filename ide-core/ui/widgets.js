@@ -1326,7 +1326,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             },
             template: `<tfoot ng-class="getClasses()" ng-transclude></tfoot>`
         }
-    }]).directive('fdTableRow', [function () {
+    }]).directive('fdTableRow', ['classNames', function (classNames) {
         /**
          * dgSelected: Boolean - Whether or not the table row is selected. Defaults to 'false'
          * activable: Boolean - Displays the row as active when clicked. Defaults to 'false'
@@ -1336,31 +1336,23 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             restrict: 'A',
             transclude: true,
             replace: true,
+            require: '?^fdTableGroup',
             scope: {
                 dgSelected: '<',
                 activable: '<',
                 hoverable: '<'
             },
-            link: function (scope, element) {
-                scope.$watch('dgSelected', function () {
-                    if (scope.dgSelected) {
-                        element[0].setAttribute('aria-selected', 'true');
-                    } else {
-                        element[0].removeAttribute('aria-selected');
-                    }
-                })
-                scope.getClasses = function () {
-                    let classList = ['fd-table__row'];
-                    if (scope.activable) {
-                        classList.push('fd-table__cell--activable');
-                    }
-                    if (scope.hoverable) {
-                        classList.push('fd-table__cell--hoverable');
-                    }
-                    return classList.join(' ');
-                };
+            link: function (scope, element, attrs, tableGroupCtrl) {
+                scope.getClasses = () => classNames('fd-table__row', {
+                    'fd-table__cell--activable': scope.activable,
+                    'fd-table__cell--hoverable': scope.hoverable,
+                    'dg-hidden': tableGroupCtrl && tableGroupCtrl.shouldHideRow(element[0])
+                });
+
+                scope.isRowExpanded = () => tableGroupCtrl && tableGroupCtrl.isRowExpanded(element[0])
+                scope.getAriaSelected = () => scope.dgSelected ? 'true' : undefined;
             },
-            template: `<tr ng-class="getClasses()" ng-transclude></tr>`
+            template: `<tr ng-class="getClasses()" ng-attr-aria-selected="{{ getAriaSelected() }}" ng-transclude></tr>`
         }
     }]).directive('fdTableHeaderCell', [function () {
         /**
@@ -1416,7 +1408,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             },
             template: `<th ng-class="getClasses()" ng-transclude></th>`
         }
-    }]).directive('fdTableCell', [function () {
+    }]).directive('fdTableCell', ['classNames', function (classNames) {
         /**
          * contentType: String - The type of the inner element. Could be one of 'checkbox', 'statusIndicator' or 'any' (default value)
          * fitContent: Boolean - Sets width to fit the cell content
@@ -1431,6 +1423,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             restrict: 'A',
             transclude: true,
             replace: true,
+            require: '?^fdTableGroup',
             scope: {
                 contentType: '@',
                 fitContent: '<',
@@ -1441,44 +1434,31 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 statusIndicator: '@',
                 nestingLevel: '<'
             },
-            link: function (scope, element) {
-                scope.getClasses = function () {
-                    let classList = ['fd-table__cell'];
-                    if (scope.noData) {
-                        classList.push('fd-table__cell--no-data');
-                        element[0].setAttribute('colspan', '100%');
-                    }
-                    switch (scope.contentType) {
-                        case 'checkbox':
-                            classList.push('fd-table__cell--checkbox');
-                            break;
-                        case 'statusIndicator':
-                            classList.push('fd-table__cell--status-indicator');
-                            break;
-                    }
-                    if (scope.statusIndicator) {
-                        classList.push(`fd-table__cell--status-indicator--${scope.statusIndicator}`);
-                    }
-                    if (scope.fitContent) {
-                        classList.push('fd-table__cell--fit-content');
-                    }
-                    if (scope.activable) {
-                        classList.push('fd-table__cell--activable');
-                    }
-                    if (scope.hoverable) {
-                        classList.push('fd-table__cell--hoverable');
-                    }
-                    if (scope.navigated) {
-                        classList.push('fd-table__cell--navigated');
-                    }
-                    return classList.join(' ');
-                };
+            link: function (scope, element, attrs, tableGroupCtrl) {
+                scope.getClasses = () => classNames('fd-table__cell', {
+                    'fd-table__cell--no-data': scope.noData,
+                    'fd-table__cell--checkbox': scope.contentType === 'checkbox',
+                    'fd-table__cell--status-indicator': scope.contentType === 'statusIndicator',
+                    [`fd-table__cell--status-indicator--${scope.statusIndicator}`]: scope.statusIndicator,
+                    'fd-table__cell--fit-content': scope.fitContent,
+                    'fd-table__cell--activable': scope.activable,
+                    'fd-table__cell--hoverable': scope.hoverable,
+                    'fd-table__cell--navigated': scope.navigated
+                });
 
                 if (scope.nestingLevel) {
                     element[0].setAttribute('data-nesting-level', scope.nestingLevel);
+                    if (tableGroupCtrl) {
+                        let rowEl = element.parent()[0];
+                        tableGroupCtrl.addRow(rowEl, scope.nestingLevel);
+
+                        scope.$on('$destroy', function () {
+                            tableGroupCtrl.removeRow(rowEl);
+                        });
+                    }
                 }
             },
-            template: `<td ng-class="getClasses()" ng-transclude></td>`
+            template: `<td ng-class="getClasses()" ng-attr-colspan="{{ noData ? '100%' : undefined }}"  ng-transclude></td>`
         }
     }]).directive('fdTableGroup', [function () {
         return {
@@ -1486,42 +1466,76 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             controller: ['$scope', '$element', function ($scope, $element) {
                 $element.addClass('fd-table--group');
 
-                let groupCells = [];
-                this.addGroupCell = function (element) {
-                    groupCells.push(element);
-                }
+                const findRowIndex = (rowElement) => rows.findIndex(r => r.element === rowElement);
+                let rows = [];
 
-                this.updateNestedRowsVisibility = function (element, expanded) {
-                    let rowExpanded = expanded;
-                    let nestingLevel = $(element).data('nesting-level');
-                    $(element).parent().nextAll('tr')
-                        .each(function () {
-                            const row = $(this);
-                            let cells = row.children('td[data-nesting-level]');
-                            if (cells.length === 0 || nestingLevel >= cells.first().data('nesting-level')) return false;
+                this.addRow = function (rowElement, nestingLevel) {
+                    let index = $(rowElement).index();
+                    rows.splice(index, 0, {
+                        element: rowElement,
+                        nestingLevel
+                    });
+                };
 
-                            if (expanded) {
-                                if (rowExpanded)
-                                    row.removeClass('dg-hidden');
-
-                                const currentRowExpanded = row.attr('aria-expanded');
-                                if (currentRowExpanded !== undefined)
-                                    rowExpanded = currentRowExpanded === 'true';
-                            } else {
-                                row.addClass('dg-hidden');
-                            }
-                        });
-                }
-
-                $element.ready(() => {
-                    groupCells.sort((a, b) => $(b).data('nesting-level') - $(a).data('nesting-level'));
-                    for (let element of groupCells) {
-                        this.updateNestedRowsVisibility(element, $(element).parent().attr('aria-expanded') === 'true');
+                this.removeRow = function (rowElement) {
+                    let index = findRowIndex(rowElement);
+                    if (index >= 0) {
+                        rows.splice(index, 1);
                     }
-                })
+                }
+
+                this.addGroupRow = function (rowElement, nestingLevel, expanded) {
+                    let index = $(rowElement).index();
+                    rows.splice(index, 0, {
+                        groupRow: true,
+                        element: rowElement,
+                        nestingLevel,
+                        expanded
+                    });
+                };
+
+                this.setGroupRowExpanded = function (rowElement, expanded) {
+                    let index = findRowIndex(rowElement);
+                    if (index >= 0) {
+                        rows[index].expanded = expanded;
+                    }
+                }
+
+                this.shouldHideRow = function (rowElement) {
+                    let index = findRowIndex(rowElement);
+                    if (index >= 0) {
+                        let currentRow = rows[index];
+
+                        if (currentRow.nestingLevel === 1)
+                            return false;
+
+                        for (let i = index - 1; i >= 0; i--) {
+                            let row = rows[i];
+
+                            if (row.groupRow && row.nestingLevel < currentRow.nestingLevel && !row.expanded) {
+                                return true;
+                            }
+
+                            if (row.nestingLevel === 1)
+                                break;
+                        }
+                    }
+
+                    return false;
+                }
+
+                this.isRowExpanded = function (rowElement) {
+                    let index = findRowIndex(rowElement);
+                    if (index >= 0) {
+                        let row = rows[index];
+                        return row.groupRow && row.expanded;
+                    }
+
+                    return false;
+                }
             }]
         };
-    }]).directive('fdTableGroupCell', [function () {
+    }]).directive('fdTableGroupCell', ['classNames', function (classNames) {
         /**
          * nestingLevel: Number - The row nesting level (starting from 1) for tables with row groups 
          * expanded: Boolean - Whether the row group is expanded or not
@@ -1535,34 +1549,29 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 expanded: '<'
             },
             require: '^fdTableGroup',
-            link: function (scope, element, attrs, tableCtrl) {
-                tableCtrl.addGroupCell(element);
+            link: function (scope, element, attrs, tableGroupCtrl) {
+                let rowEl = element.parent()[0];
+                tableGroupCtrl.addGroupRow(rowEl, scope.nestingLevel, scope.expanded);
 
-                scope.getClasses = function () {
-                    let classList = ['fd-table__expand'];
-
-                    if (scope.expanded) {
-                        classList.push('fd-table__expand--open');
-                    }
-
-                    return classList.join(' ');
-                };
+                scope.getClasses = () => classNames('fd-table__expand', {
+                    'fd-table__expand--open': scope.expanded
+                });
 
                 scope.toggleExpanded = function () {
                     scope.expanded = !scope.expanded;
-                    updateAriaExpanded();
-                    tableCtrl.updateNestedRowsVisibility(element, scope.expanded);
                 };
 
-                const updateAriaExpanded = function () {
-                    $(element).parent().attr('aria-expanded', scope.expanded ? 'true' : 'false');
-                }
+                scope.$watch('expanded', function () {
+                    tableGroupCtrl.setGroupRowExpanded(element.parent()[0], scope.expanded);
+                });
 
                 if (scope.nestingLevel) {
                     element[0].setAttribute('data-nesting-level', scope.nestingLevel);
                 }
 
-                updateAriaExpanded();
+                scope.$on('$destroy', function () {
+                    tableGroupCtrl.removeRow(rowEl);
+                });
             },
             template: `<td class="fd-table__cell fd-table__cell--group fd-table__cell--expand" colspan="100%" ng-click="toggleExpanded()">
                 <span ng-class="getClasses()"></span>
