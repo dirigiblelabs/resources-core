@@ -77,8 +77,8 @@ function getLocations(scriptId) {
                 "/ide-core/ui/theming.js",
                 "/ide-core/ui/widgets.js",
                 "/ide-core/ui/view.js",
-                "/ide-core/ui/entityApi.js",
                 "/ide-core/core/uri-builder.js",
+                "/ide-core/ui/entityApi.js",
             ];
         case "application-perspective-js":
         case "ide-perspective-js":
