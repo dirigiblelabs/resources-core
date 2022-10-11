@@ -3,26 +3,39 @@ angular.module('ideTheming', ['ngResource', 'ideMessageHub'])
         this.$get = ['$resource', '$http', 'messageHub', function editorsFactory($resource, $http, messageHub) {
             let theme = JSON.parse(localStorage.getItem('DIRIGIBLE.theme') || '{}');
             // legacySwitcher is deprecated. Remove once all views have been migrated.
-            let legacySwitcher = $resource('/services/v4/js/theme/resources.js?name=:themeId', { themeId: 'default' });
+            let legacySwitcher = $resource('/public/v4/js/theme/resources.js?name=:themeId', { themeId: 'default' });
             let themes = [];
 
-            $http.get('/services/v4/js/theme/resources.js/themes?legacy=false')
-                .then(function (response) {
-                    themes = response.data;
-                    if (!theme.version) setTheme("quartz-light"); // Default theme
-                    else {
-                        for (let i = 0; i < themes.length; i++) {
-                            if (themes[i].id === theme.id) {
-                                if (themes[i].version !== theme.version) {
-                                    setThemeObject(themes[i]);
-                                    break;
-                                }
+            function processThemeResponse(response) {
+                themes = response.data;
+                if (!theme.version) {
+                    setTheme("quartz-light");
+                } else {
+                    for (let i = 0; i < themes.length; i++) {
+                        if (themes[i].id === theme.id) {
+                            if (themes[i].version !== theme.version) {
+                                setThemeObject(themes[i]);
+                                break;
                             }
                         }
                     }
-                    messageHub.triggerEvent("ide.themesLoaded", true);
+                }
+                messageHub.triggerEvent("ide.themesLoaded", true);
+            }
+
+            $http.get('/public/v4/js/theme/resources.js/themes?legacy=false')
+                .then(function (response) {
+                    processThemeResponse(response);
                 }, function (response) {
                     console.error("ide-theming: could not get themes", response);
+                    if (response.status === 404) {
+                        $http.get('/services/v4/js/theme/resources.js/themes?legacy=false')
+                            .then(function (response) {
+                                processThemeResponse(response);
+                            }, function (response) {
+                                console.error("ide-theming: could not get themes", response);
+                            });
+                    }
                 });
 
             function setTheme(themeId, sendEvent = true) {
