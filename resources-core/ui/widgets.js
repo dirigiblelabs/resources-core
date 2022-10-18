@@ -289,10 +289,19 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
         }
     }).directive('fdScrollbar', [function () {
         return {
-            restrict: 'AE',
+            restrict: 'E',
             transclude: true,
             replace: true,
             template: `<div class="fd-scrollbar" ng-transclude><div>`,
+        }
+    }]).directive('fdScrollbar', [function () {
+        return {
+            restrict: 'A',
+            link: {
+                pre: function (scope, element) {
+                    element.addClass('fd-scrollbar');
+                }
+            },
         }
     }]).directive('fdAvatar', [function () {
         /**
