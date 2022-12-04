@@ -641,7 +641,8 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
         return {
             restrict: 'E',
             transclude: {
-                'control': 'fdInput',
+                'input': '?fdInput',
+                'textarea': '?fdTextarea',
                 'message': 'fdFormMessage',
             },
             scope: {
@@ -650,8 +651,9 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             },
             replace: true,
             link: {
-                pre: function (scope) {
+                pre: function (scope, element, attr, ctrl, transcludeFn) {
                     scope.popoverId = `fimg${uuid.generate()}`;
+                    scope.isTextarea = transcludeFn.isSlotFilled('textarea');
                 },
                 post: function (scope, element) {
                     function focusoutEvent() {
@@ -702,8 +704,8 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                     scope.$on('$destroy', cleanUp);
                 },
             },
-            template: `<div class="fd-form-input-message-group fd-popover fd-popover--input-message-group">
-                <div class="fd-popover__control" aria-controls="{{ popoverId }}" aria-expanded="false" aria-haspopup="true" ng-click="togglePopover()" ng-transclude="control"></div>
+            template: `<div class="fd-popover fd-popover--input-message-group">
+                <div class="fd-popover__control" aria-controls="{{ popoverId }}" aria-expanded="false" aria-haspopup="true" ng-click="togglePopover()" ng-transclude="{{ isTextarea ? 'textarea' : 'input'}}"></div>
                 <div class="fd-popover__body fd-popover__body--no-arrow" aria-hidden="true" id="{{ popoverId }}" ng-style="getStyle()" ng-transclude="message"></div>
             </div>`,
         }
