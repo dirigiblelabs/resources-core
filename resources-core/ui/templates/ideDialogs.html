@@ -110,7 +110,7 @@
             <div class="fd-dialog__body fd-scrollbar">
                 <fieldset ng-hide="formDialog.loader" class="fd-fieldset" ng-form="formFieldset">
                     <div class="fd-form-group">
-                        <div ng-repeat="item in formDialog.items">
+                        <div class="dg-fd-repeat" ng-repeat="item in formDialog.items">
                             <div ng-if="item.type === 'input'" ng-hide="shouldHide(item)" class="fd-form-item">
                                 <fd-form-label dg-colon="true" dg-required="{{ isRequired(item.id, item.required) }}"
                                     for="{{ item.id }}">
@@ -158,7 +158,8 @@
                                     </div>
                                 </label>
                             </div>
-                            <div ng-if="item.type === 'radio'" ng-hide="shouldHide(item)" class="fd-form-item">
+                            <div ng-if="item.type === 'radio'" ng-hide="shouldHide(item)"
+                                class="fd-form-item fd-margin--none">
                                 <div class="fd-form-group__item fd-form-item" ng-repeat="radio in item.items">
                                     <input type="radio" class="fd-radio fd-radio--compact"
                                         ng-class="{'is-error' : radio.error }" id="{{ radio.id }}" ng-model="item.value"

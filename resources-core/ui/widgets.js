@@ -12,6 +12,9 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
     .constant('SplitPaneState', {
         EXPANDED: 0,
         COLLAPSED: 1
+    }).config(function config($compileProvider) {
+        if ($compileProvider.debugInfoEnabled())
+            $compileProvider.debugInfoEnabled(false);
     }).factory('uuid', function () {
         return {
             generate: function () {

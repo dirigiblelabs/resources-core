@@ -15,9 +15,9 @@ angular.module('idePerspective', ['ngResource', 'ngCookies', 'ideTheming', 'ideM
     .constant('branding', brandingInfo)
     .constant('perspective', perspectiveData)
     .constant('extensionPoint', {})
-    // .config(function config($compileProvider) {
-    //     $compileProvider.debugInfoEnabled(false);
-    // })
+    .config(function config($compileProvider) {
+        $compileProvider.debugInfoEnabled(false);
+    })
     .service('Perspectives', ['$resource', "extensionPoint", function ($resource, extensionPoint) {
         let url = '/services/v4/js/resources-core/services/perspectives.js';
         if (extensionPoint && extensionPoint.perspectives) {
