@@ -2647,7 +2647,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             template: `<i ng-if="glyph" ng-class="getIconClasses()" role="presentation"></i>
                        <span ng-if="text" ng-class="getTextClasses()">{{text}}</span>`
         }
-    }]).directive('fdSelect', ['uuid', function (uuid) {
+    }]).directive('fdSelect', ['uuid', '$window', function (uuid, $window) {
         /**
          * dgSize: String - The size of the select. One of 'compact' or 'large'. 
          * dgDisabled: Boolean - Disable the select
@@ -2690,6 +2690,14 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 }
             },
             controller: ['$scope', '$element', function ($scope, $element) {
+                let control = $element[0].querySelector(`.fd-popover__control`);
+                let rect = control.getBoundingClientRect();
+                function resizeEvent() {
+                    let rect = control.getBoundingClientRect();
+                    $scope.defaultHeight = $window.innerHeight - rect.bottom;
+                }
+                $window.addEventListener('resize', resizeEvent);
+                $scope.defaultHeight = $window.innerHeight - rect.bottom;
                 $scope.items = [];
                 $scope.bodyExpanded = false;
                 $scope.buttonId = `select-btn-${uuid.generate()}`;
@@ -2847,8 +2855,11 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                             position: 'fixed',
                             top: `${pos.bottom}px`,
                             left: `${pos.left}px`,
+                            maxHeight: `${$scope.maxHeight || $scope.defaultHeight}px`,
                         };
-                    } else return {};
+                    } else return {
+                        maxHeight: `${$scope.maxHeight || $scope.defaultHeight}px`,
+                    };
                 };
                 function focusoutEvent(e) {
                     if (!e.relatedTarget || !$element[0].contains(e.relatedTarget)) {
@@ -2857,6 +2868,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 }
                 $element.on('focusout', focusoutEvent);
                 function cleanUp() {
+                    $window.removeEventListener('resize', resizeEvent);
                     $element.off('focusout', focusoutEvent);
                 }
                 $scope.$on('$destroy', cleanUp);
