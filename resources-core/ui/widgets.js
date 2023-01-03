@@ -93,7 +93,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
             let names;
             let keys = {};
             if (isMac && !separateCtrl) {
-                keySet = keySet.replace('ctrl', 'meta');
+                keySet = keySet.replaceAll('ctrl', 'meta');
                 names = keySet.split('+');
             } else names = keySet.split('+');
             for (const name in modifierKeys) {
