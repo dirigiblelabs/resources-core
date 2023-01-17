@@ -1084,6 +1084,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                         if (scope.dgType) classList.push(`fd-button--${scope.dgType}`);
                         if (scope.compact === true) classList.push('fd-button--compact');
                         if (scope.inGroup === true) classList.push('fd-input-group__button');
+                        if (scope.inMsgStrip === true) classList.push('fd-message-strip__close');
                         if (scope.state === "selected") {
                             element[0].removeAttribute('aria-disabled');
                             classList.push('is-selected');
@@ -1154,6 +1155,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
          * isOverflow: Boolean - Used when the button is in a toolbar overflow popover.
          * isSplit: Boolean - (Internal use) If the button is part of a split button.
          * inGroup: Boolean - If the button is inside an fd-input-group-addon element.
+         * inMsgStrip: Boolean - If the button is inside a message strip (see fd-message-strip).
          */
         return {
             restrict: 'AE',
@@ -1171,6 +1173,7 @@ angular.module('ideUI', ['ngAria', 'ideMessageHub'])
                 isOverflow: '<?',
                 isSplit: '<?',
                 inGroup: '<?',
+                inMsgStrip: '<?',
             },
             template: fdButtonTemplates.getTemplate('button'),
         };
